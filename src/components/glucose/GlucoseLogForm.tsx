@@ -31,7 +31,7 @@ type GlucoseFormData = z.infer<typeof glucoseSchema>;
 
 interface GlucoseLogFormProps {
   onFormSubmit?: () => void;
-  initialData?: Partial<GlucoseReading>; 
+  initialData?: Partial<GlucoseReading>;
 }
 
 export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLogFormProps) {
@@ -42,7 +42,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
   const form = useForm<GlucoseFormData>({
     resolver: zodResolver(glucoseSchema),
     defaultValues: {
-      value: initialData?.value || undefined,
+      value: initialData?.value ?? '', // Changed from undefined
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
       mealContext: initialData?.mealContext || '',
       notes: initialData?.notes || '',
@@ -52,7 +52,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
   const onSubmit = async (data: GlucoseFormData) => {
     setIsSaving(true);
     try {
-      const readingToSave: Omit<GlucoseReading, 'level' | 'id'> & {id?:string} = {
+      const readingToSave: Omit<GlucoseReading, 'level' | 'id' | 'user_id' | 'created_at'> & {id?:string} = {
         id: initialData?.id, // Pass ID if editing
         value: data.value,
         timestamp: new Date(data.timestamp).toISOString(),
@@ -66,16 +66,16 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
         description: `Registro de glicemia ${initialData?.id ? 'atualizado' : 'salvo'}.`,
         variant: 'default',
       });
-      form.reset({ 
-          timestamp: new Date().toISOString().substring(0, 16), 
-          value: undefined, 
-          mealContext: '', 
-          notes: '' 
+      form.reset({
+          timestamp: new Date().toISOString().substring(0, 16),
+          value: '', // Changed from undefined
+          mealContext: '',
+          notes: ''
       });
       if (onFormSubmit) {
         onFormSubmit();
       }
-      router.push('/calendar'); 
+      router.push('/calendar');
       router.refresh(); // Refresh to show updated data on calendar
     } catch (error: any) {
       toast({
@@ -150,7 +150,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="notes"

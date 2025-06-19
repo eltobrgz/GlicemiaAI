@@ -29,7 +29,7 @@ type InsulinFormData = z.infer<typeof insulinSchema>;
 
 interface InsulinLogFormProps {
   onFormSubmit?: () => void;
-  initialData?: Partial<InsulinLog>; 
+  initialData?: Partial<InsulinLog>;
 }
 
 export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLogFormProps) {
@@ -41,7 +41,7 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
     resolver: zodResolver(insulinSchema),
     defaultValues: {
       type: initialData?.type || '',
-      dose: initialData?.dose || undefined,
+      dose: initialData?.dose ?? '', // Changed from undefined
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
     },
   });
@@ -49,7 +49,7 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
   const onSubmit = async (data: InsulinFormData) => {
     setIsSaving(true);
     try {
-      const logToSave: Omit<InsulinLog, 'id'> & { id?: string } = {
+      const logToSave: Omit<InsulinLog, 'id' | 'user_id' | 'created_at'> & { id?: string } = {
         id: initialData?.id,
         type: data.type,
         dose: data.dose,
@@ -61,16 +61,16 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
         title: 'Sucesso!',
         description: `Registro de insulina ${initialData?.id ? 'atualizado' : 'salvo'}.`,
       });
-      form.reset({ 
-          timestamp: new Date().toISOString().substring(0, 16), 
-          type: '', 
-          dose: undefined 
+      form.reset({
+          timestamp: new Date().toISOString().substring(0, 16),
+          type: '',
+          dose: '' // Changed from undefined
       });
       if (onFormSubmit) {
         onFormSubmit();
       }
       router.push('/dashboard');
-      router.refresh(); 
+      router.refresh();
     } catch (error: any) {
       toast({
         title: 'Erro ao Salvar',
