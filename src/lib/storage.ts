@@ -1,7 +1,7 @@
 
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile } from '@/types';
 import { supabase } from './supabaseClient';
-import { classifyGlucoseLevel } from './utils'; // generateId might not be needed if DB handles it
+import { classifyGlucoseLevel, generateId } from './utils';
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string> {
@@ -13,6 +13,31 @@ async function getCurrentUserId(): Promise<string> {
   return session.user.id;
 }
 
+// Helper function to upload file to Supabase Storage
+async function uploadSupabaseFile(bucketName: string, filePath: string, file: File): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(bucketName)
+    .upload(filePath, file, {
+      cacheControl: '3600', // Cache for 1 hour
+      upsert: true, // Overwrite if file already exists (e.g., for profile picture update)
+    });
+
+  if (error) {
+    console.error(`Error uploading file to Supabase Storage bucket "${bucketName}":`, error);
+    throw new Error(`Falha ao enviar arquivo para ${bucketName}: ${error.message}`);
+  }
+
+  // Get public URL for the uploaded file
+  const { data: { publicUrl } } = supabase.storage.from(bucketName).getPublicUrl(data.path);
+  
+  if (!publicUrl) {
+    console.error(`Error getting public URL for ${data.path} in bucket ${bucketName}`);
+    throw new Error('Não foi possível obter a URL pública do arquivo enviado.');
+  }
+  return publicUrl;
+}
+
+
 // User Profile
 export async function getUserProfile(): Promise<UserProfile | null> {
   try {
@@ -23,31 +48,28 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       .eq('id', userId)
       .single();
 
-    if (error && error.code !== 'PGRST116') { // PGRST116: "Searched item was not found"
+    if (error && error.code !== 'PGRST116') { 
       console.error('Error fetching user profile:', error);
       throw error;
     }
     
-    if (!data) { // If no profile exists, create a default one based on auth user
+    if (!data) { 
         const { data: { user } } = await supabase.auth.getUser();
         if(user) {
             const defaultProfile: UserProfile = {
                 id: user.id,
                 name: user.user_metadata?.full_name || user.email || 'Novo Usuário',
                 email: user.email || '',
-                avatarUrl: user.user_metadata?.avatar_url || `https://placehold.co/100x100.png`,
+                avatarUrl: user.user_metadata?.avatar_url || undefined, // Initially undefined, or a placeholder
                 dateOfBirth: undefined,
                 diabetesType: undefined,
             };
-            // Attempt to save this default profile. This assumes your RLS allows user to insert their own profile.
-            // Or, this could be handled by a DB trigger on auth.users insert.
             await saveUserProfile(defaultProfile); 
             return defaultProfile;
         }
         return null;
     }
 
-    // Map Supabase row (snake_case) to UserProfile (camelCase)
     return {
       id: data.id,
       name: data.name || '',
@@ -58,35 +80,68 @@ export async function getUserProfile(): Promise<UserProfile | null> {
     };
   } catch (err) {
     console.error('Error in getUserProfile:', err);
-    // Return a default mock or null if strictly needed for UI, but ideally handle this upstream
     return null;
   }
 }
 
-export async function saveUserProfile(profile: UserProfile): Promise<void> {
+export async function saveUserProfile(profile: UserProfile, avatarFile?: File): Promise<UserProfile> {
   const userId = await getCurrentUserId();
   if (userId !== profile.id) {
     throw new Error("Não é possível salvar o perfil de outro usuário.");
   }
 
+  let publicAvatarUrl = profile.avatarUrl;
+
+  if (avatarFile) {
+    const fileExt = avatarFile.name.split('.').pop();
+    const fileName = `profile.${fileExt}`;
+    // Path structure: users/{user_id}/profile.ext
+    const filePath = `users/${userId}/${fileName}`; 
+    try {
+      publicAvatarUrl = await uploadSupabaseFile('profile-pictures', filePath, avatarFile);
+    } catch (uploadError) {
+      console.error("Error uploading avatar, profile will be saved without new avatar:", uploadError);
+      // Decide if you want to throw or save profile with old/no avatar
+      // For now, we'll let it save with the old avatarUrl if upload fails
+    }
+  }
+
   const profileDataToSave = {
     id: profile.id,
     name: profile.name,
-    email: profile.email, // Email updates might require special handling / Supabase config
-    avatar_url: profile.avatarUrl,
+    // email: profile.email, // Email updates are usually handled by auth.updateUser()
+    avatar_url: publicAvatarUrl,
     date_of_birth: profile.dateOfBirth,
     diabetes_type: profile.diabetesType,
     updated_at: new Date().toISOString(),
   };
+  
+  // Only include email if it's different and you intend to update it here (might need special RLS)
+  // For now, assuming email comes from auth and is not directly updated via profile save
+  const { email, ...restOfProfileData } = profileDataToSave;
 
-  const { error } = await supabase
+
+  const { data: savedData, error } = await supabase
     .from('profiles')
-    .upsert(profileDataToSave, { onConflict: 'id' }); // Use upsert for create or update
+    .upsert(profile.email ? profileDataToSave : restOfProfileData , { onConflict: 'id' })
+    .select()
+    .single();
 
   if (error) {
     console.error('Error saving user profile:', error);
     throw error;
   }
+  
+  return { // Return the updated profile in UserProfile format
+      id: savedData.id,
+      name: savedData.name || '',
+      email: savedData.email || profile.email, // use profile.email as fallback if not in savedData
+      avatarUrl: savedData.avatar_url || undefined,
+      dateOfBirth: savedData.date_of_birth || undefined,
+      diabetesType: savedData.diabetes_type as UserProfile['diabetesType'] || undefined,
+      created_at: savedData.created_at,
+      updated_at: savedData.updated_at,
+  };
 }
 
 
@@ -105,45 +160,51 @@ export async function getGlucoseReadings(): Promise<GlucoseReading[]> {
   }
   return data.map(r => ({
     id: r.id,
+    user_id: r.user_id,
     value: r.value,
     timestamp: r.timestamp,
     mealContext: r.meal_context as GlucoseReading['mealContext'] || undefined,
     notes: r.notes || undefined,
     level: r.level as GlucoseReading['level'] || undefined,
+    created_at: r.created_at,
   }));
 }
 
-export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'id' | 'level'> & { id?: string }): Promise<GlucoseReading> {
+export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'>): Promise<GlucoseReading> {
   const userId = await getCurrentUserId();
   const level = classifyGlucoseLevel(reading.value);
   
   const readingToSave = {
+    ...reading, // Includes id if present (for update), value, timestamp, mealContext, notes
     user_id: userId,
-    value: reading.value,
-    timestamp: reading.timestamp,
-    meal_context: reading.mealContext || null,
-    notes: reading.notes || null,
     level: level,
+    meal_context: reading.mealContext || null, // Ensure null for DB if undefined
+    notes: reading.notes || null, // Ensure null for DB if undefined
   };
+  // Remove potentially undefined fields that DB might not like if not explicitly nullable
+  if (readingToSave.mealContext === undefined) delete readingToSave.mealContext;
+  if (readingToSave.notes === undefined) delete readingToSave.notes;
 
-  if (reading.id) { // Update existing
+
+  if (reading.id) { 
+    const { id, ...updateData } = readingToSave;
     const { data, error } = await supabase
       .from('glucose_readings')
-      .update(readingToSave)
+      .update(updateData)
       .eq('id', reading.id)
       .eq('user_id', userId)
       .select()
       .single();
     if (error) throw error;
-    return { ...data, mealContext: data.meal_context as GlucoseReading['mealContext'] };
-  } else { // Insert new
+    return { ...data, mealContext: data.meal_context as GlucoseReading['mealContext'] } as GlucoseReading;
+  } else { 
     const { data, error } = await supabase
       .from('glucose_readings')
       .insert(readingToSave)
       .select()
       .single();
     if (error) throw error;
-    return { ...data, mealContext: data.meal_context as GlucoseReading['mealContext'] };
+    return { ...data, mealContext: data.meal_context as GlucoseReading['mealContext'] } as GlucoseReading;
   }
 }
 
@@ -172,36 +233,42 @@ export async function getInsulinLogs(): Promise<InsulinLog[]> {
     .order('timestamp', { ascending: false });
 
   if (error) throw error;
-  return data; // Assumes InsulinLog type matches DB structure
+  return data.map(log => ({
+      id: log.id,
+      user_id: log.user_id,
+      type: log.type,
+      dose: log.dose,
+      timestamp: log.timestamp,
+      created_at: log.created_at,
+  }));
 }
 
-export async function saveInsulinLog(log: Omit<InsulinLog, 'id'> & { id?: string }): Promise<InsulinLog> {
+export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_at'>): Promise<InsulinLog> {
   const userId = await getCurrentUserId();
   const logToSave = {
+    ...log, // Includes id if present (for update), type, dose, timestamp
     user_id: userId,
-    type: log.type,
-    dose: log.dose,
-    timestamp: log.timestamp,
   };
 
-  if (log.id) { // Update
+  if (log.id) { 
+    const { id, ...updateData } = logToSave;
     const { data, error } = await supabase
       .from('insulin_logs')
-      .update(logToSave)
+      .update(updateData)
       .eq('id', log.id)
       .eq('user_id', userId)
       .select()
       .single();
     if (error) throw error;
-    return data;
-  } else { // Insert
+    return data as InsulinLog;
+  } else { 
     const { data, error } = await supabase
       .from('insulin_logs')
       .insert(logToSave)
       .select()
       .single();
     if (error) throw error;
-    return data;
+    return data as InsulinLog;
   }
 }
 
@@ -223,13 +290,13 @@ export async function getMealAnalyses(): Promise<MealAnalysis[]> {
     .from('meal_analyses')
     .select('*')
     .eq('user_id', userId)
-    .order('timestamp', { ascending: false });
+    .order('created_at', { ascending: false }); // Order by creation time for history
 
   if (error) throw error;
-  // Map from DB (snake_case) to app type (camelCase)
   return data.map(a => ({
     id: a.id,
-    timestamp: a.timestamp,
+    user_id: a.user_id,
+    timestamp: a.timestamp, // This is analysis timestamp
     imageUrl: a.image_url || undefined,
     originalImageFileName: a.original_image_file_name || undefined,
     foodIdentification: a.food_identification,
@@ -237,46 +304,95 @@ export async function getMealAnalyses(): Promise<MealAnalysis[]> {
     estimatedGlucoseImpact: a.estimated_glucose_impact,
     suggestedInsulinDose: a.suggested_insulin_dose,
     improvementTips: a.improvement_tips,
+    created_at: a.created_at,
   }));
 }
 
-export async function saveMealAnalysis(analysis: Omit<MealAnalysis, 'id'> & { id?: string }): Promise<MealAnalysis> {
+// For saveMealAnalysis, we expect the AI output and the raw file for upload.
+// The 'imageUrl' in the input 'analysis' object (if present) would be a data URI from AI,
+// which we will replace with the Supabase Storage URL.
+export async function saveMealAnalysis(
+  analysis: Omit<MealAnalysis, 'id' | 'imageUrl' | 'user_id' | 'created_at'> & { id?: string; mealPhotoFile?: File }
+): Promise<MealAnalysis> {
   const userId = await getCurrentUserId();
-  const analysisToSave = {
+  let finalImageUrl: string | undefined = undefined;
+
+  if (analysis.mealPhotoFile) {
+    const file = analysis.mealPhotoFile;
+    const fileExt = file.name.split('.').pop() || 'jpg'; // Default extension
+    const fileName = `${generateId()}.${fileExt}`;
+    // Path structure: users/{user_id}/meals/unique_file_name.ext
+    const filePath = `users/${userId}/meals/${fileName}`;
+    try {
+      finalImageUrl = await uploadSupabaseFile('meal-photos', filePath, file);
+    } catch (uploadError) {
+       console.error("Error uploading meal photo, analysis will be saved without image URL:", uploadError);
+       // Continue to save analysis text data even if image upload fails
+    }
+  }
+  
+  const analysisDataToSave = {
     user_id: userId,
-    timestamp: analysis.timestamp,
-    image_url: analysis.imageUrl,
+    timestamp: analysis.timestamp, // Analysis request time
+    image_url: finalImageUrl, // Supabase Storage URL or undefined
     original_image_file_name: analysis.originalImageFileName,
     food_identification: analysis.foodIdentification,
     macronutrient_estimates: analysis.macronutrientEstimates,
     estimated_glucose_impact: analysis.estimatedGlucoseImpact,
     suggested_insulin_dose: analysis.suggestedInsulinDose,
     improvement_tips: analysis.improvementTips,
+    // created_at will be set by DB
   };
   
-  if (analysis.id) { // Update
+  let savedData;
+  if (analysis.id) { // Update (not typical for meal analysis, but possible)
     const { data, error } = await supabase
       .from('meal_analyses')
-      .update(analysisToSave)
+      .update(analysisDataToSave)
       .eq('id', analysis.id)
       .eq('user_id', userId)
       .select()
       .single();
     if (error) throw error;
-    return { ...analysisToSave, id: data.id, user_id: data.user_id, created_at: data.created_at, ...data } as unknown as MealAnalysis; // Remap after save
-  } else { // Insert
+    savedData = data;
+  } else { // Insert new
     const { data, error } = await supabase
       .from('meal_analyses')
-      .insert(analysisToSave)
+      .insert(analysisDataToSave)
       .select()
       .single();
     if (error) throw error;
-     return { ...analysisToSave, id: data.id, user_id: data.user_id, created_at: data.created_at, ...data } as unknown as MealAnalysis; // Remap after save
+    savedData = data;
   }
+  
+  return {
+    id: savedData.id,
+    user_id: savedData.user_id,
+    timestamp: savedData.timestamp,
+    imageUrl: savedData.image_url || undefined,
+    originalImageFileName: savedData.original_image_file_name || undefined,
+    foodIdentification: savedData.food_identification,
+    macronutrientEstimates: savedData.macronutrient_estimates as MealAnalysis['macronutrientEstimates'],
+    estimatedGlucoseImpact: savedData.estimated_glucose_impact,
+    suggestedInsulinDose: savedData.suggested_insulin_dose,
+    improvementTips: savedData.improvement_tips,
+    created_at: savedData.created_at,
+  };
 }
 
 export async function deleteMealAnalysis(id: string): Promise<void> {
   const userId = await getCurrentUserId();
+  
+  // Optional: Delete associated image from Supabase Storage
+  // To do this, you'd first fetch the mealAnalysis to get its imageUrl, parse the filePath, then delete.
+  // For simplicity, this is omitted here but important for a production app.
+  // Example:
+  // const { data: analysisToDelete, error: fetchError } = await supabase.from('meal_analyses').select('image_url').eq('id', id).eq('user_id', userId).single();
+  // if (analysisToDelete && analysisToDelete.image_url) {
+  //   const filePath = new URL(analysisToDelete.image_url).pathname.split('/meal-photos/').pop();
+  //   if (filePath) await supabase.storage.from('meal-photos').remove([filePath]);
+  // }
+
   const { error } = await supabase
     .from('meal_analyses')
     .delete()
@@ -295,12 +411,12 @@ export async function getReminders(): Promise<ReminderConfig[]> {
     .order('time', { ascending: true });
 
   if (error) throw error;
-  // Map from DB to app type
   return data.map(r => ({
     id: r.id,
+    user_id: r.user_id,
     type: r.type as ReminderConfig['type'],
     name: r.name,
-    time: r.time.substring(0,5), // Assuming DB stores HH:MM:SS, take HH:MM
+    time: r.time.substring(0,5), 
     days: r.days as ReminderConfig['days'],
     enabled: r.enabled,
     insulinType: r.insulin_type || undefined,
@@ -308,44 +424,43 @@ export async function getReminders(): Promise<ReminderConfig[]> {
     isSimulatedCall: r.is_simulated_call || undefined,
     simulatedCallContact: r.simulated_call_contact || undefined,
     customSound: r.custom_sound || undefined,
+    created_at: r.created_at,
   }));
 }
 
-export async function saveReminder(reminder: Omit<ReminderConfig, 'id'> & { id?: string }): Promise<ReminderConfig> {
+export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'created_at'>): Promise<ReminderConfig> {
   const userId = await getCurrentUserId();
-  // Map from app type to DB
   const reminderToSave = {
+    ...reminder, // Includes id if present (for update)
     user_id: userId,
-    type: reminder.type,
-    name: reminder.name,
     time: `${reminder.time}:00`, // Ensure HH:MM:SS for DB if 'time' type
-    days: reminder.days,
-    enabled: reminder.enabled,
-    insulin_type: reminder.insulinType,
-    insulin_dose: reminder.insulinDose,
-    is_simulated_call: reminder.isSimulatedCall,
-    simulated_call_contact: reminder.simulatedCallContact,
-    custom_sound: reminder.customSound,
+    insulin_type: reminder.insulinType || null,
+    insulin_dose: reminder.insulinDose || null,
+    is_simulated_call: reminder.isSimulatedCall || null,
+    simulated_call_contact: reminder.simulatedCallContact || null,
+    custom_sound: reminder.customSound || null,
   };
 
-  if (reminder.id) { // Update
+  if (reminder.id) { 
+    const { id, ...updateData } = reminderToSave;
     const { data, error } = await supabase
       .from('reminders')
-      .update(reminderToSave)
+      .update(updateData)
       .eq('id', reminder.id)
       .eq('user_id', userId)
       .select()
       .single();
     if (error) throw error;
-    return { ...reminder, id: data.id }; // Return the app type
-  } else { // Insert
+    // Map back to ReminderConfig type
+    return { ...reminder, id: data.id, time: data.time.substring(0,5), created_at: data.created_at, user_id: data.user_id };
+  } else { 
     const { data, error } = await supabase
       .from('reminders')
       .insert(reminderToSave)
       .select()
       .single();
     if (error) throw error;
-    return { ...reminder, id: data.id }; // Return the app type
+    return { ...reminder, id: data.id, time: data.time.substring(0,5), created_at: data.created_at, user_id: data.user_id };
   }
 }
 
@@ -358,7 +473,3 @@ export async function deleteReminder(id: string): Promise<void> {
     .eq('user_id', userId);
   if (error) throw error;
 }
-
-// Remove unused updateGlucoseReading and updateInsulinLog if save handles both insert/update
-// export async function updateGlucoseReading(updatedReading: GlucoseReading): Promise<void> {...}
-// export async function updateInsulinLog(updatedLog: InsulinLog): Promise<void> {...}

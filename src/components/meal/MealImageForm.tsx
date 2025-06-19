@@ -16,7 +16,7 @@ import { UploadCloud, Loader2, Camera } from 'lucide-react';
 import type { MealAnalysis, AnalyzeMealImageOutput } from '@/types';
 import { analyzeMealImage as analyzeMealImageFlow, type AnalyzeMealImageInput } from '@/ai/flows/analyze-meal-image';
 import { fileToDataUri } from '@/lib/utils';
-import { saveMealAnalysis } from '@/lib/storage'; // Now async and saves to Supabase
+import { saveMealAnalysis } from '@/lib/storage';
 
 const mealAnalysisSchema = z.object({
   mealPhoto: z.instanceof(File, { message: 'Por favor, selecione uma imagem da refeição.' })
@@ -61,37 +61,39 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
   
   const onSubmit = async (data: MealAnalysisFormData) => {
     setIsAnalyzing(true);
-    // Keep previewImage during analysis for better UX
-    // setPreviewImage(null); 
-
     try {
       const mealPhotoDataUri = await fileToDataUri(data.mealPhoto);
       
-      const input: AnalyzeMealImageInput = {
+      const aiInput: AnalyzeMealImageInput = {
         mealPhotoDataUri,
         userContext: data.userContext,
       };
 
-      const aiResult: AnalyzeMealImageOutput = await analyzeMealImageFlow(input);
+      const aiResult: AnalyzeMealImageOutput = await analyzeMealImageFlow(aiInput);
       
-      // Prepare data for saving, without 'id' for new entries
-      const analysisDataForStorage: Omit<MealAnalysis, 'id'> = {
-        timestamp: new Date().toISOString(),
-        imageUrl: mealPhotoDataUri, 
+      // Prepare data for saving, including the raw File object for Supabase Storage
+      const analysisDataForStorage: Omit<MealAnalysis, 'id' | 'imageUrl' | 'user_id' | 'created_at'> & { mealPhotoFile: File } = {
+        timestamp: new Date().toISOString(), // Timestamp of the analysis request
         originalImageFileName: data.mealPhoto.name,
-        ...aiResult,
+        foodIdentification: aiResult.foodIdentification,
+        macronutrientEstimates: aiResult.macronutrientEstimates,
+        estimatedGlucoseImpact: aiResult.estimatedGlucoseImpact,
+        suggestedInsulinDose: aiResult.suggestedInsulinDose,
+        improvementTips: aiResult.improvementTips,
+        mealPhotoFile: data.mealPhoto, // Pass the actual file
       };
       
-      const savedAnalysis = await saveMealAnalysis(analysisDataForStorage); // saveMealAnalysis now returns the saved object with an ID
+      // saveMealAnalysis will handle uploading mealPhotoFile to Supabase Storage and use its public URL
+      const savedAnalysis = await saveMealAnalysis(analysisDataForStorage); 
       
-      onAnalysisComplete(savedAnalysis); // Pass the complete analysis with ID from DB
+      onAnalysisComplete(savedAnalysis); // Pass the complete analysis with Supabase Storage URL
 
       toast({
         title: 'Análise Concluída!',
-        description: 'Sua refeição foi analisada com sucesso.',
+        description: 'Sua refeição foi analisada e salva com sucesso.',
       });
       form.reset();
-      setPreviewImage(null); // Clear preview after successful submission
+      setPreviewImage(null); 
 
     } catch (error: any) {
       console.error('Meal analysis error:', error);
@@ -114,7 +116,7 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
               <Camera className="mr-2 h-7 w-7" /> Analisar Refeição com IA
             </CardTitle>
             <CardDescription>
-              Tire uma foto da sua refeição e nossa IA fornecerá uma estimativa de macronutrientes, impacto glicêmico e mais.
+              Tire uma foto da sua refeição e nossa IA fornecerá uma estimativa de macronutrientes, impacto glicêmico e mais. A foto será salva no seu histórico.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -138,7 +140,7 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
                             className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 hover:text-primary/80"
                           >
                             <span>Carregar um arquivo</span>
-                            <input id="mealPhoto" name="mealPhoto" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} disabled={isAnalyzing} />
+                            <input id="mealPhoto" name="mealPhoto" type="file" className="sr-only" accept="image/png, image/jpeg, image/webp, image/gif" onChange={handleFileChange} disabled={isAnalyzing} />
                           </label>
                           <p className="pl-1">ou arraste e solte</p>
                         </div>
@@ -176,14 +178,14 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full text-lg py-6" disabled={isAnalyzing || !form.formState.isValid}>
+            <Button type="submit" className="w-full text-lg py-6" disabled={isAnalyzing || !form.formState.isValid || !previewImage}>
               {isAnalyzing ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Analisando...
                 </>
               ) : (
-                'Analisar Refeição'
+                'Analisar Refeição e Salvar'
               )}
             </Button>
           </CardFooter>
@@ -192,3 +194,4 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
     </Card>
   );
 }
+

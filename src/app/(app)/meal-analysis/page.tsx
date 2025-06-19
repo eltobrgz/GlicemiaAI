@@ -1,15 +1,15 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
 import MealImageForm from '@/components/meal/MealImageForm';
 import MealAnalysisDisplay from '@/components/meal/MealAnalysisDisplay';
 import type { MealAnalysis } from '@/types';
-import { getMealAnalyses, deleteMealAnalysis, saveMealAnalysis } from '@/lib/storage'; // save is async now
+import { getMealAnalyses, deleteMealAnalysis } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
-import { Trash2, RotateCcw, Loader2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Trash2, RotateCcw, Loader2, Album } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import { formatDateTime } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -21,31 +21,34 @@ export default function MealAnalysisPage() {
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  const fetchAnalyses = async () => {
+  const fetchAnalyses = useCallback(async () => {
     setIsLoading(true);
     try {
       const analyses = await getMealAnalyses();
       setPastAnalyses(analyses);
     } catch (error: any) {
-      toast({ title: "Erro ao buscar análises", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao buscar histórico de análises", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchAnalyses();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchAnalyses]);
 
-  const handleAnalysisComplete = async (analysisResult: MealAnalysis) => {
-    // The MealImageForm now handles saving to Supabase via saveMealAnalysis from storage.ts
+  const handleAnalysisComplete = useCallback(async (analysisResult: MealAnalysis) => {
+    // MealImageForm now handles saving to Supabase (including image upload) via saveMealAnalysis from storage.ts
+    // and returns the complete MealAnalysis object with the Supabase Storage URL.
     setCurrentAnalysis(analysisResult);
-    // Prepend to local state for immediate UI update, then refetch for consistency
+    // Prepend to local state for immediate UI update.
+    // fetchAnalyses will be called again if needed or to ensure consistency.
     setPastAnalyses(prev => [analysisResult, ...prev.filter(p => p.id !== analysisResult.id)]);
     setShowForm(false);
-    await fetchAnalyses(); // Refetch to ensure data consistency
-  };
+    // Optionally, call fetchAnalyses() again if you want to ensure the list is exactly from DB
+    // but for UX, prepend and then rely on next full fetch is often good.
+    // await fetchAnalyses(); // This would re-fetch everything
+  }, []);
 
   const handleShowNewAnalysisForm = () => {
     setCurrentAnalysis(null);
@@ -53,6 +56,8 @@ export default function MealAnalysisPage() {
   };
 
   const handleDeleteAnalysis = async (id: string) => {
+    // Consider also deleting the image from Supabase Storage if needed
+    // This logic would be in deleteMealAnalysis in storage.ts or here.
     try {
       await deleteMealAnalysis(id);
       toast({ title: "Análise apagada" });
@@ -75,7 +80,7 @@ export default function MealAnalysisPage() {
     <div className="space-y-8">
       <PageHeader
         title="Análise de Refeições com IA"
-        description="Use a inteligência artificial para entender melhor suas refeições e seu impacto glicêmico."
+        description="Use a inteligência artificial para entender melhor suas refeições e seu impacto glicêmico. As fotos são salvas no seu histórico."
       >
         {!showForm && (
           <Button onClick={handleShowNewAnalysisForm} variant="outline">
@@ -107,46 +112,51 @@ export default function MealAnalysisPage() {
       {!isLoading && pastAnalyses.length > 0 && (
         <Card className="mt-12 shadow-lg">
           <CardHeader>
-            <CardTitle className="font-headline">Histórico de Análises</CardTitle>
-            <CardDescription>Veja suas análises de refeições anteriores.</CardDescription>
+            <CardTitle className="font-headline flex items-center"><Album className="mr-2 h-6 w-6 text-primary" />Histórico de Análises</CardTitle>
+            <CardDescription>Veja suas análises de refeições anteriores. As imagens são carregadas do seu armazenamento seguro.</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {pastAnalyses.map((analysis) => (
-              <div key={analysis.id} className="p-4 border rounded-lg flex items-start justify-between gap-4 hover:bg-muted/50 transition-colors">
-                <div className="flex items-start gap-4">
-                  {analysis.imageUrl && (
+              <Card key={analysis.id} className="overflow-hidden hover:shadow-xl transition-shadow duration-200 ease-in-out flex flex-col">
+                <CardHeader className="p-4">
+                   {analysis.imageUrl ? (
                      <Image 
                         src={analysis.imageUrl} 
-                        alt={analysis.foodIdentification.substring(0,30)} 
-                        width={80} 
-                        height={80} 
-                        className="rounded-md object-cover aspect-square"
+                        alt={analysis.foodIdentification.substring(0,50) || 'Imagem da refeição'} 
+                        width={300} 
+                        height={200} 
+                        className="rounded-md object-cover aspect-video w-full"
                         data-ai-hint="food plate"
                       />
+                  ) : (
+                    <div className="aspect-video w-full bg-muted rounded-md flex items-center justify-center" data-ai-hint="placeholder food">
+                      <Camera className="h-12 w-12 text-muted-foreground" />
+                    </div>
                   )}
-                  <div>
-                    <h3 className="font-semibold text-primary">{analysis.foodIdentification.substring(0, 50)}{analysis.foodIdentification.length > 50 ? '...' : ''}</h3>
-                    <p className="text-xs text-muted-foreground">Analisado em: {formatDateTime(analysis.timestamp)}</p>
-                    <p className="text-sm mt-1">Carbs: {analysis.macronutrientEstimates.carbohydrates.toFixed(0)}g, Prot: {analysis.macronutrientEstimates.protein.toFixed(0)}g, Fat: {analysis.macronutrientEstimates.fat.toFixed(0)}g</p>
-                  </div>
-                </div>
-                <div className="flex flex-col sm:flex-row gap-2 items-center">
-                   <Button onClick={() => handleViewPastAnalysis(analysis)} variant="outline" size="sm">
+                </CardHeader>
+                <CardContent className="p-4 flex-grow">
+                  <h3 className="font-semibold text-primary truncate" title={analysis.foodIdentification}>{analysis.foodIdentification.substring(0, 40)}{analysis.foodIdentification.length > 40 ? '...' : ''}</h3>
+                  <p className="text-xs text-muted-foreground">Analisado em: {formatDateTime(analysis.timestamp)}</p>
+                  <p className="text-sm mt-1">Carbs: {analysis.macronutrientEstimates.carbohydrates.toFixed(0)}g, Prot: {analysis.macronutrientEstimates.protein.toFixed(0)}g, Fat: {analysis.macronutrientEstimates.fat.toFixed(0)}g</p>
+                </CardContent>
+                <CardFooter className="p-4 border-t flex items-center justify-between gap-2">
+                   <Button onClick={() => handleViewPastAnalysis(analysis)} variant="outline" size="sm" className="flex-1">
                     Ver Detalhes
                   </Button>
-                  <Button onClick={() => handleDeleteAnalysis(analysis.id)} variant="ghost" size="icon" className="text-destructive hover:text-destructive/80">
+                  <Button onClick={() => handleDeleteAnalysis(analysis.id)} variant="ghost" size="icon" className="text-destructive hover:text-destructive/80 shrink-0">
                     <Trash2 className="h-4 w-4" />
                     <span className="sr-only">Apagar</span>
                   </Button>
-                </div>
-              </div>
+                </CardFooter>
+              </Card>
             ))}
           </CardContent>
         </Card>
       )}
        {!isLoading && pastAnalyses.length === 0 && !showForm && !currentAnalysis &&(
-         <p className="text-center text-muted-foreground py-10">Nenhuma análise de refeição encontrada.</p>
+         <p className="text-center text-muted-foreground py-10">Nenhuma análise de refeição encontrada no histórico.</p>
        )}
     </div>
   );
 }
+
