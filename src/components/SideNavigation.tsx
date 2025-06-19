@@ -51,25 +51,22 @@ export function SideNavigation() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href} passHref legacyBehavior={false}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))}
-                  className={cn(
-                    "justify-start w-full",
-                    (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))) 
-                      ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                      : "hover:bg-accent/10 hover:text-accent-foreground"
-                  )}
-                  tooltip={{ children: item.label, side: 'right', align: 'center' }}
-                >
-                  {/* The <a> tag is rendered by the Link component itself when legacyBehavior is false */}
-                  <> 
-                    <item.icon className="h-5 w-5" />
-                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                  </>
-                </SidebarMenuButton>
-              </Link>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))}
+                className={cn(
+                  "justify-start w-full",
+                  (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))) 
+                    ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                    : "hover:bg-accent/10 hover:text-accent-foreground"
+                )}
+                tooltip={{ children: item.label, side: 'right', align: 'center' }}
+              >
+                <Link href={item.href}>
+                  <item.icon className="h-5 w-5" />
+                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -81,19 +78,17 @@ export function SideNavigation() {
             <SidebarMenu>
               {bottomNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                   <Link href={item.href} passHref legacyBehavior={false}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={pathname === item.href}
-                      className="justify-start w-full"
-                      tooltip={{ children: item.label, side: 'right', align: 'center' }}
-                    >
-                      <>
-                        <item.icon className="h-5 w-5" />
-                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                      </>
-                    </SidebarMenuButton>
-                  </Link>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    className="justify-start w-full"
+                    tooltip={{ children: item.label, side: 'right', align: 'center' }}
+                  >
+                    <Link href={item.href}>
+                      <item.icon className="h-5 w-5" />
+                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                    </Link>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
