@@ -1,0 +1,255 @@
+
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import type { DateRange } from 'react-day-picker';
+import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, differenceInDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+import { CalendarIcon, Loader2, FileSearch } from 'lucide-react';
+import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile } from '@/lib/storage';
+import ReportView, { type ReportData } from '@/components/reports/ReportView';
+import { useToast } from '@/hooks/use-toast';
+import { GLUCOSE_THRESHOLDS } from '@/config/constants';
+
+type PeriodOption = 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'custom';
+
+const periodOptions: { value: PeriodOption; label: string }[] = [
+  { value: 'last7', label: 'Últimos 7 dias' },
+  { value: 'last30', label: 'Últimos 30 dias' },
+  { value: 'thisMonth', label: 'Este Mês' },
+  { value: 'lastMonth', label: 'Mês Anterior' },
+  { value: 'custom', label: 'Personalizado' },
+];
+
+export default function ReportGenerator() {
+  const [selectedPeriod, setSelectedPeriod] = useState<PeriodOption>('last7');
+  const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
+  const [reportData, setReportData] = useState<ReportData | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        toast({ title: 'Erro ao carregar perfil', description: 'Não foi possível carregar dados do perfil para os relatórios.', variant: 'destructive' });
+      }
+    };
+    fetchProfile();
+  }, [toast]);
+
+  const calculateDateRange = useCallback((): DateRange | undefined => {
+    const today = new Date();
+    switch (selectedPeriod) {
+      case 'last7':
+        return { from: subDays(today, 6), to: today };
+      case 'last30':
+        return { from: subDays(today, 29), to: today };
+      case 'thisMonth':
+        return { from: startOfMonth(today), to: endOfMonth(today) };
+      case 'lastMonth':
+        const lastMonthStart = startOfMonth(subDays(today, today.getDate() + 1)); // Go to end of prev month, then start
+        return { from: lastMonthStart, to: endOfMonth(lastMonthStart) };
+      case 'custom':
+        return customDateRange;
+      default:
+        return undefined;
+    }
+  }, [selectedPeriod, customDateRange]);
+
+
+  const handleGenerateReport = async () => {
+    const range = calculateDateRange();
+    if (!range?.from || !range?.to) {
+      toast({ title: 'Período Inválido', description: 'Por favor, selecione um período válido.', variant: 'destructive' });
+      return;
+    }
+    if (!userProfile) {
+      toast({ title: 'Perfil não carregado', description: 'Aguarde o carregamento do perfil do usuário.', variant: 'destructive' });
+      return;
+    }
+
+    setIsLoading(true);
+    setReportData(null);
+
+    try {
+      const [allGlucoseReadings, allInsulinLogs] = await Promise.all([
+        getGlucoseReadings(userProfile),
+        getInsulinLogs(),
+      ]);
+
+      const filteredGlucose = allGlucoseReadings.filter(r => {
+        const rDate = parseISO(r.timestamp);
+        return rDate >= range.from! && rDate <= range.to!;
+      });
+      const filteredInsulin = allInsulinLogs.filter(l => {
+        const lDate = parseISO(l.timestamp);
+        return lDate >= range.from! && lDate <= range.to!;
+      });
+
+      // Calculations
+      let averageGlucose: number | null = null;
+      let minGlucose: { value: number; timestamp: string } | null = null;
+      let maxGlucose: { value: number; timestamp: string } | null = null;
+      let stdDevGlucose: number | null = null;
+      let timeInTargetPercent: number | null = null;
+      let timeBelowTargetPercent: number | null = null;
+      let timeAboveTargetPercent: number | null = null;
+      let countHypo = 0;
+      let countNormal = 0;
+      let countHigh = 0;
+      let countVeryHigh = 0;
+
+      if (filteredGlucose.length > 0) {
+        const sum = filteredGlucose.reduce((acc, r) => acc + r.value, 0);
+        averageGlucose = sum / filteredGlucose.length;
+
+        minGlucose = filteredGlucose.reduce((min, r) => (r.value < min.value ? r : min), filteredGlucose[0]);
+        maxGlucose = filteredGlucose.reduce((max, r) => (r.value > max.value ? r : max), filteredGlucose[0]);
+        
+        if (filteredGlucose.length > 1) {
+          const mean = averageGlucose;
+          const variance = filteredGlucose.reduce((acc, r) => acc + Math.pow(r.value - mean, 2), 0) / (filteredGlucose.length -1); // sample variance
+          stdDevGlucose = Math.sqrt(variance);
+        }
+
+
+        const tLow = userProfile.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low;
+        const tNormalMin = userProfile.target_glucose_low ?? GLUCOSE_THRESHOLDS.low;
+        const tNormalMax = userProfile.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax;
+        const tHigh = userProfile.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high;
+
+        filteredGlucose.forEach(r => {
+          if (r.value < tLow) countHypo++;
+          else if (r.value >= tNormalMin && r.value <= tNormalMax) countNormal++;
+          else if (r.value > tNormalMax && r.value <= tHigh) countHigh++;
+          else if (r.value > tHigh) countVeryHigh++;
+        });
+        
+        const totalInRange = countHypo + countNormal + countHigh + countVeryHigh;
+        if (totalInRange > 0) {
+            timeBelowTargetPercent = (countHypo / totalInRange) * 100;
+            timeInTargetPercent = (countNormal / totalInRange) * 100;
+            // Above target can be sum of high and very high for a general "above"
+            timeAboveTargetPercent = ((countHigh + countVeryHigh) / totalInRange) * 100;
+        }
+      }
+
+      let totalInsulin: number | null = null;
+      let averageDailyInsulin: number | null = null;
+      if (filteredInsulin.length > 0) {
+        totalInsulin = filteredInsulin.reduce((acc, log) => acc + log.dose, 0);
+        const numberOfDays = differenceInDays(range.to!, range.from!) + 1;
+        averageDailyInsulin = totalInsulin / numberOfDays;
+      }
+      
+      setReportData({
+        period: { start: range.from, end: range.to },
+        glucoseReadings: filteredGlucose,
+        insulinLogs: filteredInsulin,
+        userProfile,
+        summary: {
+          averageGlucose,
+          minGlucose,
+          maxGlucose,
+          stdDevGlucose,
+          timeInTargetPercent,
+          timeBelowTargetPercent,
+          timeAboveTargetPercent,
+          countHypo,
+          countNormal,
+          countHigh,
+          countVeryHigh,
+          totalInsulin,
+          averageDailyInsulin,
+          insulinApplications: filteredInsulin.length,
+        },
+      });
+
+    } catch (error) {
+      console.error("Error generating report:", error);
+      toast({ title: 'Erro ao Gerar Relatório', description: 'Não foi possível processar os dados para o relatório.', variant: 'destructive' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return (
+    <Card className="shadow-xl">
+      <CardHeader>
+        <CardTitle className="text-xl font-headline text-primary">Configurar Relatório</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as PeriodOption)}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="Selecionar Período" />
+            </SelectTrigger>
+            <SelectContent>
+              {periodOptions.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {selectedPeriod === 'custom' && (
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto justify-start text-left font-normal"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {customDateRange?.from ? (
+                    customDateRange.to ? (
+                      `${format(customDateRange.from, 'dd/MM/yy', { locale: ptBR })} - ${format(customDateRange.to, 'dd/MM/yy', { locale: ptBR })}`
+                    ) : (
+                      format(customDateRange.from, 'dd/MM/yy', { locale: ptBR })
+                    )
+                  ) : (
+                    <span>Escolha as datas</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={customDateRange}
+                  onSelect={setCustomDateRange}
+                  initialFocus
+                  locale={ptBR}
+                  numberOfMonths={2}
+                  disabled={(date) => date > new Date() || date < new Date("2000-01-01")}
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+        </div>
+        <Button onClick={handleGenerateReport} disabled={isLoading || !userProfile} className="w-full sm:w-auto">
+          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSearch className="mr-2 h-4 w-4" />}
+          {isLoading ? 'Gerando...' : 'Gerar Relatório'}
+        </Button>
+      </CardContent>
+
+      {isLoading && (
+        <div className="p-6 flex justify-center items-center min-h-[200px]">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="ml-3 text-muted-foreground">Processando dados do relatório...</p>
+        </div>
+      )}
+      
+      {reportData && !isLoading && (
+        <ReportView data={reportData} />
+      )}
+    </Card>
+  );
+}

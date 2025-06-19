@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -141,10 +142,19 @@ const ChartTooltipContent = React.forwardRef<
       const [item] = payload
       const key = `${labelKey || item.dataKey || item.name || "value"}`
       const itemConfig = getPayloadConfigFromPayload(config, item, key)
-      const value =
+      let value =
         !labelKey && typeof label === "string"
           ? config[label as keyof typeof config]?.label || label
           : itemConfig?.label
+
+      // If label is a date, format it
+      if (label instanceof Date) {
+         value = format(label, "PP p", { locale: ptBR }); // Example: "Aug 21, 2024 10:30 AM"
+      } else if (payload[0]?.payload?.date && typeof payload[0]?.payload?.date === 'string' && !labelFormatter) {
+        // Special handling for date in payload if not formatted by labelFormatter
+        value = payload[0].payload.date; // Assuming date is already formatted as dd/MM
+      }
+
 
       if (labelFormatter) {
         return (
@@ -192,7 +202,7 @@ const ChartTooltipContent = React.forwardRef<
 
             return (
               <div
-                key={item.dataKey}
+                key={item.dataKey || item.name || index} // Ensure unique key
                 className={cn(
                   "flex w-full flex-wrap items-stretch gap-2 [&>svg]:h-2.5 [&>svg]:w-2.5 [&>svg]:text-muted-foreground",
                   indicator === "dot" && "items-center"
@@ -238,7 +248,7 @@ const ChartTooltipContent = React.forwardRef<
                           {itemConfig?.label || item.name}
                         </span>
                       </div>
-                      {item.value && (
+                      {item.value !== undefined && item.value !== null && ( // Check for undefined and null
                         <span className="font-mono font-medium tabular-nums text-foreground">
                           {item.value.toLocaleString()}
                         </span>
@@ -306,7 +316,7 @@ const ChartLegendContent = React.forwardRef<
                   }}
                 />
               )}
-              {itemConfig?.label}
+              {itemConfig?.label || item.value}
             </div>
           )
         })}

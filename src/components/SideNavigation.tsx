@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText } from 'lucide-react'; // FileText Adicionado
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
@@ -25,6 +25,7 @@ const navItems = [
   { href: '/log/activity', label: 'Registrar Atividade', icon: Bike },
   { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
   { href: '/calendar', label: 'Calendário', icon: CalendarDays },
+  { href: '/reports', label: 'Relatórios', icon: FileText }, // Adicionado
   { href: '/profile', label: 'Meu Perfil', icon: User },
   { href: '/reminders', label: 'Lembretes', icon: BellRing },
   { href: '/insights', label: 'Insights IA', icon: BarChart3 },
@@ -53,7 +54,7 @@ export function SideNavigation() {
         description: "Você foi desconectado com sucesso.",
       });
       router.push('/login');
-      router.refresh(); // Important to update auth state across app
+      router.refresh(); 
     }
   };
 
