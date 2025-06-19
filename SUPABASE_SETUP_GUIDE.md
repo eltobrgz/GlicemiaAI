@@ -87,7 +87,7 @@ BEGIN
     new.email,
     new.raw_user_meta_data->>'full_name', -- Captura o nome dos metadados
     new.raw_user_meta_data->>'avatar_url', -- Captura avatar_url dos metadados, se houver
-    'pt-BR' -- Define o idioma padrão para novos usuários
+    new.raw_user_meta_data->>'language_preference' -- Captura preferência de idioma dos metadados, se houver
   );
   RETURN new;
 END;
@@ -177,8 +177,8 @@ CREATE POLICY "Users can manage their own reminders." ON public.reminders
 **Importante sobre a Trigger `handle_new_user`**:
 Se você executar esta trigger:
 *   Ela criará automaticamente uma entrada na tabela `profiles` quando um novo usuário se cadastrar através do sistema de autenticação do Supabase.
-*   Ela espera que `full_name` (e opcionalmente `avatar_url`) seja passado no campo `options: { data: { full_name: 'Nome do Usuario' } }` durante a chamada de `supabase.auth.signUp()` no seu frontend. O código atual em `SignupForm.tsx` já faz isso para `full_name`.
-*   Ela definirá `language_preference` como 'pt-BR' por padrão para novos usuários.
+*   Ela espera que `full_name` (e opcionalmente `avatar_url` e `language_preference`) seja passado no campo `options: { data: { full_name: 'Nome do Usuario', language_preference: 'pt-BR' } }` durante a chamada de `supabase.auth.signUp()` no seu frontend. O código atual em `SignupForm.tsx` já faz isso para `full_name`.
+*   Ela tentará definir `language_preference` com base nos metadados, ou 'pt-BR' como padrão se não fornecido nos metadados.
 
 Se você não quiser usar a trigger, precisará garantir que um perfil seja criado manualmente ou através da lógica do seu app após o cadastro.
 
@@ -189,11 +189,11 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
 1.  No painel do seu projeto Supabase, vá para **Storage** (ícone de pasta).
 2.  Clique em "**New bucket**" para criar o primeiro bucket:
     *   **Bucket name**: `profile-pictures`
-    *   **Public bucket**: **NÃO MARQUE A OPÇÃO "Public bucket" AQUI**. Vamos configurar políticas de acesso mais granulares.
+    *   **Public bucket**: **NÃO MARQUE A OPÇÃO "Public bucket" AQUI INICIALMENTE**. Vamos configurar políticas de acesso mais granulares primeiro. Se as políticas RLS abaixo não resolverem o erro "Bucket not found" para URLs públicas, você pode tentar editar o bucket e marcar esta opção como "Public".
     *   Clique em "**Create bucket**".
 3.  Clique em "**New bucket**" novamente para criar o segundo bucket:
     *   **Bucket name**: `meal-photos`
-    *   **Public bucket**: **NÃO MARQUE A OPÇÃO "Public bucket" AQUI**.
+    *   **Public bucket**: **NÃO MARQUE A OPÇÃO "Public bucket" AQUI INICIALMENTE**. Siga a mesma lógica acima.
     *   Clique em "**Create bucket**".
 
 **Estrutura de Pastas Esperada no Storage:**
@@ -204,7 +204,7 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
 
 ### Configurar Políticas de Storage
 
-**MUITO IMPORTANTE:** Para que as imagens possam ser exibidas na sua aplicação, você PRECISA configurar políticas que permitam a LEITURA (SELECT) pública dos objetos nesses buckets.
+**MUITO IMPORTANTE:** Para que as imagens possam ser exibidas na sua aplicação através das URLs `/object/public/...`, você PRECISA configurar políticas que permitam a LEITURA (SELECT) pública dos objetos nesses buckets.
 
 #### Opção A: Configurar Políticas de Storage via Interface do Supabase
 
@@ -216,9 +216,8 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
         *   **Policy name**: `Public Read Access for Profile Pictures` (ou similar)
         *   **Allowed operations**: Marque **APENAS `SELECT`**.
         *   **Target roles**: Marque `anon` E `authenticated`. (Permite que qualquer um veja as fotos, o que é comum para avatares).
-        *   **Policy definition (USING expression)**: `true` (ou, para ser mais específico ao bucket `(bucket_id = 'profile-pictures')`)
+        *   **Policy definition (USING expression)**: `(bucket_id = 'profile-pictures')`
         *   Clique em "**Review**" e "**Save policy**".
-        *   **Observação:** Esta política torna todas as fotos de perfil publicamente legíveis. Se você precisar de controle mais granular, a política precisaria ser mais específica, mas para a maioria dos casos de avatares, a leitura pública é aceitável.
 
     *   **Política 2: Usuários Gerenciam Suas Próprias Fotos de Perfil (INSERT, UPDATE, DELETE)**
         *   **Policy name**: `Users can manage their own profile pictures` (ou similar)
@@ -234,7 +233,7 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
         *   **Policy name**: `Public Read Access for Meal Photos` (ou similar)
         *   **Allowed operations**: Marque **APENAS `SELECT`**.
         *   **Target roles**: Marque `anon` E `authenticated`.
-        *   **Policy definition (USING expression)**: `true` (ou, para ser mais específico ao bucket `(bucket_id = 'meal-photos')`)
+        *   **Policy definition (USING expression)**: `(bucket_id = 'meal-photos')`
 
     *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)**
         *   **Policy name**: `Users can upload their own meal photos` (ou similar)
@@ -256,7 +255,7 @@ Se preferir, você pode criar as políticas de storage usando o SQL Editor. Vá 
 -- Políticas para o bucket 'profile-pictures'
 
 -- 1. Permite que qualquer pessoa leia (SELECT) fotos de perfil (ESSENCIAL PARA EXIBIÇÃO)
--- SE ESTA POLÍTICA NÃO EXISTIR OU ESTIVER INCORRETA, AS IMAGENS NÃO SERÃO EXIBIDAS
+-- SE ESTA POLÍTICA NÃO EXISTIR OU ESTIVER INCORRETA, AS IMAGENS NÃO SERÃO EXIBIDAS VIA URL PÚBLICA
 CREATE POLICY "Public Read Access for Profile Pictures"
 ON storage.objects FOR SELECT
 TO anon, authenticated  -- IMPORTANTE: Incluir 'anon' e 'authenticated'
@@ -297,7 +296,7 @@ USING (
 -- Políticas para o bucket 'meal-photos'
 
 -- 1. Permite que qualquer pessoa leia (SELECT) fotos de refeições (ESSENCIAL PARA EXIBIÇÃO)
--- SE ESTA POLÍTICA NÃO EXISTIR OU ESTIVER INCORRETA, AS IMAGENS NÃO SERÃO EXIBIDAS
+-- SE ESTA POLÍTICA NÃO EXISTIR OU ESTIVER INCORRETA, AS IMAGENS NÃO SERÃO EXIBIDAS VIA URL PÚBLICA
 CREATE POLICY "Public Read Access for Meal Photos"
 ON storage.objects FOR SELECT
 TO anon, authenticated -- IMPORTANTE: Incluir 'anon' e 'authenticated'
@@ -323,7 +322,7 @@ USING (
 ```
 **Nota sobre `(storage.foldername(name))[2]`**: Esta função extrai o nome da segunda pasta no caminho do arquivo. A aplicação está configurada para salvar arquivos em `users/{user_id}/...`, então `(storage.foldername(name))[1]` seria "users" e `(storage.foldername(name))[2]` seria o ID do usuário.
 
-**SEM AS POLÍTICAS DE LEITURA PÚBLICA (`SELECT` PARA `anon, authenticated` COM `USING (bucket_id = 'NOME_DO_BUCKET')`), AS IMAGENS NÃO SERÃO EXIBIDAS NO SEU APLICATIVO E VOCÊ PODERÁ RECEBER ERROS COMO "Bucket not found" AO TENTAR ACESSAR AS URLs PÚBLICAS!**
+**SEM AS POLÍTICAS DE LEITURA PÚBLICA (`SELECT` PARA `anon, authenticated` COM `USING (bucket_id = 'NOME_DO_BUCKET')`), AS IMAGENS NÃO SERÃO EXIBIDAS NO SEU APLICATIVO ATRAVÉS DAS URLs `/object/public/...` E VOCÊ PODERÁ RECEBER ERROS COMO "Bucket not found" OU 403/404 AO TENTAR ACESSAR AS URLs PÚBLICAS DIRETAMENTE NO NAVEGADOR!**
 
 ## Passo 6: Configurações de Autenticação no Supabase
 
@@ -370,20 +369,20 @@ pnpm dev
     *   Verifique se os valores das chaves estão corretos e não contêm erros de digitação.
     *   **REINICIE O SERVIDOR NEXT.JS.**
 *   **Erros de Permissão (RLS nas tabelas)**: Se você receber erros indicando que não tem permissão para acessar ou modificar dados nas tabelas do Supabase, verifique suas políticas de RLS nas tabelas.
-*   **IMAGENS NÃO APARECEM ou ERRO "Bucket not found" ao acessar URL pública**:
-    *   **Causa mais provável: Políticas de Storage INCORRETAS ou AUSENTES para LEITURA PÚBLICA.**
-        *   Acesse o painel do Supabase -> Storage -> Clique no bucket (`profile-pictures` ou `meal-photos`) -> Policies.
-        *   **GARANTA** que existe uma política para a operação `SELECT` que tenha `anon` E `authenticated` como "Target roles".
-        *   Para esta política de `SELECT` público, a "Policy definition (USING expression)" DEVE ser `true` ou, mais especificamente, `(bucket_id = 'NOME_DO_BUCKET_CORRETO')`. Se estiver usando SQL, a cláusula `USING` deve ser `bucket_id = 'NOME_DO_BUCKET_CORRETO'`.
-        *   **Se essa política de leitura pública estiver faltando ou mal configurada, as URLs públicas retornarão "Bucket not found" ou acesso negado, e as imagens não carregarão no app.** Revise o Passo 5 cuidadosamente.
-    *   **Verifique `next.config.ts`**: Confirme que o hostname do seu projeto Supabase (ex: `SEU_ID_DE_PROJETO.supabase.co`) está listado em `images.remotePatterns` e é o correto. **Reinicie o servidor Next.js após qualquer alteração.**
+*   **IMAGENS NÃO APARECEM ou ERRO "Bucket not found" ao acessar URL pública DIRETAMENTE NO NAVEGADOR**:
+    *   **Causa mais provável: O bucket não está configurado como "Public" no Supabase OU as Políticas de Storage (RLS para `storage.objects`) para LEITURA PÚBLICA estão INCORRETAS ou AUSENTES.**
+        *   **Diagnóstico Primário:** Tente acessar a URL pública da imagem (ex: `https://[SEU_ID_DE_PROJETO].supabase.co/storage/v1/object/public/[NOME_DO_BUCKET]/caminho/para/imagem.jpg`) diretamente no seu navegador.
+        *   **Se você receber `{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}`:**
+            1.  **Verifique o nome do bucket e o ID do projeto na URL:** Certifique-se de que estão corretos.
+            2.  **Torne o Bucket "Public" (se as políticas RLS sozinhas não funcionarem):** No painel do Supabase, vá para Storage, selecione o bucket, clique nos três pontinhos (...), escolha "Edit bucket" e MARQUE a opção "This bucket is public". Salve e teste a URL pública novamente.
+            3.  **Se tornar o bucket "Public" funcionar, verifique suas políticas RLS de `SELECT`:** Mesmo com o bucket público, as políticas RLS em `storage.objects` (como `CREATE POLICY "Public Read Access for Meal Photos" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'meal-photos');`) são boas para garantir que `anon` e `authenticated` tenham permissão de leitura explícita. Certifique-se de que elas existem e estão corretas.
+    *   **Verifique `next.config.ts` (Após resolver o acesso direto à URL)**: Confirme que o hostname do seu projeto Supabase (ex: `rnblscpnhltqcgwsiobb.supabase.co`) está listado em `images.remotePatterns` e é o correto. **Reinicie o servidor Next.js após qualquer alteração.**
     *   **URLs no Banco de Dados**: As URLs na sua tabela (ex: `avatar_url` em `profiles` ou `image_url` em `meal_analyses`) devem ser as URLs públicas corretas do Supabase Storage, começando com `https://[SEU_ID_DE_PROJETO].supabase.co/storage/v1/object/public/[NOME_DO_BUCKET]/...`.
-    *   **Console do Navegador**: Verifique o console do navegador por erros de rede (403 Forbidden, 404 Not Found) ao tentar carregar as imagens. Um erro 403 geralmente indica um problema de permissão no Storage. Um 404 pode ser "Bucket not found" (problema de política de leitura pública do bucket) ou "Object not found" (caminho do arquivo incorreto dentro do bucket).
-    *   **Tente acessar a URL da imagem diretamente no navegador.** Se ela não abrir ou der erro, o problema é na configuração do Supabase Storage ou na própria URL, não no código do Next.js.
+    *   **Console do Navegador**: Verifique o console do navegador por erros de rede (403 Forbidden, 404 Not Found) ao tentar carregar as imagens no seu aplicativo.
 *   **Erro "fetch failed" ou de rede**: Verifique se a "Project URL" do Supabase está correta no seu `.env.local` e se seu projeto Supabase está ativo e acessível.
 *   **Upload para Storage Falha**:
     *   Verifique se o nome do bucket está correto no código.
-    *   Verifique as políticas do bucket (seja via UI ou SQL) para operações de `INSERT`, `UPDATE`, `DELETE` (estas são diferentes das políticas de leitura pública).
+    *   Verifique as políticas do bucket (seja via UI ou SQL) para operações de `INSERT`, `UPDATE`, `DELETE`.
     *   Verifique o tamanho do arquivo e os tipos permitidos (se configurado).
     *   Confirme que a estrutura de pastas (`users/UID_DO_USUARIO/...`) está sendo respeitada pelo código de upload e que as políticas de escrita correspondem a essa estrutura.
 *   **Erro da IA (`FAILED_PRECONDITION` para Gemini)**:
@@ -391,5 +390,5 @@ pnpm dev
     *   Verifique se a chave de API do Gemini é válida e tem as permissões necessárias no Google Cloud Project associado.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente à sua aplicação GlicemiaAI, incluindo o uso do Storage! Se tiver mais dúvidas ou problemas, me diga.
-
+Se você marcou o bucket como "Public" na UI do Supabase e as URLs `/object/public/...` começaram a funcionar no navegador, mas as imagens ainda não aparecem no app Next.js, o problema pode estar no cache do Next.js ou um detalhe na configuração `next.config.js`. Certifique-se de reiniciar o servidor Next.js vigorosamente.
 ```
