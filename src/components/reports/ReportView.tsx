@@ -8,8 +8,8 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info } from 'lucide-react'; // Corrigido aqui
-import { getGlucoseLevelColor } from '@/lib/utils'; // Para consistência de cores
+import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info } from 'lucide-react';
+import { getGlucoseLevelColor } from '@/lib/utils'; 
 
 export interface ReportData {
   period: { start: Date; end: Date };
@@ -38,7 +38,7 @@ interface ReportViewProps {
   data: ReportData;
 }
 
-const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']; // Azul (Abaixo), Verde (Alvo), Amarelo (Acima), Laranja/Vermelho (Muito Acima)
+const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']; 
 
 const SummaryCard: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; icon?: React.ElementType; iconColor?: string }> = ({ title, value, unit, description, icon: Icon, iconColor }) => (
   <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -69,7 +69,7 @@ export default function ReportView({ data }: ReportViewProps) {
         date: format(day, 'dd/MM', { locale: ptBR }),
         glicemia: avg !== null ? parseFloat(avg.toFixed(1)) : null,
       };
-    }).filter(d => d.glicemia !== null); // Remove dias sem leituras para o gráfico de linha não quebrar
+    }).filter(d => d.glicemia !== null); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [glucoseReadings, period.start, period.end]);
 
@@ -79,7 +79,6 @@ export default function ReportView({ data }: ReportViewProps) {
       { name: 'Abaixo do Alvo', value: summary.timeBelowTargetPercent ?? 0, fill: COLORS_PIE[0] },
       { name: 'No Alvo', value: summary.timeInTargetPercent ?? 0, fill: COLORS_PIE[1] },
       { name: 'Acima do Alvo', value: summary.timeAboveTargetPercent ?? 0, fill: COLORS_PIE[2] },
-      // Poderia adicionar "Muito Acima" se os dados permitirem distinção clara e desejada
     ].filter(item => item.value > 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [summary.timeBelowTargetPercent, summary.timeInTargetPercent, summary.timeAboveTargetPercent]);
@@ -100,15 +99,15 @@ export default function ReportView({ data }: ReportViewProps) {
       const totalDose = logsForDay.reduce((sum, log) => sum + log.dose, 0);
       return {
         date: format(day, 'dd/MM', { locale: ptBR }),
-        dose: totalDose > 0 ? parseFloat(totalDose.toFixed(1)) : null, // null se nenhuma dose no dia
+        dose: totalDose > 0 ? parseFloat(totalDose.toFixed(1)) : null, 
       };
-    }).filter(d => d.dose !== null); // Remove dias sem logs para o gráfico de barras não mostrar 0 desnecessariamente
+    }).filter(d => d.dose !== null); 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insulinLogs, period.start, period.end]);
 
 
   return (
-    <div className="space-y-6 p-4 sm:p-6">
+    <div className="space-y-6 p-4 sm:p-6 bg-background text-foreground"> {/* Added bg-background and text-foreground for PDF export consistency */}
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary">
@@ -141,7 +140,7 @@ export default function ReportView({ data }: ReportViewProps) {
           <CardHeader>
             <CardTitle className="flex items-center"><BarChartBig className="mr-2 h-5 w-5 text-primary" />Tendência da Glicemia (Média Diária)</CardTitle>
           </CardHeader>
-          <CardContent className="h-[350px] pr-6">
+          <CardContent className="h-[350px] pr-6 recharts-responsive-container">
             <ChartContainer config={glucoseChartConfig} className="w-full h-full">
               <LineChart data={glucoseTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -166,7 +165,7 @@ export default function ReportView({ data }: ReportViewProps) {
           <CardHeader>
             <CardTitle className="flex items-center"><PieChartIcon className="mr-2 h-5 w-5 text-primary" />Distribuição do Tempo nos Alvos Glicêmicos</CardTitle>
           </CardHeader>
-          <CardContent className="h-[350px] flex justify-center items-center">
+          <CardContent className="h-[350px] flex justify-center items-center recharts-responsive-container">
             <ChartContainer config={{}} className="w-full max-w-md h-full">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -201,7 +200,7 @@ export default function ReportView({ data }: ReportViewProps) {
           <CardHeader>
             <CardTitle className="flex items-center"><Syringe className="mr-2 h-5 w-5 text-accent" />Dose Total de Insulina Diária</CardTitle>
           </CardHeader>
-          <CardContent className="h-[350px] pr-6">
+          <CardContent className="h-[350px] pr-6 recharts-responsive-container">
              <ChartContainer config={insulinChartConfig} className="w-full h-full">
               <BarChart data={insulinTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
@@ -224,8 +223,3 @@ export default function ReportView({ data }: ReportViewProps) {
             Por favor, registre seus dados ou selecione um período diferente.
           </CardContent>
         </Card>
-      )}
-
-    </div>
-  );
-}

@@ -79,13 +79,23 @@ body {
     --sidebar-border: 240 3.7% 22%;
     --sidebar-ring: 260 70% 65%;
   }
-}
 
-@layer base {
   * {
     @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  /* Styles for PDF export - fix recharts size issues with html2canvas */
+  .fixed-chart-size-for-pdf .recharts-wrapper {
+    width: 800px !important; /* Or a fixed width that works well for your charts */
+    height: 350px !important; /* Or a fixed height */
+  }
+  .fixed-chart-size-for-pdf .recharts-surface {
+    width: 800px !important;
+    height: 350px !important;
   }
 }

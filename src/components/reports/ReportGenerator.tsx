@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -8,14 +7,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import type { DateRange } from 'react-day-picker';
-import { format, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, parseISO, differenceInDays } from 'date-fns';
+import { format, subDays, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Loader2, FileSearch } from 'lucide-react';
+import { CalendarIcon, Loader2, FileSearch, Download } from 'lucide-react';
 import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
 import { getGlucoseReadings, getInsulinLogs, getUserProfile } from '@/lib/storage';
 import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 type PeriodOption = 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -32,6 +33,7 @@ export default function ReportGenerator() {
   const [customDateRange, setCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [reportData, setReportData] = useState<ReportData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
 
@@ -57,7 +59,7 @@ export default function ReportGenerator() {
       case 'thisMonth':
         return { from: startOfMonth(today), to: endOfMonth(today) };
       case 'lastMonth':
-        const lastMonthStart = startOfMonth(subDays(today, today.getDate() + 1)); // Go to end of prev month, then start
+        const lastMonthStart = startOfMonth(subDays(today, today.getDate() + 1));
         return { from: lastMonthStart, to: endOfMonth(lastMonthStart) };
       case 'custom':
         return customDateRange;
@@ -96,7 +98,6 @@ export default function ReportGenerator() {
         return lDate >= range.from! && lDate <= range.to!;
       });
 
-      // Calculations
       let averageGlucose: number | null = null;
       let minGlucose: { value: number; timestamp: string } | null = null;
       let maxGlucose: { value: number; timestamp: string } | null = null;
@@ -118,10 +119,9 @@ export default function ReportGenerator() {
         
         if (filteredGlucose.length > 1) {
           const mean = averageGlucose;
-          const variance = filteredGlucose.reduce((acc, r) => acc + Math.pow(r.value - mean, 2), 0) / (filteredGlucose.length -1); // sample variance
+          const variance = filteredGlucose.reduce((acc, r) => acc + Math.pow(r.value - mean, 2), 0) / (filteredGlucose.length -1);
           stdDevGlucose = Math.sqrt(variance);
         }
-
 
         const tLow = userProfile.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low;
         const tNormalMin = userProfile.target_glucose_low ?? GLUCOSE_THRESHOLDS.low;
@@ -139,7 +139,6 @@ export default function ReportGenerator() {
         if (totalInRange > 0) {
             timeBelowTargetPercent = (countHypo / totalInRange) * 100;
             timeInTargetPercent = (countNormal / totalInRange) * 100;
-            // Above target can be sum of high and very high for a general "above"
             timeAboveTargetPercent = ((countHigh + countVeryHigh) / totalInRange) * 100;
         }
       }
@@ -183,13 +182,136 @@ export default function ReportGenerator() {
     }
   };
 
+  const handleExportPDF = async () => {
+    if (!reportData) {
+      toast({ title: 'Nenhum relatório para exportar', description: 'Gere um relatório primeiro.', variant: 'warning' });
+      return;
+    }
+    setIsExportingPDF(true);
+    try {
+      const reportElement = document.getElementById('report-content-to-export');
+      if (!reportElement) {
+        toast({ title: 'Erro ao Exportar', description: 'Não foi possível encontrar o conteúdo do relatório para exportar.', variant: 'destructive' });
+        setIsExportingPDF(false);
+        return;
+      }
+
+      // Temporarily make charts non-responsive for better canvas capture
+      const charts = reportElement.querySelectorAll('.recharts-responsive-container');
+      charts.forEach(chart => chart.classList.add('fixed-chart-size-for-pdf'));
+
+
+      const canvas = await html2canvas(reportElement, {
+        scale: 2, // Increase scale for better quality
+        useCORS: true, // If images are from external sources (though not the case here)
+        logging: false, // Disable html2canvas logging to console
+        onclone: (document) => {
+          // Apply specific styles for PDF rendering if needed
+          // Example: Ensure dark mode text is visible on white PDF background
+          if (document.documentElement.classList.contains('dark')) {
+            const elements = document.querySelectorAll('#report-content-to-export *');
+            elements.forEach((el: any) => {
+              const style = window.getComputedStyle(el);
+              if (style.color === 'rgb(250, 250, 250)' || style.color === 'rgb(229, 231, 235)') { // Example dark mode text colors
+                // el.style.color = '#000000'; // Force black for PDF
+              }
+            });
+          }
+        }
+      });
+      
+      charts.forEach(chart => chart.classList.remove('fixed-chart-size-for-pdf'));
+
+
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+        putOnlyUsedFonts: true,
+        compress: true,
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = imgProps.width;
+      const imgHeight = imgProps.height;
+      
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const effectiveImgWidth = imgWidth * ratio;
+      const effectiveImgHeight = imgHeight * ratio;
+
+      // Centering the image if it's smaller than the page
+      const xOffset = (pdfWidth - effectiveImgWidth) / 2;
+      const yOffset = (pdfHeight - effectiveImgHeight) / 2;
+
+      // Handle multi-page PDF if content is too long
+      const pageHeightMm = pdf.internal.pageSize.getHeight();
+      let currentPosition = 0;
+      const totalImageHeightInPdfUnits = imgHeight * (pdfWidth / imgWidth); // Scale image height to fit PDF width
+
+      if (totalImageHeightInPdfUnits <= pageHeightMm) {
+        pdf.addImage(imgData, 'PNG', xOffset > 0 ? xOffset : 0, yOffset > 0 ? yOffset : 0, effectiveImgWidth, effectiveImgHeight);
+      } else {
+        let tempCanvas = document.createElement('canvas');
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height * (pageHeightMm / totalImageHeightInPdfUnits) * (imgWidth/pdfWidth) ; // portion of original canvas height for one PDF page
+        let tempCtx = tempCanvas.getContext('2d');
+
+        let sourceY = 0;
+        const pageCanvasHeight = canvas.height * (pageHeightMm / totalImageHeightInPdfUnits);
+
+
+        while(sourceY < canvas.height) {
+          const remainingHeight = canvas.height - sourceY;
+          const currentSliceHeight = Math.min(pageCanvasHeight, remainingHeight);
+          
+          tempCanvas.height = currentSliceHeight;
+
+          tempCtx?.clearRect(0,0, tempCanvas.width, tempCanvas.height); // Clear for new slice
+          tempCtx?.drawImage(canvas, 0, sourceY, canvas.width, currentSliceHeight, 0, 0, canvas.width, currentSliceHeight);
+          
+          const pageImgData = tempCanvas.toDataURL('image/png');
+          const pageImgProps = pdf.getImageProperties(pageImgData);
+          const pageImgWidth = pageImgProps.width;
+          const pageImgHeight = pageImgProps.height;
+
+          const pageRatio = Math.min(pdfWidth / pageImgWidth, pdfHeight / pageImgHeight);
+          const pageEffectiveImgWidth = pageImgWidth * pageRatio;
+          const pageEffectiveImgHeight = pageImgHeight * pageRatio;
+          const pageXOffset = (pdfWidth - pageEffectiveImgWidth) / 2;
+
+
+          if (sourceY > 0) {
+            pdf.addPage();
+          }
+          pdf.addImage(pageImgData, 'PNG', pageXOffset > 0 ? pageXOffset : 0, 0, pageEffectiveImgWidth, pageEffectiveImgHeight);
+          sourceY += currentSliceHeight;
+        }
+      }
+
+
+      pdf.save(`GlicemiaAI_Relatorio_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+      toast({ title: 'PDF Exportado', description: 'Seu relatório foi exportado com sucesso.' });
+
+    } catch (error) {
+      console.error("Error exporting PDF:", error);
+      toast({ title: 'Erro ao Exportar PDF', description: 'Não foi possível gerar o arquivo PDF.', variant: 'destructive' });
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
+
   return (
     <Card className="shadow-xl">
       <CardHeader>
         <CardTitle className="text-xl font-headline text-primary">Configurar Relatório</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row gap-4 items-center">
           <Select value={selectedPeriod} onValueChange={(value) => setSelectedPeriod(value as PeriodOption)}>
             <SelectTrigger className="w-full sm:w-[200px]">
               <SelectValue placeholder="Selecionar Período" />
@@ -234,10 +356,16 @@ export default function ReportGenerator() {
             </Popover>
           )}
         </div>
-        <Button onClick={handleGenerateReport} disabled={isLoading || !userProfile} className="w-full sm:w-auto">
-          {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSearch className="mr-2 h-4 w-4" />}
-          {isLoading ? 'Gerando...' : 'Gerar Relatório'}
-        </Button>
+        <div className="flex flex-col sm:flex-row gap-2">
+            <Button onClick={handleGenerateReport} disabled={isLoading || !userProfile || isExportingPDF} className="w-full sm:w-auto">
+            {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileSearch className="mr-2 h-4 w-4" />}
+            {isLoading ? 'Gerando...' : 'Gerar Relatório'}
+            </Button>
+            <Button onClick={handleExportPDF} disabled={isLoading || !reportData || isExportingPDF} variant="outline" className="w-full sm:w-auto">
+            {isExportingPDF ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Download className="mr-2 h-4 w-4" />}
+            {isExportingPDF ? 'Exportando...' : 'Exportar para PDF'}
+            </Button>
+        </div>
       </CardContent>
 
       {isLoading && (
@@ -248,7 +376,9 @@ export default function ReportGenerator() {
       )}
       
       {reportData && !isLoading && (
-        <ReportView data={reportData} />
+        <div id="report-content-to-export">
+          <ReportView data={reportData} />
+        </div>
       )}
     </Card>
   );
