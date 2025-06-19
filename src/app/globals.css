@@ -8,76 +8,76 @@ body {
 
 @layer base {
   :root {
-    --background: 240 13% 95%; /* Light Gray #F0F0F5 */
+    --background: 220 20% 98%; /* Off-white, slightly cool */
     --foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
-    --primary: 288 49% 53%; /* Vibrant Purple #A050BE */
+    --primary: 260 70% 58%; /* More vibrant purple */
     --primary-foreground: 0 0% 100%; /* White for contrast on purple */
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --muted: 240 4.8% 95.9%;
     --muted-foreground: 240 3.8% 46.1%;
-    --accent: 188 33% 41%; /* Teal #468189 */
+    --accent: 180 55% 48%; /* Clearer, brighter teal/cyan */
     --accent-foreground: 0 0% 100%; /* White for contrast on teal */
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --ring: 288 49% 53%; /* Primary color for rings */
-    --chart-1: 288 49% 53%;
-    --chart-2: 188 33% 41%;
+    --ring: 260 70% 58%; /* Primary color for rings */
+    --chart-1: 260 70% 58%;
+    --chart-2: 180 55% 48%;
     --chart-3: 210 40% 50%;
     --chart-4: 30 80% 55%;
     --chart-5: 120 40% 50%;
     --radius: 0.5rem;
-    /* Sidebar specific colors - can be adjusted if default shadcn sidebar needs theming */
-    --sidebar-background: 240 10% 98%; /* Slightly lighter than main background or distinct */
-    --sidebar-foreground: 240 10% 25%;
-    --sidebar-primary: 288 49% 53%;
+    /* Sidebar specific colors */
+    --sidebar-background: 220 15% 94%; /* Slightly darker than main bg for distinction */
+    --sidebar-foreground: 240 10% 20%; /* Darker text for sidebar */
+    --sidebar-primary: 260 70% 58%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 188 33% 41%;
+    --sidebar-accent: 180 55% 48%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 5.9% 85%;
-    --sidebar-ring: 288 49% 53%;
+    --sidebar-border: 220 10% 88%;
+    --sidebar-ring: 260 70% 58%;
   }
 
   .dark {
-    --background: 240 10% 3.9%;
+    --background: 240 10% 10%; /* Dark gray, slightly blue */
     --foreground: 0 0% 98%;
-    --card: 240 10% 3.9%;
+    --card: 240 8% 15%;
     --card-foreground: 0 0% 98%;
-    --popover: 240 10% 3.9%;
+    --popover: 240 8% 15%;
     --popover-foreground: 0 0% 98%;
-    --primary: 288 49% 53%; /* Vibrant Purple #A050BE */
+    --primary: 260 70% 65%; /* Purple, adjusted for dark mode */
     --primary-foreground: 0 0% 100%;
     --secondary: 240 3.7% 15.9%;
     --secondary-foreground: 0 0% 98%;
     --muted: 240 3.7% 15.9%;
     --muted-foreground: 240 5% 64.9%;
-    --accent: 188 33% 41%; /* Teal #468189 */
+    --accent: 180 55% 55%; /* Teal/cyan, adjusted for dark mode */
     --accent-foreground: 0 0% 100%;
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border: 240 3.7% 15.9%;
+    --border: 240 3.7% 20%;
     --input: 240 3.7% 15.9%;
-    --ring: 288 49% 53%;
-    --chart-1: 288 49% 53%;
-    --chart-2: 188 33% 41%;
-    --chart-3: 210 40% 50%;
-    --chart-4: 30 80% 55%;
-    --chart-5: 120 40% 50%;
+    --ring: 260 70% 65%;
+    --chart-1: 260 70% 65%;
+    --chart-2: 180 55% 55%;
+    --chart-3: 210 40% 58%;
+    --chart-4: 30 80% 60%;
+    --chart-5: 120 40% 58%;
     /* Sidebar specific colors for dark mode */
-    --sidebar-background: 240 8% 12%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 288 49% 53%;
+    --sidebar-background: 240 9% 13%; /* Darker sidebar */
+    --sidebar-foreground: 0 0% 90%;
+    --sidebar-primary: 260 70% 65%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 188 33% 41%;
+    --sidebar-accent: 180 55% 55%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 240 3.7% 20%;
-    --sidebar-ring: 288 49% 53%;
+    --sidebar-border: 240 3.7% 22%;
+    --sidebar-ring: 260 70% 65%;
   }
 }
 
