@@ -17,7 +17,8 @@ import { supabase } from '@/lib/supabaseClient';
 export default function UserProfileCard() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editForm, setEditForm] = useState<Partial<UserProfile>>({});
+  // editForm não precisa mais de avatarUrl, pois é gerenciado por avatarPreview e avatarFile
+  const [editForm, setEditForm] = useState<Partial<Omit<UserProfile, 'avatarUrl'>>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -34,8 +35,7 @@ export default function UserProfileCard() {
           setUser(profile);
           setEditForm({ 
             name: profile.name, 
-            email: profile.email,
-            avatarUrl: profile.avatarUrl,
+            email: profile.email, // Email não é editável aqui
             dateOfBirth: profile.dateOfBirth || '',
             diabetesType: profile.diabetesType || 'outro',
           });
@@ -50,12 +50,18 @@ export default function UserProfileCard() {
                     name: authUser.user_metadata?.full_name || authUser.email || 'Novo Usuário',
                     email: authUser.email || '',
                     avatarUrl: authUser.user_metadata?.avatar_url,
+                    // dateOfBirth and diabetesType start as undefined
                 };
                 setUser(newProfile);
-                setEditForm(newProfile);
+                setEditForm({
+                    name: newProfile.name,
+                    email: newProfile.email,
+                    dateOfBirth: '',
+                    diabetesType: 'outro',
+                });
                 if (newProfile.avatarUrl) setAvatarPreview(newProfile.avatarUrl);
                 toast({ title: "Complete seu Perfil", description: "Por favor, revise e complete suas informações de perfil."});
-                setIsEditing(true); // Prompt to complete profile
+                setIsEditing(true); 
             } else {
                toast({ title: "Erro", description: "Não foi possível carregar o perfil do usuário.", variant: "destructive" });
             }
@@ -76,13 +82,12 @@ export default function UserProfileCard() {
       setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatarPreview(reader.result as string);
+        setAvatarPreview(reader.result as string); // Mostra o preview do novo arquivo
       };
       reader.readAsDataURL(file);
-    } else {
+    } else { // Usuário cancelou a seleção de arquivo ou não selecionou nenhum
       setAvatarFile(null);
-      // Don't clear preview immediately if user cancels, keep old one or current one
-      // setAvatarPreview(user?.avatarUrl || null); 
+      setAvatarPreview(user?.avatarUrl || null); // Volta para a imagem salva anteriormente ou null se não houver
     }
   };
 
@@ -90,13 +95,12 @@ export default function UserProfileCard() {
     if (user && !isEditing) { 
       setEditForm({ 
         name: user.name, 
-        email: user.email, // Email is not directly editable via this form typically
-        avatarUrl: user.avatarUrl,
+        email: user.email,
         dateOfBirth: user.dateOfBirth || '',
         diabetesType: user.diabetesType || 'outro',
       });
-      setAvatarPreview(user.avatarUrl || null); // Reset preview to saved avatar
-      setAvatarFile(null); // Clear any staged file
+      setAvatarPreview(user.avatarUrl || null); 
+      setAvatarFile(null); 
     }
     setIsEditing(!isEditing);
   };
@@ -110,21 +114,20 @@ export default function UserProfileCard() {
     if (user) {
       setIsSaving(true);
       try {
-        // Construct the profile object from editForm to pass to saveUserProfile
         const profileToSave: UserProfile = {
-          id: user.id, // Must include id
-          name: editForm.name || user.name,
-          email: user.email, // Email is generally not updated here
-          avatarUrl: avatarPreview || user.avatarUrl, // Use preview if new file, else existing
+          id: user.id, 
+          name: editForm.name || user.name, // Usa o valor do formulário ou o original se não alterado
+          email: user.email, // Email não é editado aqui
+          avatarUrl: user.avatarUrl, // Passa a URL ATUAL. saveUserProfile cuidará do upload do avatarFile.
           dateOfBirth: editForm.dateOfBirth || undefined,
           diabetesType: editForm.diabetesType as UserProfile['diabetesType'] || undefined,
         };
         
         const updatedProfile = await saveUserProfile(profileToSave, avatarFile || undefined);
         setUser(updatedProfile); 
-        setAvatarPreview(updatedProfile.avatarUrl || null); // Update preview with the URL from storage
+        setAvatarPreview(updatedProfile.avatarUrl || null); 
         setIsEditing(false);
-        setAvatarFile(null); // Clear staged file
+        setAvatarFile(null); 
         toast({ title: "Perfil Atualizado", description: "Suas informações foram salvas." });
       } catch (error: any) {
          toast({ title: "Erro ao Salvar Perfil", description: error.message, variant: "destructive" });
@@ -172,7 +175,6 @@ export default function UserProfileCard() {
       label: "Data de Nascimento", 
       value: user.dateOfBirth ? new Date(user.dateOfBirth + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado', 
       formValue: editForm.dateOfBirth, 
-      key: 'dateOfBirth', // This 'key' property is distinct from React's 'key' prop
       formKey: 'dateOfBirth',
       type: 'date',
       editable: true 
@@ -182,7 +184,6 @@ export default function UserProfileCard() {
       label: "Tipo de Diabetes", 
       value: user.diabetesType ? (user.diabetesType.charAt(0).toUpperCase() + user.diabetesType.slice(1)).replace('tipo', 'Tipo ') : 'Não informado',
       formValue: editForm.diabetesType,
-      key: 'diabetesType',  // This 'key' property is distinct from React's 'key' prop
       formKey: 'diabetesType',
       type: 'select',
       editable: true,
@@ -200,9 +201,9 @@ export default function UserProfileCard() {
       <CardHeader className="items-center text-center border-b pb-6">
         <div className="relative group">
           <Avatar className="w-32 h-32 mb-4 border-4 border-primary shadow-lg" data-ai-hint="person avatar">
-            <AvatarImage src={avatarPreview || `https://placehold.co/128x128.png`} alt={editForm.name || user.name} />
+            <AvatarImage src={avatarPreview || `https://placehold.co/128x128.png`} alt={user.name} />
             <AvatarFallback className="text-5xl bg-primary/20 text-primary font-semibold">
-              {(editForm.name || user.name)?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2)}
+              {(user.name)?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2)}
             </AvatarFallback>
           </Avatar>
           {isEditing && (
@@ -212,6 +213,7 @@ export default function UserProfileCard() {
               className="absolute bottom-4 right-0 rounded-full bg-background hover:bg-muted border-primary text-primary hover:text-primary/90 shadow-md"
               onClick={() => fileInputRef.current?.click()}
               title="Alterar foto de perfil"
+              disabled={isSaving}
             >
               <Upload className="h-5 w-5" />
               <span className="sr-only">Alterar foto de perfil</span>
@@ -253,7 +255,7 @@ export default function UserProfileCard() {
                     <select 
                       name={item.formKey} 
                       id={item.formKey} 
-                      value={editForm[item.formKey as keyof UserProfile] as string || ''} 
+                      value={(editForm as any)[item.formKey] || ''} 
                       onChange={handleInputChange}
                       className="mt-1 block w-full rounded-md border-input bg-background p-2.5 text-base focus:border-primary focus:ring-primary shadow-sm"
                       disabled={isSaving}
@@ -266,7 +268,7 @@ export default function UserProfileCard() {
                       id={item.formKey} 
                       name={item.formKey} 
                       type={item.type} 
-                      value={editForm[item.formKey as keyof UserProfile] as string || ''} 
+                      value={(editForm as any)[item.formKey] || ''} 
                       onChange={handleInputChange} 
                       className="mt-1 text-base p-2.5" 
                       disabled={isSaving || !item.editable}
@@ -319,3 +321,4 @@ export default function UserProfileCard() {
   );
 }
 
+    
