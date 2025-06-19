@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -38,6 +37,7 @@ export default function UserProfileCard() {
             email: profile.email, // Email não é editável aqui
             dateOfBirth: profile.dateOfBirth || '',
             diabetesType: profile.diabetesType || 'outro',
+            languagePreference: profile.languagePreference || 'pt-BR',
           });
           if (profile.avatarUrl) {
             setAvatarPreview(profile.avatarUrl);
@@ -50,6 +50,7 @@ export default function UserProfileCard() {
                     name: authUser.user_metadata?.full_name || authUser.email || 'Novo Usuário',
                     email: authUser.email || '',
                     avatarUrl: authUser.user_metadata?.avatar_url,
+                    languagePreference: 'pt-BR',
                     // dateOfBirth and diabetesType start as undefined
                 };
                 setUser(newProfile);
@@ -58,6 +59,7 @@ export default function UserProfileCard() {
                     email: newProfile.email,
                     dateOfBirth: '',
                     diabetesType: 'outro',
+                    languagePreference: 'pt-BR',
                 });
                 if (newProfile.avatarUrl) setAvatarPreview(newProfile.avatarUrl);
                 toast({ title: "Complete seu Perfil", description: "Por favor, revise e complete suas informações de perfil."});
@@ -98,6 +100,7 @@ export default function UserProfileCard() {
         email: user.email,
         dateOfBirth: user.dateOfBirth || '',
         diabetesType: user.diabetesType || 'outro',
+        languagePreference: user.languagePreference || 'pt-BR',
       });
       setAvatarPreview(user.avatarUrl || null); 
       setAvatarFile(null); 
@@ -121,6 +124,7 @@ export default function UserProfileCard() {
           avatarUrl: user.avatarUrl, // Passa a URL ATUAL. saveUserProfile cuidará do upload do avatarFile.
           dateOfBirth: editForm.dateOfBirth || undefined,
           diabetesType: editForm.diabetesType as UserProfile['diabetesType'] || undefined,
+          languagePreference: editForm.languagePreference || user.languagePreference || 'pt-BR',
         };
         
         const updatedProfile = await saveUserProfile(profileToSave, avatarFile || undefined);
@@ -169,7 +173,6 @@ export default function UserProfileCard() {
   }
 
   const profileInfoItems = [
-    { icon: Mail, label: "Email", value: user.email, formKey: 'email', type: 'email', editable: false },
     { 
       icon: CalendarDays, 
       label: "Data de Nascimento", 
@@ -200,10 +203,10 @@ export default function UserProfileCard() {
     <Card className="w-full max-w-2xl mx-auto shadow-xl">
       <CardHeader className="items-center text-center border-b pb-6">
         <div className="relative group">
-          <Avatar className="w-32 h-32 mb-4 border-4 border-primary shadow-lg" data-ai-hint="person avatar">
-            <AvatarImage src={avatarPreview || `https://placehold.co/128x128.png`} alt={user.name} />
+          <Avatar className="w-32 h-32 mb-4 border-4 border-primary shadow-lg" data-ai-hint="person avatar portrait">
+            <AvatarImage src={avatarPreview || `https://placehold.co/128x128.png`} alt={user.name || 'Avatar do usuário'} />
             <AvatarFallback className="text-5xl bg-primary/20 text-primary font-semibold">
-              {(user.name)?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2)}
+              {(user.name)?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2) || <UserCircle size={64}/>}
             </AvatarFallback>
           </Avatar>
           {isEditing && (
@@ -240,7 +243,7 @@ export default function UserProfileCard() {
             disabled={isSaving}
           />
         ) : (
-          <CardTitle className="text-3xl font-headline text-primary mt-2">{user.name}</CardTitle>
+          <CardTitle className="text-3xl font-headline text-primary mt-2">{user.name || 'Usuário'}</CardTitle>
         )}
          <CardDescription className="text-lg text-muted-foreground">{user.email}</CardDescription>
       </CardHeader>
@@ -320,5 +323,4 @@ export default function UserProfileCard() {
     </Card>
   );
 }
-
     

@@ -21,10 +21,10 @@ Após a criação do projeto, você será redirecionado para o painel do projeto
 1.  No menu lateral esquerdo, vá para **Project Settings** (ícone de engrenagem).
 2.  Selecione a aba **API**.
 3.  Você precisará de duas informações desta página:
-    *   **Project URL**: Encontrada na seção "Configuration" -> "URL".
-    *   **Project API Keys** -> `anon` `public`: Encontrada na seção "Project API Keys" -> "Default API Keys". **Use a chave `anon public`**. Não use a `service_role` key no frontend.
+    *   **Project URL**: Encontrada na seção "Configuration" -> "URL". **Este é o valor para `NEXT_PUBLIC_SUPABASE_URL`**.
+    *   **Project API Keys** -> `anon` `public`: Encontrada na seção "Project API Keys" -> "Default API Keys". **Use a chave `anon public`**. Não use a `service_role` key no frontend. **Este é o valor para `NEXT_PUBLIC_SUPABASE_ANON_KEY`**.
 
-Copie esses dois valores.
+Copie esses dois valores. Certifique-se de que o Project URL é o correto (ex: `https://SEU_ID_DE_PROJETO.supabase.co`).
 
 ## Passo 3: Configurar Variáveis de Ambiente no Projeto Next.js
 
@@ -200,7 +200,7 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
 O código da aplicação (`storage.ts`) criará os caminhos da seguinte forma:
 - Foto de perfil: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/profile.{EXTENSAO}`
 - Foto de refeição: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/meals/{ID_UNICO_DA_FOTO}.{EXTENSAO}`
-Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` resultará em `users` e `(storage.foldername(name))[2]` resultará no `{UID_DO_USUARIO}`. Usaremos `(storage.foldername(name))[2]` para verificar a propriedade do usuário.
+Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` resultará em `users` e `(storage.foldername(name))[2]` resultará no `{UID_DO_USUARIO}`. Usaremos `(storage.foldername(name))[2]` para verificar a propriedade do usuário nas políticas de INSERT/UPDATE/DELETE.
 
 ### Configurar Políticas de Storage
 
@@ -213,15 +213,15 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
 3.  Crie as seguintes políticas para `profile-pictures`:
 
     *   **Política 1: Leitura Pública para Avatares (ESSENCIAL PARA EXIBIÇÃO)**
-        *   **Policy name**: `Public Read Access for Profile Pictures`
+        *   **Policy name**: `Public Read Access for Profile Pictures` (ou similar)
         *   **Allowed operations**: Marque **APENAS `SELECT`**.
-        *   **Target roles**: Marque `anon`, `authenticated`. (Permite que qualquer um veja as fotos, o que é comum para avatares).
-        *   **Policy definition (USING expression)**: `true`
+        *   **Target roles**: Marque `anon` E `authenticated`. (Permite que qualquer um veja as fotos, o que é comum para avatares).
+        *   **Policy definition (USING expression)**: `true` (ou, para ser mais específico ao bucket `(bucket_id = 'profile-pictures')`)
         *   Clique em "**Review**" e "**Save policy**".
         *   **Observação:** Esta política torna todas as fotos de perfil publicamente legíveis. Se você precisar de controle mais granular, a política precisaria ser mais específica, mas para a maioria dos casos de avatares, a leitura pública é aceitável.
 
     *   **Política 2: Usuários Gerenciam Suas Próprias Fotos de Perfil (INSERT, UPDATE, DELETE)**
-        *   **Policy name**: `Users can manage their own profile pictures`
+        *   **Policy name**: `Users can manage their own profile pictures` (ou similar)
         *   **Allowed operations**: Marque `INSERT`, `UPDATE`, `DELETE`.
         *   **Target roles**: Marque `authenticated`.
         *   **Policy definition (USING expression para UPDATE/DELETE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[2])`
@@ -231,19 +231,19 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
 4.  Repita o processo para o bucket `meal-photos`:
 
     *   **Política 1: Leitura Pública para Fotos de Refeição (ESSENCIAL PARA EXIBIÇÃO)**
-        *   **Policy name**: `Public Read Access for Meal Photos`
+        *   **Policy name**: `Public Read Access for Meal Photos` (ou similar)
         *   **Allowed operations**: Marque **APENAS `SELECT`**.
-        *   **Target roles**: Marque `anon`, `authenticated`.
-        *   **Policy definition (USING expression)**: `true`
+        *   **Target roles**: Marque `anon` E `authenticated`.
+        *   **Policy definition (USING expression)**: `true` (ou, para ser mais específico ao bucket `(bucket_id = 'meal-photos')`)
 
     *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)**
-        *   **Policy name**: `Users can upload their own meal photos`
+        *   **Policy name**: `Users can upload their own meal photos` (ou similar)
         *   **Allowed operations**: Marque `INSERT`.
         *   **Target roles**: Marque `authenticated`.
         *   **Policy definition (WITH CHECK expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])`
 
     *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição (DELETE)** (Opcional, mas recomendado se a funcionalidade existir no app)
-        *   **Policy name**: `Users can delete their own meal photos`
+        *   **Policy name**: `Users can delete their own meal photos` (ou similar)
         *   **Allowed operations**: Marque `DELETE`.
         *   **Target roles**: Marque `authenticated`.
         *   **Policy definition (USING expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])`
@@ -256,14 +256,13 @@ Se preferir, você pode criar as políticas de storage usando o SQL Editor. Vá 
 -- Políticas para o bucket 'profile-pictures'
 
 -- 1. Permite que qualquer pessoa leia (SELECT) fotos de perfil (ESSENCIAL PARA EXIBIÇÃO)
+-- SE ESTA POLÍTICA NÃO EXISTIR OU ESTIVER INCORRETA, AS IMAGENS NÃO SERÃO EXIBIDAS
 CREATE POLICY "Public Read Access for Profile Pictures"
 ON storage.objects FOR SELECT
-TO anon, authenticated  -- Permite que qualquer pessoa (mesmo não logada) veja as fotos de perfil
-USING (bucket_id = 'profile-pictures');
+TO anon, authenticated  -- IMPORTANTE: Incluir 'anon' e 'authenticated'
+USING (bucket_id = 'profile-pictures'); -- Condição para aplicar apenas a este bucket
 
 -- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de perfil
--- A estrutura de pasta esperada é 'users/USER_ID/filename.ext'
--- (storage.foldername(name))[1] seria 'users', (storage.foldername(name))[2] seria o USER_ID
 CREATE POLICY "Users can insert their own profile pictures"
 ON storage.objects FOR INSERT
 TO authenticated
@@ -298,22 +297,22 @@ USING (
 -- Políticas para o bucket 'meal-photos'
 
 -- 1. Permite que qualquer pessoa leia (SELECT) fotos de refeições (ESSENCIAL PARA EXIBIÇÃO)
+-- SE ESTA POLÍTICA NÃO EXISTIR OU ESTIVER INCORRETA, AS IMAGENS NÃO SERÃO EXIBIDAS
 CREATE POLICY "Public Read Access for Meal Photos"
 ON storage.objects FOR SELECT
-TO anon, authenticated -- Permite que qualquer pessoa (mesmo não logada) veja as fotos de refeições
-USING (bucket_id = 'meal-photos');
+TO anon, authenticated -- IMPORTANTE: Incluir 'anon' e 'authenticated'
+USING (bucket_id = 'meal-photos'); -- Condição para aplicar apenas a este bucket
 
 -- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de refeições
--- A estrutura de pasta esperada é 'users/USER_ID/meals/filename.ext'
 CREATE POLICY "Users can upload their own meal photos"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
   bucket_id = 'meal-photos' AND
-  auth.uid()::text = (storage.foldername(name))[2] -- Checa se o segundo nível da pasta é o UID do usuário
+  auth.uid()::text = (storage.foldername(name))[2]
 );
 
--- 3. Permite que usuários autenticados deletem (DELETE) suas próprias fotos de refeições (se a funcionalidade for implementada no app)
+-- 3. Permite que usuários autenticados deletem (DELETE) suas próprias fotos de refeições
 CREATE POLICY "Users can delete their own meal photos"
 ON storage.objects FOR DELETE
 TO authenticated
@@ -324,7 +323,7 @@ USING (
 ```
 **Nota sobre `(storage.foldername(name))[2]`**: Esta função extrai o nome da segunda pasta no caminho do arquivo. A aplicação está configurada para salvar arquivos em `users/{user_id}/...`, então `(storage.foldername(name))[1]` seria "users" e `(storage.foldername(name))[2]` seria o ID do usuário.
 
-**SEM AS POLÍTICAS DE LEITURA PÚBLICA (SELECT), AS IMAGENS NÃO SERÃO EXIBIDAS NO SEU APLICATIVO!**
+**SEM AS POLÍTICAS DE LEITURA PÚBLICA (`SELECT` PARA `anon, authenticated` COM `USING (bucket_id = 'NOME_DO_BUCKET')`), AS IMAGENS NÃO SERÃO EXIBIDAS NO SEU APLICATIVO E VOCÊ PODERÁ RECEBER ERROS COMO "Bucket not found" AO TENTAR ACESSAR AS URLs PÚBLICAS!**
 
 ## Passo 6: Configurações de Autenticação no Supabase
 
@@ -339,7 +338,7 @@ USING (
 ## Passo 7: Reiniciar a Aplicação Next.js
 
 Se sua aplicação Next.js estiver rodando, **pare-a e reinicie-a completamente**.
-Isso é crucial para que ela carregue as variáveis de ambiente do arquivo `.env.local`.
+Isso é crucial para que ela carregue as variáveis de ambiente do arquivo `.env.local` e as configurações do `next.config.ts`.
 
 ```bash
 npm run dev
@@ -361,6 +360,7 @@ pnpm dev
     *   **Analisar refeições (com upload de imagem para o Storage e visualização da imagem).**
     *   Configurar e visualizar lembretes.
     *   **Visualizar e editar o perfil do usuário (com upload de foto de perfil para o Storage e visualização da foto).**
+    *   **Verifique se as imagens aparecem no perfil e nas análises de refeição.**
 
 ## Solução de Problemas Comuns
 
@@ -370,17 +370,22 @@ pnpm dev
     *   Verifique se os valores das chaves estão corretos e não contêm erros de digitação.
     *   **REINICIE O SERVIDOR NEXT.JS.**
 *   **Erros de Permissão (RLS nas tabelas)**: Se você receber erros indicando que não tem permissão para acessar ou modificar dados nas tabelas do Supabase, verifique suas políticas de RLS nas tabelas.
-*   **IMAGENS NÃO APARECEM**:
-    *   **Verifique as POLÍTICAS DE STORAGE**: Certifique-se de que os buckets `profile-pictures` e `meal-photos` têm políticas que permitem a operação `SELECT` para os roles `anon` e `authenticated`. Sem isso, as imagens não serão publicamente acessíveis e não carregarão. (Veja Passo 5).
-    *   **Verifique `next.config.ts`**: Confirme que o hostname do seu projeto Supabase (ex: `SEU_ID_DE_PROJETO.supabase.co`) está listado em `images.remotePatterns`.
-    *   **Verifique as URLs no Banco de Dados**: As URLs na sua tabela (ex: `avatar_url` em `profiles` ou `image_url` em `meal_analyses`) devem ser as URLs públicas corretas do Supabase Storage.
-    *   **Console do Navegador**: Verifique o console do navegador por erros de rede (403 Forbidden, 404 Not Found) ao tentar carregar as imagens. Um erro 403 geralmente indica um problema de permissão no Storage.
+*   **IMAGENS NÃO APARECEM ou ERRO "Bucket not found" ao acessar URL pública**:
+    *   **Causa mais provável: Políticas de Storage INCORRETAS ou AUSENTES para LEITURA PÚBLICA.**
+        *   Acesse o painel do Supabase -> Storage -> Clique no bucket (`profile-pictures` ou `meal-photos`) -> Policies.
+        *   **GARANTA** que existe uma política para a operação `SELECT` que tenha `anon` E `authenticated` como "Target roles".
+        *   Para esta política de `SELECT` público, a "Policy definition (USING expression)" DEVE ser `true` ou, mais especificamente, `(bucket_id = 'NOME_DO_BUCKET_CORRETO')`. Se estiver usando SQL, a cláusula `USING` deve ser `bucket_id = 'NOME_DO_BUCKET_CORRETO'`.
+        *   **Se essa política de leitura pública estiver faltando ou mal configurada, as URLs públicas retornarão "Bucket not found" ou acesso negado, e as imagens não carregarão no app.** Revise o Passo 5 cuidadosamente.
+    *   **Verifique `next.config.ts`**: Confirme que o hostname do seu projeto Supabase (ex: `SEU_ID_DE_PROJETO.supabase.co`) está listado em `images.remotePatterns` e é o correto. **Reinicie o servidor Next.js após qualquer alteração.**
+    *   **URLs no Banco de Dados**: As URLs na sua tabela (ex: `avatar_url` em `profiles` ou `image_url` em `meal_analyses`) devem ser as URLs públicas corretas do Supabase Storage, começando com `https://[SEU_ID_DE_PROJETO].supabase.co/storage/v1/object/public/[NOME_DO_BUCKET]/...`.
+    *   **Console do Navegador**: Verifique o console do navegador por erros de rede (403 Forbidden, 404 Not Found) ao tentar carregar as imagens. Um erro 403 geralmente indica um problema de permissão no Storage. Um 404 pode ser "Bucket not found" (problema de política de leitura pública do bucket) ou "Object not found" (caminho do arquivo incorreto dentro do bucket).
+    *   **Tente acessar a URL da imagem diretamente no navegador.** Se ela não abrir ou der erro, o problema é na configuração do Supabase Storage ou na própria URL, não no código do Next.js.
 *   **Erro "fetch failed" ou de rede**: Verifique se a "Project URL" do Supabase está correta no seu `.env.local` e se seu projeto Supabase está ativo e acessível.
 *   **Upload para Storage Falha**:
     *   Verifique se o nome do bucket está correto no código.
-    *   Verifique as políticas do bucket (seja via UI ou SQL) para operações de `INSERT`, `UPDATE`, `DELETE`.
+    *   Verifique as políticas do bucket (seja via UI ou SQL) para operações de `INSERT`, `UPDATE`, `DELETE` (estas são diferentes das políticas de leitura pública).
     *   Verifique o tamanho do arquivo e os tipos permitidos (se configurado).
-    *   Confirme que a estrutura de pastas (`users/UID_DO_USUARIO/...`) está sendo respeitada pelo código de upload e que as políticas correspondem a essa estrutura.
+    *   Confirme que a estrutura de pastas (`users/UID_DO_USUARIO/...`) está sendo respeitada pelo código de upload e que as políticas de escrita correspondem a essa estrutura.
 *   **Erro da IA (`FAILED_PRECONDITION` para Gemini)**:
     *   Confirme que a `GEMINI_API_KEY` está no seu `.env.local` e que o servidor Next.js foi reiniciado.
     *   Verifique se a chave de API do Gemini é válida e tem as permissões necessárias no Google Cloud Project associado.

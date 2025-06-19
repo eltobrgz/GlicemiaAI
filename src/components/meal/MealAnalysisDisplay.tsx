@@ -25,7 +25,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ElementType; children: 
 export default function MealAnalysisDisplay({ analysis }: MealAnalysisDisplayProps) {
   return (
     <div className="space-y-6 mt-6 animate-fadeIn">
-      <Card className="overflow-hidden shadow-lg" data-ai-hint="food meal">
+      <Card className="overflow-hidden shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline text-primary">Imagem da Refeição Analisada</CardTitle>
             {analysis.originalImageFileName && <CardDescription>Arquivo: {analysis.originalImageFileName}</CardDescription>}
@@ -34,13 +34,14 @@ export default function MealAnalysisDisplay({ analysis }: MealAnalysisDisplayPro
             {analysis.imageUrl ? (
                 <Image
                   src={analysis.imageUrl}
-                  alt="Refeição analisada"
+                  alt={analysis.foodIdentification || "Refeição analisada"}
                   width={400}
                   height={300}
                   className="rounded-md object-cover max-h-[400px]"
+                  data-ai-hint="food meal delicious"
                 />
             ) : (
-              <div className="w-full h-[300px] bg-muted rounded-md flex flex-col items-center justify-center text-muted-foreground" data-ai-hint="placeholder cooking">
+              <div className="w-full h-[300px] bg-muted rounded-md flex flex-col items-center justify-center text-muted-foreground" data-ai-hint="placeholder cooking kitchen">
                 <Camera className="h-16 w-16 mb-2" />
                 <span>Imagem não disponível</span>
               </div>
@@ -82,3 +83,4 @@ export default function MealAnalysisDisplay({ analysis }: MealAnalysisDisplayPro
 // @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 // .animate-fadeIn { animation: fadeIn 0.5s ease-in-out; }
 // Or use tailwindcss-animate classes if already configured
+
