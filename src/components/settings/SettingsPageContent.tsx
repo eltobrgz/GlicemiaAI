@@ -48,7 +48,7 @@ export default function SettingsPageContent() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 max-w-2xl mx-auto"> {/* Centering classes added here */}
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary flex items-center">
@@ -151,3 +151,4 @@ export default function SettingsPageContent() {
     </div>
   );
 }
+
