@@ -20,6 +20,7 @@ import { getReminders, saveReminder, deleteReminder } from '@/lib/storage';
 import { formatTime } from '@/lib/utils';
 import { DAYS_OF_WEEK, INSULIN_TYPES } from '@/config/constants';
 import { PlusCircle, Trash2, Bell, Phone, Loader2, Edit3, Info, CheckCircle, BellOff } from 'lucide-react';
+import { Badge } from '@/components/ui/badge'; // Added import for Badge
 
 const reminderSchema = z.object({
   id: z.string().optional(),
