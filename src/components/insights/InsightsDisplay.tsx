@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { GlucoseReading } from '@/types';
-import { getGlucoseReadings }.0from '@/lib/storage';
-import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { getGlucoseReadings } from '@/lib/storage';
+import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity, CheckCircle } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { format, subDays, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
@@ -186,7 +186,3 @@ export default function InsightsDisplay() {
     </div>
   );
 }
-
-const CheckCircle: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
-  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-);
