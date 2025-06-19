@@ -1,22 +1,45 @@
 
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input'; // Adicionado import
+import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, Palette, Bell, Shield, Languages, FileText } from 'lucide-react';
+import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+
+const THEME_STORAGE_KEY = 'glicemiaai-theme';
 
 export default function SettingsPageContent() {
   const { toast } = useToast();
   const router = useRouter();
+  const [darkMode, setDarkMode] = useState(false);
+
+  useEffect(() => {
+    const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    if (storedTheme) {
+      setDarkMode(storedTheme === 'dark');
+    } else {
+      setDarkMode(prefersDark);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem(THEME_STORAGE_KEY, 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem(THEME_STORAGE_KEY, 'light');
+    }
+  }, [darkMode]);
 
   const handleLogout = () => {
-    // Em uma aplicação real, você invalidaria a sessão/token aqui
     toast({
       title: "Logout Realizado",
       description: "Você foi desconectado com sucesso.",
@@ -65,14 +88,21 @@ export default function SettingsPageContent() {
           <CardDescription>Personalize a aparência do aplicativo.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="dark-mode" className="text-base">Modo Escuro</Label>
-              <p className="text-xs text-muted-foreground">Ative para uma interface com cores escuras.</p>
+          <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
+            <div className="flex items-center space-x-3">
+              {darkMode ? <Moon className="h-5 w-5 text-sky-400" /> : <Sun className="h-5 w-5 text-yellow-500" />}
+              <div>
+                <Label htmlFor="dark-mode" className="text-base font-medium">Modo Escuro</Label>
+                <p className="text-xs text-muted-foreground">Ative para uma interface com cores escuras.</p>
+              </div>
             </div>
-            <Switch id="dark-mode" aria-label="Ativar modo escuro" />
+            <Switch 
+              id="dark-mode" 
+              checked={darkMode}
+              onCheckedChange={setDarkMode}
+              aria-label="Ativar modo escuro" 
+            />
           </div>
-          {/* Mais opções de aparência podem ser adicionadas aqui */}
         </CardContent>
       </Card>
       
@@ -84,16 +114,16 @@ export default function SettingsPageContent() {
           <CardDescription>Controle como e quando você recebe notificações.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
              <div>
-              <Label htmlFor="glucose-reminders" className="text-base">Lembretes de Glicemia</Label>
+              <Label htmlFor="glucose-reminders" className="text-base font-medium">Lembretes de Glicemia</Label>
                <p className="text-xs text-muted-foreground">Receber notificações para registrar glicemia.</p>
             </div>
             <Switch id="glucose-reminders" defaultChecked />
           </div>
-           <div className="flex items-center justify-between">
+           <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
              <div>
-              <Label htmlFor="insulin-reminders" className="text-base">Lembretes de Insulina</Label>
+              <Label htmlFor="insulin-reminders" className="text-base font-medium">Lembretes de Insulina</Label>
                <p className="text-xs text-muted-foreground">Receber notificações para administrar insulina.</p>
             </div>
             <Switch id="insulin-reminders" defaultChecked />
@@ -111,10 +141,9 @@ export default function SettingsPageContent() {
           </CardTitle>
            <CardDescription>Defina suas preferências de idioma.</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 rounded-lg border">
           <Label htmlFor="language-select">Idioma do Aplicativo</Label>
-          {/* Implementar um Select real aqui se múltiplos idiomas forem suportados */}
-          <Input id="language-select" value="Português (Brasil)" readOnly className="mt-1 bg-muted cursor-not-allowed" />
+          <Input id="language-select" value="Português (Brasil)" readOnly className="mt-1 bg-input cursor-not-allowed" />
            <p className="text-xs text-muted-foreground mt-1">Atualmente, apenas Português (Brasil) está disponível.</p>
         </CardContent>
       </Card>
