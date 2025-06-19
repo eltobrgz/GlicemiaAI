@@ -39,15 +39,13 @@ export default function DashboardPage() {
         <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           {quickAccessItems.map((item) => (
-            <Link href={item.href} key={item.href} passHref legacyBehavior={false}>
-              <a className="block group">
+            <Link href={item.href} key={item.href} className="block group">
                 <Card className="shadow-md hover:shadow-lg transition-all duration-200 ease-in-out group-hover:border-primary">
                   <CardContent className="p-6 flex flex-col items-center justify-center text-center h-36">
                     <item.icon className={`h-10 w-10 mb-3 ${item.iconColor} transition-transform group-hover:scale-110`} />
                     <span className="font-medium text-card-foreground group-hover:text-primary">{item.label}</span>
                   </CardContent>
                 </Card>
-              </a>
             </Link>
           ))}
         </div>
@@ -76,7 +74,7 @@ export default function DashboardPage() {
             ) : (
               <p className="text-muted-foreground">Nenhum registro de glicemia encontrado.</p>
             )}
-            <Link href="/log/glucose" passHref>
+            <Link href="/log/glucose">
                <Button variant="outline" className="mt-4 w-full">
                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Registro
                </Button>
@@ -105,7 +103,7 @@ export default function DashboardPage() {
             ) : (
               <p className="text-muted-foreground">Nenhum registro de insulina encontrado.</p>
             )}
-             <Link href="/log/insulin" passHref>
+             <Link href="/log/insulin">
                <Button variant="outline" className="mt-4 w-full">
                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Registro
                </Button>
@@ -125,7 +123,7 @@ export default function DashboardPage() {
           <p className="text-muted-foreground">
             Em breve, você verá aqui dicas e análises personalizadas da nossa IA para te ajudar a gerenciar melhor sua glicemia.
           </p>
-          <Link href="/insights" passHref>
+          <Link href="/insights">
             <Button variant="link" className="mt-2 p-0">Ver mais insights</Button>
           </Link>
         </CardContent>
