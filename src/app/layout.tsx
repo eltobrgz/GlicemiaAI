@@ -7,6 +7,8 @@ import { SidebarProvider } from "@/components/ui/sidebar"; // SidebarProvider in
 export const metadata: Metadata = {
   title: 'GlicemiaAI',
   description: 'Aplicativo de Acompanhamento Glicêmico com Inteligência Artificial',
+  // O Next.js lida com o favicon.ico principal, mas podemos adicionar mais aqui se necessário.
+  // O manifest.json cuidará de outros ícones para PWA.
 };
 
 export default function RootLayout({
@@ -20,6 +22,20 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+        
+        {/* PWA Manifest and Theme Color */}
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#A050BE" />
+
+        {/* Apple PWA Meta Tags */}
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="GlicemiaAI" />
+        <link rel="apple-touch-icon" href="https://placehold.co/180x180.png" /> 
+        {/* Você pode adicionar mais tamanhos de apple-touch-icon se desejar */}
+        {/* Ex: <link rel="apple-touch-icon" sizes="152x152" href="https://placehold.co/152x152.png" /> */}
+
+
         <script
           dangerouslySetInnerHTML={{
             __html: `
