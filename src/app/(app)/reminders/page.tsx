@@ -14,14 +14,14 @@ export default function RemindersPage() {
         title="Gerenciamento de Lembretes"
         description="Configure e personalize lembretes para medições de glicemia e administração de insulina."
       />
-      <Alert variant="default" className="bg-primary/5 border-primary/20">
-        <BellRing className="h-4 w-4 text-primary" />
-        <AlertTitle className="text-primary">Notificações de Lembretes</AlertTitle>
-        <AlertDescription className="text-primary/80">
+      <Alert variant="info">
+        {/* Icone será adicionado automaticamente pelo componente Alert */}
+        <AlertTitle>Notificações de Lembretes no Navegador</AlertTitle>
+        <AlertDescription>
           Os lembretes configurados aqui usarão as Notificações do Navegador para alertá-lo.
-          Certifique-se de que concedeu permissão para notificações nas configurações desta página.
-          As notificações só funcionarão se a aba do GlicemiaAI estiver aberta no seu navegador.
-          Para uma experiência de notificação mais robusta (mesmo com o app fechado), seria necessária uma configuração mais avançada com notificações push.
+          Para que funcionem, você precisará conceder permissão para notificações quando solicitado.
+          As notificações são mais eficazes quando a aba do GlicemiaAI está aberta no seu navegador.
+          Para uma experiência de notificação mais robusta (mesmo com o app fechado), seria necessária uma configuração de notificações push, que é mais complexa.
         </AlertDescription>
       </Alert>
       <ReminderSetup />

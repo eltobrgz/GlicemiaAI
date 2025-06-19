@@ -1,7 +1,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
-import { CheckCircle, AlertTriangle, Info, XCircle } from "lucide-react" // Import common icons
+import { CheckCircle, AlertTriangle, Info, XCircle, Bell } from "lucide-react" // Import common icons
 
 import { cn } from "@/lib/utils"
 
@@ -10,10 +10,9 @@ const alertVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-background text-foreground",
+        default: "bg-background text-foreground [&>svg]:text-foreground", // Garante que o ícone padrão também tenha cor
         destructive:
           "border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive",
-        // Add more variants if needed
         success: 
           "border-green-500/50 text-green-700 dark:border-green-500 [&>svg]:text-green-600 bg-green-50 dark:bg-green-900/30",
         warning: 
@@ -32,13 +31,15 @@ const Alert = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement> & VariantProps<typeof alertVariants>
 >(({ className, variant, children, ...props }, ref) => {
-  // Automatically add an icon based on variant if not provided explicitly
   const Icon =
-    variant === "destructive" ? XCircle :
+    React.Children.toArray(children).find(
+      (child) => React.isValidElement(child) && typeof child.type !== 'string' && (child.type as any).displayName?.includes("Icon")
+    ) || // Prioritize icon passed as child
+    (variant === "destructive" ? XCircle :
     variant === "success" ? CheckCircle :
     variant === "warning" ? AlertTriangle :
     variant === "info" ? Info :
-    null; // Default or other custom icon can be passed as child
+    null); // Default icon based on variant (Bell for default can be an option too if needed)
 
   return (
     <div
@@ -47,14 +48,12 @@ const Alert = React.forwardRef<
       className={cn(alertVariants({ variant }), className)}
       {...props}
     >
-      {Icon && !React.Children.toArray(children).find(child => React.isValidElement(child) && child.type === Icon) && (
-        <Icon className={cn("h-4 w-4", 
-          variant === "destructive" && "text-destructive",
-          variant === "success" && "text-green-600",
-          variant === "warning" && "text-yellow-600",
-          variant === "info" && "text-blue-600"
-        )} />
-      )}
+      {Icon && React.isValidElement(Icon) ? 
+        React.cloneElement(Icon as React.ReactElement<any>, { 
+          className: cn("h-4 w-4", Icon.props.className) 
+        }) : 
+        Icon ? <Icon className={cn("h-4 w-4")} /> : null // Render the icon component if it's a direct component
+      }
       {children}
     </div>
   )

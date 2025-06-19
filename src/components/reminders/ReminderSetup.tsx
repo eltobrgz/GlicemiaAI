@@ -19,7 +19,7 @@ import type { ReminderConfig } from '@/types';
 import { getReminders, saveReminder, deleteReminder } from '@/lib/storage';
 import { formatTime } from '@/lib/utils';
 import { DAYS_OF_WEEK, INSULIN_TYPES } from '@/config/constants';
-import { PlusCircle, Trash2, Bell, Phone, Loader2, Edit3, Info } from 'lucide-react';
+import { PlusCircle, Trash2, Bell, Phone, Loader2, Edit3, Info, CheckCircle, BellOff } from 'lucide-react';
 
 const reminderSchema = z.object({
   id: z.string().optional(),
@@ -172,8 +172,8 @@ export default function ReminderSetup() {
         </CardHeader>
         <CardContent>
           {notificationPermission === 'default' && (
-            <Alert>
-              <Info className="h-4 w-4" />
+            <Alert variant="info">
+              {/* Icone será adicionado automaticamente pelo componente Alert */}
               <AlertTitle>Permitir Notificações</AlertTitle>
               <AlertDescription>
                 Para receber alertas de lembretes, precisamos da sua permissão para enviar notificações.
@@ -182,21 +182,21 @@ export default function ReminderSetup() {
             </Alert>
           )}
           {notificationPermission === 'granted' && (
-            <Alert variant="default" className="bg-green-50 border-green-200">
-              <CheckCircle className="h-4 w-4 text-green-600" />
-              <AlertTitle className="text-green-700">Permissão Concedida</AlertTitle>
-              <AlertDescription className="text-green-600">
+            <Alert variant="success">
+               {/* Icone será adicionado automaticamente */}
+              <AlertTitle>Permissão Concedida</AlertTitle>
+              <AlertDescription>
                 Você está configurado para receber notificações de lembretes.
               </AlertDescription>
             </Alert>
           )}
           {notificationPermission === 'denied' && (
             <Alert variant="destructive">
-              <BellOff className="h-4 w-4" />
+               {/* Icone será adicionado automaticamente */}
               <AlertTitle>Permissão Negada</AlertTitle>
               <AlertDescription>
                 As notificações foram bloqueadas. Para habilitá-las, você precisará alterar as configurações de notificação do seu navegador para este site e então clicar em "Permitir Notificações" aqui novamente.
-                 <Button onClick={requestNotificationPermission} className="mt-2 ml-auto block">Tentar Permitir Notificações Novamente</Button>
+                 <Button onClick={requestNotificationPermission} className="mt-2 ml-auto block">Tentar Permitir Novamente</Button>
               </AlertDescription>
             </Alert>
           )}

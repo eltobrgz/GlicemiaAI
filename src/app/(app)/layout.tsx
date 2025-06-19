@@ -41,11 +41,10 @@ export default function AppLayout({
   const fetchUserReminders = useCallback(async (currentUserId?: string) => {
     if (!currentUserId) return;
     try {
-      const userReminders = await getReminders(); // getReminders should be context-aware or use userId
+      const userReminders = await getReminders(); 
       setReminders(userReminders);
     } catch (error) {
       console.error("Error fetching reminders:", error);
-      // Optionally, toast an error message to the user
     }
   }, []);
 
@@ -73,7 +72,7 @@ export default function AppLayout({
       
       if (event === 'SIGNED_OUT' || (!newSession && event !== 'INITIAL_SESSION')) {
         router.replace('/login');
-        setReminders([]); // Clear reminders on logout
+        setReminders([]); 
       } else if (newSession?.user) {
         await fetchUserReminders(newSession.user.id);
       }
@@ -108,8 +107,8 @@ export default function AppLayout({
 
     new Notification(title, {
       body: body,
-      icon: '/favicon.ico', // Optional: You can use a specific icon
-      // tag: reminder.id, // Optional: to prevent multiple notifications for the same reminder if logic allows
+      icon: '/favicon.ico', 
+      tag: reminder.id, 
     });
   };
 
@@ -125,7 +124,7 @@ export default function AppLayout({
       const currentMinute = now.getMinutes();
 
       if (currentMinute === lastCheckedMinute) {
-        return; // Already checked this minute
+        return; 
       }
       setLastCheckedMinute(currentMinute);
 
@@ -139,10 +138,10 @@ export default function AppLayout({
           showNotification(reminder);
         }
       });
-    }, 15000); // Check every 15 seconds
+    }, 15000); 
 
     return () => clearInterval(intervalId);
-  }, [reminders, user, lastCheckedMinute, notificationPermission]);
+  }, [reminders, user, lastCheckedMinute, notificationPermission, showNotification]);
 
 
   if (loading) {
