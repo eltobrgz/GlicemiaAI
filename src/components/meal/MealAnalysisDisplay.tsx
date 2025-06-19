@@ -2,7 +2,7 @@
 import type { MealAnalysis } from '@/types';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
-import { Utensils, Info, Lightbulb, CheckCircle } from 'lucide-react';
+import { Utensils, Info, Lightbulb, CheckCircle, Camera } from 'lucide-react'; // Added Camera icon
 
 interface MealAnalysisDisplayProps {
   analysis: MealAnalysis;
@@ -25,23 +25,28 @@ const SectionCard: React.FC<{ title: string; icon: React.ElementType; children: 
 export default function MealAnalysisDisplay({ analysis }: MealAnalysisDisplayProps) {
   return (
     <div className="space-y-6 mt-6 animate-fadeIn">
-      {analysis.imageUrl && (
-        <Card className="overflow-hidden shadow-lg" data-ai-hint="food meal">
+      <Card className="overflow-hidden shadow-lg" data-ai-hint="food meal">
           <CardHeader>
             <CardTitle className="font-headline text-primary">Imagem da Refeição Analisada</CardTitle>
             {analysis.originalImageFileName && <CardDescription>Arquivo: {analysis.originalImageFileName}</CardDescription>}
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Image
-              src={analysis.imageUrl}
-              alt="Refeição analisada"
-              width={400}
-              height={300}
-              className="rounded-md object-cover max-h-[400px]"
-            />
+            {analysis.imageUrl ? (
+                <Image
+                  src={analysis.imageUrl}
+                  alt="Refeição analisada"
+                  width={400}
+                  height={300}
+                  className="rounded-md object-cover max-h-[400px]"
+                />
+            ) : (
+              <div className="w-full h-[300px] bg-muted rounded-md flex flex-col items-center justify-center text-muted-foreground" data-ai-hint="placeholder cooking">
+                <Camera className="h-16 w-16 mb-2" />
+                <span>Imagem não disponível</span>
+              </div>
+            )}
           </CardContent>
         </Card>
-      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <SectionCard title="Identificação dos Alimentos" icon={Utensils} className="shadow-md">

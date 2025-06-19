@@ -19,9 +19,9 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'rnblscpnhltqcgwsiobb.supabase.co', // Your Supabase project hostname
+        hostname: 'rnblscpnhltqcgwsiobb.supabase.co', // CONFIRME SE ESTE É O HOSTNAME CORRETO DO SEU PROJETO SUPABASE
         port: '',
-        pathname: '/storage/v1/object/public/**',    // Allows images from any public bucket
+        pathname: '/storage/v1/object/public/**',    // Permite imagens de qualquer bucket público
       }
     ],
   },

@@ -189,11 +189,11 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
 1.  No painel do seu projeto Supabase, vá para **Storage** (ícone de pasta).
 2.  Clique em "**New bucket**" para criar o primeiro bucket:
     *   **Bucket name**: `profile-pictures`
-    *   **Public bucket**: **Deixe desmarcado** por enquanto. Vamos configurar políticas de acesso via SQL ou UI.
+    *   **Public bucket**: **NÃO MARQUE A OPÇÃO "Public bucket" AQUI**. Vamos configurar políticas de acesso mais granulares.
     *   Clique em "**Create bucket**".
 3.  Clique em "**New bucket**" novamente para criar o segundo bucket:
     *   **Bucket name**: `meal-photos`
-    *   **Public bucket**: **Deixe desmarcado** por enquanto.
+    *   **Public bucket**: **NÃO MARQUE A OPÇÃO "Public bucket" AQUI**.
     *   Clique em "**Create bucket**".
 
 **Estrutura de Pastas Esperada no Storage:**
@@ -202,18 +202,23 @@ O código da aplicação (`storage.ts`) criará os caminhos da seguinte forma:
 - Foto de refeição: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/meals/{ID_UNICO_DA_FOTO}.{EXTENSAO}`
 Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` resultará em `users` e `(storage.foldername(name))[2]` resultará no `{UID_DO_USUARIO}`. Usaremos `(storage.foldername(name))[2]` para verificar a propriedade do usuário.
 
-### Opção A: Configurar Políticas de Storage via Interface do Supabase
+### Configurar Políticas de Storage
+
+**MUITO IMPORTANTE:** Para que as imagens possam ser exibidas na sua aplicação, você PRECISA configurar políticas que permitam a LEITURA (SELECT) pública dos objetos nesses buckets.
+
+#### Opção A: Configurar Políticas de Storage via Interface do Supabase
 
 1.  Clique no bucket `profile-pictures` recém-criado e vá para a aba "**Policies**".
 2.  Clique em "**New policy**" e escolha "**Create a new policy from scratch**".
 3.  Crie as seguintes políticas para `profile-pictures`:
 
-    *   **Política 1: Leitura Pública para Avatares**
+    *   **Política 1: Leitura Pública para Avatares (ESSENCIAL PARA EXIBIÇÃO)**
         *   **Policy name**: `Public Read Access for Profile Pictures`
-        *   **Allowed operations**: Marque `SELECT`.
-        *   **Target roles**: Marque `anon`, `authenticated`.
+        *   **Allowed operations**: Marque **APENAS `SELECT`**.
+        *   **Target roles**: Marque `anon`, `authenticated`. (Permite que qualquer um veja as fotos, o que é comum para avatares).
         *   **Policy definition (USING expression)**: `true`
         *   Clique em "**Review**" e "**Save policy**".
+        *   **Observação:** Esta política torna todas as fotos de perfil publicamente legíveis. Se você precisar de controle mais granular, a política precisaria ser mais específica, mas para a maioria dos casos de avatares, a leitura pública é aceitável.
 
     *   **Política 2: Usuários Gerenciam Suas Próprias Fotos de Perfil (INSERT, UPDATE, DELETE)**
         *   **Policy name**: `Users can manage their own profile pictures`
@@ -225,9 +230,9 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
 
 4.  Repita o processo para o bucket `meal-photos`:
 
-    *   **Política 1: Leitura Pública para Fotos de Refeição**
+    *   **Política 1: Leitura Pública para Fotos de Refeição (ESSENCIAL PARA EXIBIÇÃO)**
         *   **Policy name**: `Public Read Access for Meal Photos`
-        *   **Allowed operations**: Marque `SELECT`.
+        *   **Allowed operations**: Marque **APENAS `SELECT`**.
         *   **Target roles**: Marque `anon`, `authenticated`.
         *   **Policy definition (USING expression)**: `true`
 
@@ -243,17 +248,17 @@ Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` re
         *   **Target roles**: Marque `authenticated`.
         *   **Policy definition (USING expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])`
 
-### Opção B: Configurar Políticas de Storage via SQL Editor
+#### Opção B: Configurar Políticas de Storage via SQL Editor
 
 Se preferir, você pode criar as políticas de storage usando o SQL Editor. Vá para o SQL Editor no painel do Supabase e execute os seguintes scripts. **Certifique-se de que os buckets `profile-pictures` e `meal-photos` já foram criados pela UI como descrito acima.**
 
 ```sql
 -- Políticas para o bucket 'profile-pictures'
 
--- 1. Permite que qualquer pessoa leia (SELECT) fotos de perfil
+-- 1. Permite que qualquer pessoa leia (SELECT) fotos de perfil (ESSENCIAL PARA EXIBIÇÃO)
 CREATE POLICY "Public Read Access for Profile Pictures"
 ON storage.objects FOR SELECT
-TO anon, authenticated
+TO anon, authenticated  -- Permite que qualquer pessoa (mesmo não logada) veja as fotos de perfil
 USING (bucket_id = 'profile-pictures');
 
 -- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de perfil
@@ -292,10 +297,10 @@ USING (
 
 -- Políticas para o bucket 'meal-photos'
 
--- 1. Permite que qualquer pessoa leia (SELECT) fotos de refeições
+-- 1. Permite que qualquer pessoa leia (SELECT) fotos de refeições (ESSENCIAL PARA EXIBIÇÃO)
 CREATE POLICY "Public Read Access for Meal Photos"
 ON storage.objects FOR SELECT
-TO anon, authenticated
+TO anon, authenticated -- Permite que qualquer pessoa (mesmo não logada) veja as fotos de refeições
 USING (bucket_id = 'meal-photos');
 
 -- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de refeições
@@ -318,6 +323,8 @@ USING (
 );
 ```
 **Nota sobre `(storage.foldername(name))[2]`**: Esta função extrai o nome da segunda pasta no caminho do arquivo. A aplicação está configurada para salvar arquivos em `users/{user_id}/...`, então `(storage.foldername(name))[1]` seria "users" e `(storage.foldername(name))[2]` seria o ID do usuário.
+
+**SEM AS POLÍTICAS DE LEITURA PÚBLICA (SELECT), AS IMAGENS NÃO SERÃO EXIBIDAS NO SEU APLICATIVO!**
 
 ## Passo 6: Configurações de Autenticação no Supabase
 
@@ -351,9 +358,9 @@ pnpm dev
 5.  Teste todas as funcionalidades que salvam e buscam dados:
     *   Registrar e visualizar glicemias.
     *   Registrar e visualizar doses de insulina.
-    *   **Analisar refeições (com upload de imagem para o Storage).**
+    *   **Analisar refeições (com upload de imagem para o Storage e visualização da imagem).**
     *   Configurar e visualizar lembretes.
-    *   **Visualizar e editar o perfil do usuário (com upload de foto de perfil para o Storage).**
+    *   **Visualizar e editar o perfil do usuário (com upload de foto de perfil para o Storage e visualização da foto).**
 
 ## Solução de Problemas Comuns
 
@@ -362,11 +369,16 @@ pnpm dev
     *   Verifique se os nomes das variáveis (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GEMINI_API_KEY`) estão corretos.
     *   Verifique se os valores das chaves estão corretos e não contêm erros de digitação.
     *   **REINICIE O SERVIDOR NEXT.JS.**
-*   **Erros de Permissão (RLS)**: Se você receber erros indicando que não tem permissão para acessar ou modificar dados (inclusive no Storage), verifique suas políticas de RLS nas tabelas do Supabase e as políticas dos Buckets no Storage. Certifique-se de que elas permitem que usuários autenticados (`auth.uid() = ...`) realizem as operações necessárias.
+*   **Erros de Permissão (RLS nas tabelas)**: Se você receber erros indicando que não tem permissão para acessar ou modificar dados nas tabelas do Supabase, verifique suas políticas de RLS nas tabelas.
+*   **IMAGENS NÃO APARECEM**:
+    *   **Verifique as POLÍTICAS DE STORAGE**: Certifique-se de que os buckets `profile-pictures` e `meal-photos` têm políticas que permitem a operação `SELECT` para os roles `anon` e `authenticated`. Sem isso, as imagens não serão publicamente acessíveis e não carregarão. (Veja Passo 5).
+    *   **Verifique `next.config.ts`**: Confirme que o hostname do seu projeto Supabase (ex: `SEU_ID_DE_PROJETO.supabase.co`) está listado em `images.remotePatterns`.
+    *   **Verifique as URLs no Banco de Dados**: As URLs na sua tabela (ex: `avatar_url` em `profiles` ou `image_url` em `meal_analyses`) devem ser as URLs públicas corretas do Supabase Storage.
+    *   **Console do Navegador**: Verifique o console do navegador por erros de rede (403 Forbidden, 404 Not Found) ao tentar carregar as imagens. Um erro 403 geralmente indica um problema de permissão no Storage.
 *   **Erro "fetch failed" ou de rede**: Verifique se a "Project URL" do Supabase está correta no seu `.env.local` e se seu projeto Supabase está ativo e acessível.
 *   **Upload para Storage Falha**:
     *   Verifique se o nome do bucket está correto no código.
-    *   Verifique as políticas do bucket (seja via UI ou SQL). A mensagem de erro do Supabase geralmente é informativa.
+    *   Verifique as políticas do bucket (seja via UI ou SQL) para operações de `INSERT`, `UPDATE`, `DELETE`.
     *   Verifique o tamanho do arquivo e os tipos permitidos (se configurado).
     *   Confirme que a estrutura de pastas (`users/UID_DO_USUARIO/...`) está sendo respeitada pelo código de upload e que as políticas correspondem a essa estrutura.
 *   **Erro da IA (`FAILED_PRECONDITION` para Gemini)**:
@@ -374,3 +386,5 @@ pnpm dev
     *   Verifique se a chave de API do Gemini é válida e tem as permissões necessárias no Google Cloud Project associado.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente à sua aplicação GlicemiaAI, incluindo o uso do Storage! Se tiver mais dúvidas ou problemas, me diga.
+
+```
