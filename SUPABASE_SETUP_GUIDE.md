@@ -185,119 +185,134 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
 1.  No painel do seu projeto Supabase, vá para **Storage** (ícone de pasta).
 2.  Clique em "**New bucket**" para criar o primeiro bucket:
     *   **Bucket name**: `profile-pictures`
-    *   **Public bucket**: Deixe **desmarcado** por enquanto. Vamos configurar políticas de acesso.
+    *   **Public bucket**: **Deixe desmarcado** por enquanto. Vamos configurar políticas de acesso via SQL ou UI.
     *   Clique em "**Create bucket**".
-3.  Clique no bucket `profile-pictures` recém-criado e vá para a aba "**Policies**".
-4.  Clique em "**New policy**" e escolha "**Create a new policy from scratch**".
-5.  Crie as seguintes políticas para `profile-pictures` (você pode precisar de múltiplas políticas ou combinar):
+3.  Clique em "**New bucket**" novamente para criar o segundo bucket:
+    *   **Bucket name**: `meal-photos`
+    *   **Public bucket**: **Deixe desmarcado** por enquanto.
+    *   Clique em "**Create bucket**".
 
-    *   **Política para Leitura Pública de Avatares:**
-        *   **Policy name**: `Public Read Access for Avatars`
+**Estrutura de Pastas Esperada no Storage:**
+O código da aplicação (`storage.ts`) criará os caminhos da seguinte forma:
+- Foto de perfil: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/profile.{EXTENSAO}`
+- Foto de refeição: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/meals/{ID_UNICO_DA_FOTO}.{EXTENSAO}`
+Isso significa que nas políticas de storage, `(storage.foldername(name))[1]` resultará em `users` e `(storage.foldername(name))[2]` resultará no `{UID_DO_USUARIO}`. Usaremos `(storage.foldername(name))[2]` para verificar a propriedade do usuário.
+
+### Opção A: Configurar Políticas de Storage via Interface do Supabase
+
+1.  Clique no bucket `profile-pictures` recém-criado e vá para a aba "**Policies**".
+2.  Clique em "**New policy**" e escolha "**Create a new policy from scratch**".
+3.  Crie as seguintes políticas para `profile-pictures`:
+
+    *   **Política 1: Leitura Pública para Avatares**
+        *   **Policy name**: `Public Read Access for Profile Pictures`
         *   **Allowed operations**: Marque `SELECT`.
         *   **Target roles**: Marque `anon`, `authenticated`.
-        *   **Policy definition (USING expression)**:
-            ```sql
-            true
-            ```
+        *   **Policy definition (USING expression)**: `true`
         *   Clique em "**Review**" e "**Save policy**".
 
-    *   **Política para Usuários Gerenciarem Seus Próprios Avatares:**
-        *   **Policy name**: `Users can manage their own avatars`
+    *   **Política 2: Usuários Gerenciam Suas Próprias Fotos de Perfil (INSERT, UPDATE, DELETE)**
+        *   **Policy name**: `Users can manage their own profile pictures`
         *   **Allowed operations**: Marque `INSERT`, `UPDATE`, `DELETE`.
         *   **Target roles**: Marque `authenticated`.
-        *   **Policy definition (USING expression for SELECT, DELETE, UPDATE; WITH CHECK expression for INSERT, UPDATE)**:
-            ```sql
-            -- Para SELECT, UPDATE, DELETE (o que o usuário PODE acessar/modificar)
-            (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1])
+        *   **Policy definition (USING expression para UPDATE/DELETE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[2])`
+        *   **Policy definition (WITH CHECK expression para INSERT/UPDATE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[2])`
+        *   Clique em "**Review**" e "**Save policy**".
 
-            -- Para INSERT, UPDATE (o que o usuário PODE criar/modificar)
-            (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1])
-            ```
-            *Nota: Esta política assume que você armazenará os avatares em pastas nomeadas com o `user_id`, por exemplo: `users/{user_id}/profile.png`. A lógica de upload no app precisará seguir este padrão.*
-            *Se preferir um nome de arquivo fixo por usuário, a política pode ser mais simples. Se os arquivos têm nomes únicos e o path inclui o user_id, como `auth.uid()::text || '/' || name` (ex: `{user_id}/profile.png`), a política acima é um bom começo.*
-            *Alternativa mais simples para INSERT/UPDATE se os nomes de arquivo não seguem um padrão de pasta com user_id, mas você confia na lógica do app para colocar na pasta correta (menos seguro se a lógica do app falhar):*
-            ```sql
-            -- Para INSERT/UPDATE (CHECK)
-            (bucket_id = 'profile-pictures' AND auth.role() = 'authenticated')
-            -- Para SELECT/DELETE (USING)
-            (bucket_id = 'profile-pictures' AND auth.role() = 'authenticated') -- Ou true se for público
-            ```
-            *Vamos usar uma abordagem onde o app garante o path `users/{uid}/filename`.*
+4.  Repita o processo para o bucket `meal-photos`:
 
-            Policy Example (INSERT for profile-pictures):
-            Name: `Allow user to insert own avatar`
-            Operations: `INSERT`
-            Roles: `authenticated`
-            USING expression: `(bucket_id = 'profile-pictures') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
-            WITH CHECK expression: `(bucket_id = 'profile-pictures') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
-
-            Policy Example (SELECT for profile-pictures - Public Read):
-            Name: `Allow public read for avatars`
-            Operations: `SELECT`
-            Roles: `anon`, `authenticated`
-            USING expression: `bucket_id = 'profile-pictures'`
-            WITH CHECK expression: `(false)` (não aplicável para select)
-
-            Policy Example (UPDATE for profile-pictures):
-            Name: `Allow user to update own avatar`
-            Operations: `UPDATE`
-            Roles: `authenticated`
-            USING expression: `(bucket_id = 'profile-pictures') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
-            WITH CHECK expression: `(bucket_id = 'profile-pictures') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
-
-            Policy Example (DELETE for profile-pictures):
-            Name: `Allow user to delete own avatar`
-            Operations: `DELETE`
-            Roles: `authenticated`
-            USING expression: `(bucket_id = 'profile-pictures') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
-            WITH CHECK expression: `(false)` (não aplicável para delete)
-
-6.  Clique em "**New bucket**" novamente para criar o segundo bucket:
-    *   **Bucket name**: `meal-photos`
-    *   **Public bucket**: Deixe **desmarcado**.
-    *   Clique em "**Create bucket**".
-7.  Clique no bucket `meal-photos` e vá para a aba "**Policies**".
-8.  Crie políticas similares para `meal-photos`:
-
-    *   **Política para Leitura Pública de Fotos de Refeição:**
+    *   **Política 1: Leitura Pública para Fotos de Refeição**
         *   **Policy name**: `Public Read Access for Meal Photos`
         *   **Allowed operations**: Marque `SELECT`.
         *   **Target roles**: Marque `anon`, `authenticated`.
-        *   **Policy definition (USING expression)**:
-            ```sql
-            true
-            ```
-        *   Clique em "**Review**" e "**Save policy**".
+        *   **Policy definition (USING expression)**: `true`
 
-    *   **Política para Usuários Enviarem Suas Fotos de Refeição:**
-        *   **Policy name**: `Users can upload their meal photos`
+    *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)**
+        *   **Policy name**: `Users can upload their own meal photos`
         *   **Allowed operations**: Marque `INSERT`.
         *   **Target roles**: Marque `authenticated`.
-        *   **Policy definition (WITH CHECK expression)**:
-            ```sql
-            (bucket_id = 'meal-photos' AND auth.uid() = (storage.foldername(name))[1])
-            ```
-             *Isso também assume que as fotos das refeições serão armazenadas em pastas com `user_id`, ex: `users/{user_id}/meals/{some_uuid}.jpg`.*
+        *   **Policy definition (WITH CHECK expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])`
 
-            Policy Example (INSERT for meal-photos):
-            Name: `Allow user to insert own meal photo`
-            Operations: `INSERT`
-            Roles: `authenticated`
-            USING expression: `(bucket_id = 'meal-photos') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
-            WITH CHECK expression: `(bucket_id = 'meal-photos') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
+    *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição (DELETE)** (Opcional, mas recomendado se a funcionalidade existir no app)
+        *   **Policy name**: `Users can delete their own meal photos`
+        *   **Allowed operations**: Marque `DELETE`.
+        *   **Target roles**: Marque `authenticated`.
+        *   **Policy definition (USING expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])`
 
-            Policy Example (SELECT for meal-photos - Public Read):
-            Name: `Allow public read for meal photos`
-            Operations: `SELECT`
-            Roles: `anon`, `authenticated`
-            USING expression: `bucket_id = 'meal-photos'`
+### Opção B: Configurar Políticas de Storage via SQL Editor
 
-            Policy Example (DELETE for meal-photos - User can delete their own):
-            Name: `Allow user to delete own meal photo`
-            Operations: `DELETE`
-            Roles: `authenticated`
-            USING expression: `(bucket_id = 'meal-photos') AND ((storage.foldername(name))[1] = (auth.uid())::text)`
+Se preferir, você pode criar as políticas de storage usando o SQL Editor. Vá para o SQL Editor no painel do Supabase e execute os seguintes scripts. **Certifique-se de que os buckets `profile-pictures` e `meal-photos` já foram criados pela UI como descrito acima.**
 
+```sql
+-- Políticas para o bucket 'profile-pictures'
+
+-- 1. Permite que qualquer pessoa leia (SELECT) fotos de perfil
+CREATE POLICY "Public Read Access for Profile Pictures"
+ON storage.objects FOR SELECT
+TO anon, authenticated
+USING (bucket_id = 'profile-pictures');
+
+-- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de perfil
+-- A estrutura de pasta esperada é 'users/USER_ID/filename.ext'
+CREATE POLICY "Users can insert their own profile pictures"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'profile-pictures' AND
+  auth.uid()::text = (storage.foldername(name))[2] -- Checa se o segundo nível da pasta é o UID do usuário
+);
+
+-- 3. Permite que usuários autenticados atualizem (UPDATE) suas próprias fotos de perfil
+CREATE POLICY "Users can update their own profile pictures"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (
+  bucket_id = 'profile-pictures' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+)
+WITH CHECK (
+  bucket_id = 'profile-pictures' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+-- 4. Permite que usuários autenticados deletem (DELETE) suas próprias fotos de perfil
+CREATE POLICY "Users can delete their own profile pictures"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'profile-pictures' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+
+
+-- Políticas para o bucket 'meal-photos'
+
+-- 1. Permite que qualquer pessoa leia (SELECT) fotos de refeições
+CREATE POLICY "Public Read Access for Meal Photos"
+ON storage.objects FOR SELECT
+TO anon, authenticated
+USING (bucket_id = 'meal-photos');
+
+-- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de refeições
+-- A estrutura de pasta esperada é 'users/USER_ID/meals/filename.ext'
+CREATE POLICY "Users can upload their own meal photos"
+ON storage.objects FOR INSERT
+TO authenticated
+WITH CHECK (
+  bucket_id = 'meal-photos' AND
+  auth.uid()::text = (storage.foldername(name))[2] -- Checa se o segundo nível da pasta é o UID do usuário
+);
+
+-- 3. Permite que usuários autenticados deletem (DELETE) suas próprias fotos de refeições (se a funcionalidade for implementada no app)
+CREATE POLICY "Users can delete their own meal photos"
+ON storage.objects FOR DELETE
+TO authenticated
+USING (
+  bucket_id = 'meal-photos' AND
+  auth.uid()::text = (storage.foldername(name))[2]
+);
+```
+**Nota sobre `(storage.foldername(name))[2]`**: Esta função extrai o nome da segunda pasta no caminho do arquivo. A aplicação está configurada para salvar arquivos em `users/{user_id}/...`, então `(storage.foldername(name))[1]` seria "users" e `(storage.foldername(name))[2]` seria o ID do usuário.
 
 ## Passo 6: Configurações de Autenticação no Supabase
 
@@ -306,7 +321,7 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
     *   **Email** já deve estar habilitado por padrão. Você pode configurar outras opções aqui se desejar (Google, GitHub, etc.), mas a aplicação Next.js está configurada apenas para Email/Senha por enquanto.
 3.  **Settings**:
     *   **Confirm email**: Por padrão, isso geralmente está habilitado. Isso significa que os usuários precisarão confirmar o email antes de poderem fazer login. Para desenvolvimento, você pode querer desabilitar temporariamente para facilitar os testes. Lembre-se de habilitá-lo para produção.
-    *   **Redirect URLs**: Configure o "Site URL" (geralmente `http://localhost:3000` para desenvolvimento) e "Additional Redirect URLs" se necessário para o fluxo de autenticação (ex: links de confirmação de email, reset de senha).
+    *   **Redirect URLs**: Configure o "Site URL" (geralmente `http://localhost:3000` para desenvolvimento, ou a URL da sua aplicação em produção) e "Additional Redirect URLs" se necessário para o fluxo de autenticação (ex: links de confirmação de email, reset de senha). A URL base é importante para que os links mágicos de confirmação funcionem.
 4.  **Email Templates**: Personalize os templates de email (Confirmação, Reset de Senha, etc.) para que correspondam à identidade visual da sua aplicação.
 
 ## Passo 7: Reiniciar a Aplicação Next.js
@@ -346,178 +361,8 @@ pnpm dev
 *   **Erro "fetch failed" ou de rede**: Verifique se a "Project URL" do Supabase está correta no seu `.env.local` e se seu projeto Supabase está ativo e acessível.
 *   **Upload para Storage Falha**:
     *   Verifique se o nome do bucket está correto no código.
-    *   Verifique as políticas do bucket. A mensagem de erro do Supabase geralmente é informativa.
+    *   Verifique as políticas do bucket (seja via UI ou SQL). A mensagem de erro do Supabase geralmente é informativa.
     *   Verifique o tamanho do arquivo e os tipos permitidos (se configurado).
+    *   Confirme que a estrutura de pastas (`users/UID_DO_USUARIO/...`) está sendo respeitada pelo código de upload e que as políticas correspondem a essa estrutura.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente à sua aplicação GlicemiaAI, incluindo o uso do Storage! Se tiver mais dúvidas ou problemas, me diga.
-      
-As políticas de storage podem ser um pouco complexas. Para simplificar inicialmente, você pode tornar os buckets públicos (marcando "Public bucket" na criação ou editando-o). Isso remove a necessidade de políticas de SELECT complexas, mas qualquer um com o link poderá acessar os arquivos. Para INSERT, UPDATE, DELETE, você ainda precisará de políticas baseadas em `auth.uid()`. Para produção, políticas mais granulares são recomendadas.
-
-Exemplo de política de Storage mais simples para permitir que usuários autenticados façam upload e qualquer um leia (público):
-
-Para o bucket `profile-pictures` e `meal-photos`:
-1.  Marque o bucket como "Public" nas configurações do bucket. Isso lida com o SELECT público.
-2.  Adicione uma política para INSERT:
-    *   **Policy name**: `Authenticated users can upload`
-    *   **Allowed operations**: `INSERT`
-    *   **Target roles**: `authenticated`
-    *   **Policy definition (WITH CHECK expression)**:
-        ```sql
-        (bucket_id = 'profile-pictures') -- ou 'meal-photos' para o outro bucket
-        ```
-3.  Adicione uma política para UPDATE (se necessário, por exemplo, para foto de perfil):
-    *   **Policy name**: `Authenticated users can update their own files`
-    *   **Allowed operations**: `UPDATE`
-    *   **Target roles**: `authenticated`
-    *   **Policy definition (USING e WITH CHECK)**:
-        ```sql
-        (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1])
-        ```
-        *(Isso ainda assume que o user_id está no caminho do arquivo)*
-4.  Adicione uma política para DELETE (se necessário):
-    *   **Policy name**: `Authenticated users can delete their own files`
-    *   **Allowed operations**: `DELETE`
-    *   **Target roles**: `authenticated`
-    *   **Policy definition (USING)**:
-        ```sql
-        (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1])
-        ```
-
-Lembre-se que `(storage.foldername(name))[1]` extrai a primeira pasta do caminho do arquivo. Se você salvar arquivos como `user_id/photo.jpg`, então `(storage.foldername(name))[1]` será `user_id`.
-
-Para simplificar ainda mais o **desenvolvimento inicial**, você pode usar políticas bem abertas e depois restringi-las:
-Ex: Política para `INSERT` em `profile-pictures` (desenvolvimento):
-```sql
--- Policy Name: Allow any authenticated user to insert
--- Operations: INSERT
--- Roles: authenticated
--- USING expression: true
--- WITH CHECK expression: (bucket_id = 'profile-pictures')
-```
-E para `SELECT` (leitura), marcar o bucket como público é o mais fácil. **Lembre-se de revisar e restringir essas políticas para produção!**
-
-```sql
--- Para facilitar o início, políticas de Storage bem permissivas (REVISAR PARA PRODUÇÃO):
-
--- Para o bucket 'profile-pictures'
--- 1. Permite que qualquer pessoa leia (SELECT)
--- CREATE POLICY "Public Read Access for Profile Pictures" ON storage.objects FOR SELECT USING (bucket_id = 'profile-pictures');
-
--- 2. Permite que usuários autenticados insiram (INSERT)
--- CREATE POLICY "Authenticated User Insert for Profile Pictures" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'profile-pictures');
-
--- 3. Permite que usuários autenticados atualizem (UPDATE) seus próprios arquivos (assumindo que o user_id está no caminho do arquivo)
--- CREATE POLICY "Authenticated User Update for Own Profile Pictures" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1]);
-
--- 4. Permite que usuários autenticados deletem (DELETE) seus próprios arquivos
--- CREATE POLICY "Authenticated User Delete for Own Profile Pictures" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid() = (storage.foldername(name))[1]);
-
-
--- Para o bucket 'meal-photos'
--- 1. Permite que qualquer pessoa leia (SELECT)
--- CREATE POLICY "Public Read Access for Meal Photos" ON storage.objects FOR SELECT USING (bucket_id = 'meal-photos');
-
--- 2. Permite que usuários autenticados insiram (INSERT)
--- CREATE POLICY "Authenticated User Insert for Meal Photos" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'meal-photos');
-
--- 3. Permite que usuários autenticados deletem (DELETE) seus próprios arquivos (se necessário)
--- CREATE POLICY "Authenticated User Delete for Own Meal Photos" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'meal-photos' AND auth.uid() = (storage.foldername(name))[1]);
-
--- Nota: Para executar estas políticas SQL diretamente, você pode precisar habilitar o acesso via SQL para o schema de storage,
--- ou criá-las através da UI do Supabase Storage, que é o método recomendado.
--- As políticas acima com (storage.foldername(name))[1] esperam que o primeiro nível de pasta seja o ID do usuário.
--- Ex: 'profile-pictures/USER_ID/avatar.png'
--- Ex: 'meal-photos/USER_ID/refeicao_xyz.jpg'
-```
-
-**Se você optar por buckets públicos na UI do Supabase, você não precisará das políticas de `SELECT` acima.** Você só precisará das políticas de `INSERT`, `UPDATE`, e `DELETE` para usuários autenticados.
-
-**Exemplo de estrutura de pastas no Storage que as políticas acima esperam:**
-*   Bucket `profile-pictures`:
-    *   `{user_id}/profile.png` (ou `avatar.jpg`, etc.)
-*   Bucket `meal-photos`:
-    *   `{user_id}/meals/{timestamp_or_uuid}.jpg`
-
-A lógica de upload nos arquivos Typescript (`storage.ts`) será responsável por criar esses caminhos.
-
-```sql
--- Simplificando as políticas de Storage para o Guia (usando a UI do Supabase para criar):
-
--- BUCKET: profile-pictures
--- Policy 1: Public Read
---   Name: "Public read access for profile pictures"
---   Allowed operation: SELECT
---   Target roles: anon, authenticated
---   USING expression: true
-
--- Policy 2: Authenticated users can upload/update/delete their own
---   Name: "Users can manage their own profile pictures"
---   Allowed operations: INSERT, UPDATE, DELETE
---   Target roles: authenticated
---   USING expression (for UPDATE, DELETE): auth.uid() = (storage.foldername(name))[1]  -- Checks if the user owns the folder
---   WITH CHECK expression (for INSERT, UPDATE): auth.uid() = (storage.foldername(name))[1] -- Ensures user uploads to their own folder
-
--- BUCKET: meal-photos
--- Policy 1: Public Read
---   Name: "Public read access for meal photos"
---   Allowed operation: SELECT
---   Target roles: anon, authenticated
---   USING expression: true
-
--- Policy 2: Authenticated users can upload their own
---   Name: "Users can upload their own meal photos"
---   Allowed operations: INSERT
---   Target roles: authenticated
---   WITH CHECK expression: auth.uid() = (storage.foldername(name))[1]
-
--- Policy 3: Authenticated users can delete their own (opcional, mas bom ter)
---   Name: "Users can delete their own meal photos"
---   Allowed operations: DELETE
---   Target roles: authenticated
---   USING expression: auth.uid() = (storage.foldername(name))[1]
-```
-
-O código da aplicação (`storage.ts`) criará os caminhos da seguinte forma:
-- Foto de perfil: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/profile.{EXTENSAO}`
-- Foto de refeição: `NOMEDOBBUCKET/users/{UID_DO_USUARIO}/meals/{ID_UNICO_DA_FOTO}.{EXTENSAO}`
-
-Isso significa que `(storage.foldername(name))[1]` resultará em `users` e `(storage.foldername(name))[2]` resultará em `{UID_DO_USUARIO}`.
-A política correta para checar o dono do arquivo no segundo nível de pasta seria:
-`auth.uid()::text = (storage.foldername(name))[2]`
-
-Vamos ajustar as políticas no guia para refletir essa estrutura de pasta: `users/{user_id}/...`
-
-**Políticas de Storage (REVISADAS para o guia):**
-
-*   **Bucket**: `profile-pictures`
-    *   **Política 1: Leitura Pública**
-        *   Nome: `Public Read Access for Profile Pictures`
-        *   Operações: `SELECT`
-        *   Perfis (Roles): `anon`, `authenticated`
-        *   Usando expressão (USING): `true`
-    *   **Política 2: Usuários Gerenciam Próprias Fotos de Perfil**
-        *   Nome: `Users can manage their own profile pictures`
-        *   Operações: `INSERT`, `UPDATE`, `DELETE`
-        *   Perfis (Roles): `authenticated`
-        *   Usando expressão (USING para UPDATE/DELETE): `auth.uid()::text = (storage.foldername(name))[2]`
-        *   Com checagem (WITH CHECK para INSERT/UPDATE): `auth.uid()::text = (storage.foldername(name))[2]`
-
-*   **Bucket**: `meal-photos`
-    *   **Política 1: Leitura Pública**
-        *   Nome: `Public Read Access for Meal Photos`
-        *   Operações: `SELECT`
-        *   Perfis (Roles): `anon`, `authenticated`
-        *   Usando expressão (USING): `true`
-    *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição**
-        *   Nome: `Users can upload their own meal photos`
-        *   Operações: `INSERT`
-        *   Perfis (Roles): `authenticated`
-        *   Com checagem (WITH CHECK): `auth.uid()::text = (storage.foldername(name))[2]`
-    *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição**
-        *   Nome: `Users can delete their own meal photos`
-        *   Operações: `DELETE`
-        *   Perfis (Roles): `authenticated`
-        *   Usando expressão (USING): `auth.uid()::text = (storage.foldername(name))[2]`
-
-Isso deve cobrir a configuração do Storage.
-
