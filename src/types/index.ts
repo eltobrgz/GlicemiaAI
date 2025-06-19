@@ -1,3 +1,4 @@
+
 import type { AnalyzeMealImageOutput as GenAIAnalyzeMealImageOutput } from '@/ai/flows/analyze-meal-image';
 
 export interface GlucoseReading {
@@ -40,4 +41,16 @@ export interface MealAnalysis extends AnalyzeMealImageOutput {
   timestamp: string; // ISO string of when the analysis was done/requested
   imageUrl?: string; // Data URI of the analyzed image (optional, for display)
   originalImageFileName?: string; // Name of the uploaded file
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  avatarUrl?: string; // URL for the user's avatar image
+  // Add other profile fields as needed, e.g.:
+  // dateOfBirth?: string;
+  // diabetesType?: 'tipo1' | 'tipo2' | 'gestacional' | 'outro';
+  // insulinSensitivityFactor?: number;
+  // carbohydrateRatio?: number;
 }

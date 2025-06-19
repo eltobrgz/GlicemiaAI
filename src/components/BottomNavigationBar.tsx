@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3 } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface NavItem {
@@ -21,7 +21,8 @@ export default function BottomNavigationBar() {
     { href: '/log/glucose', label: 'Glicemia', icon: Droplet },
     { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
-    { href: '/insights', label: 'Insights', icon: BarChart3 },
+    // { href: '/insights', label: 'Insights', icon: BarChart3 }, // Potentially remove for space if 6 items is too much
+    { href: '/profile', label: 'Perfil', icon: User },
   ];
 
   return (
@@ -34,7 +35,7 @@ export default function BottomNavigationBar() {
               href={item.href}
               key={item.href}
               className={cn(
-                'flex flex-col items-center justify-center text-center p-1 rounded-md w-1/5 group', // w-1/count_of_items
+                'flex flex-col items-center justify-center text-center p-1 rounded-md w-1/5 group', // w-1/count_of_items (adjust if count changes)
                 isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary/90',
                 'transition-colors duration-150'
               )}

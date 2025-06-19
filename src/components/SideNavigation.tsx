@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, Info, LogOut } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, Info, LogOut, User } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
@@ -19,13 +19,14 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 
 const navItems = [
-  { href: '/', label: 'Dashboard', icon: Home },
+  { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet },
   { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
   { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
   { href: '/calendar', label: 'Calendário Glicêmico', icon: CalendarDays },
   { href: '/reminders', label: 'Lembretes', icon: BellRing },
   { href: '/insights', label: 'Insights IA', icon: BarChart3 },
+  { href: '/profile', label: 'Meu Perfil', icon: User },
 ];
 
 const bottomNavItems = [
@@ -50,22 +51,25 @@ export function SideNavigation() {
         <SidebarMenu>
           {navItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))}
-                className={cn(
-                  "justify-start w-full",
-                  (pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href))) 
-                    ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                    : "hover:bg-accent/10 hover:text-accent-foreground"
-                )}
-                tooltip={{ children: item.label, side: 'right', align: 'center' }}
-              >
-                <Link href={item.href}>
-                  <item.icon className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
+              <Link href={item.href} passHref legacyBehavior={false}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))}
+                  className={cn(
+                    "justify-start w-full",
+                    (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))) 
+                      ? "bg-primary/10 text-primary hover:bg-primary/20" 
+                      : "hover:bg-accent/10 hover:text-accent-foreground"
+                  )}
+                  tooltip={{ children: item.label, side: 'right', align: 'center' }}
+                >
+                  {/* The <a> tag is rendered by the Link component itself when legacyBehavior is false */}
+                  <> 
+                    <item.icon className="h-5 w-5" />
+                    <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                  </>
+                </SidebarMenuButton>
+              </Link>
             </SidebarMenuItem>
           ))}
         </SidebarMenu>
@@ -77,17 +81,19 @@ export function SideNavigation() {
             <SidebarMenu>
               {bottomNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                    className="justify-start w-full"
-                    tooltip={{ children: item.label, side: 'right', align: 'center' }}
-                  >
-                    <Link href={item.href}>
-                      <item.icon className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
+                   <Link href={item.href} passHref legacyBehavior={false}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={pathname === item.href}
+                      className="justify-start w-full"
+                      tooltip={{ children: item.label, side: 'right', align: 'center' }}
+                    >
+                      <>
+                        <item.icon className="h-5 w-5" />
+                        <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+                      </>
+                    </SidebarMenuButton>
+                  </Link>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>

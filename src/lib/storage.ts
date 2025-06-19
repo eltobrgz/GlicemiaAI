@@ -1,9 +1,12 @@
-import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis } from '@/types';
+
+import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile } from '@/types';
 
 const GLUCOSE_READINGS_KEY = 'glicemiaAI_glucoseReadings';
 const INSULIN_LOGS_KEY = 'glicemiaAI_insulinLogs';
 const REMINDERS_KEY = 'glicemiaAI_reminders';
 const MEAL_ANALYSES_KEY = 'glicemiaAI_mealAnalyses';
+const USER_PROFILE_KEY = 'glicemiaAI_userProfile';
+
 
 function safelyParseJSON<T>(jsonString: string | null, defaultValue: T): T {
   if (!jsonString) return defaultValue;
@@ -25,7 +28,13 @@ export function getGlucoseReadings(): GlucoseReading[] {
 export function saveGlucoseReading(reading: GlucoseReading): void {
   if (typeof window === 'undefined') return;
   const readings = getGlucoseReadings();
-  readings.unshift(reading); // Add to the beginning for chronological order (newest first)
+  // Check if reading already exists to prevent duplicates if ID is stable before save
+  const existingIndex = readings.findIndex(r => r.id === reading.id);
+  if (existingIndex > -1) {
+    readings[existingIndex] = reading; // Update existing
+  } else {
+    readings.unshift(reading); // Add new to the beginning
+  }
   window.localStorage.setItem(GLUCOSE_READINGS_KEY, JSON.stringify(readings));
 }
 
@@ -54,7 +63,12 @@ export function getInsulinLogs(): InsulinLog[] {
 export function saveInsulinLog(log: InsulinLog): void {
   if (typeof window === 'undefined') return;
   const logs = getInsulinLogs();
-  logs.unshift(log);
+   const existingIndex = logs.findIndex(l => l.id === log.id);
+  if (existingIndex > -1) {
+    logs[existingIndex] = log;
+  } else {
+    logs.unshift(log);
+  }
   window.localStorage.setItem(INSULIN_LOGS_KEY, JSON.stringify(logs));
 }
 
@@ -109,7 +123,12 @@ export function getMealAnalyses(): MealAnalysis[] {
 export function saveMealAnalysis(analysis: MealAnalysis): void {
   if (typeof window === 'undefined') return;
   const analyses = getMealAnalyses();
-  analyses.unshift(analysis);
+  const existingIndex = analyses.findIndex(a => a.id === analysis.id);
+  if (existingIndex > -1) {
+    analyses[existingIndex] = analysis;
+  } else {
+    analyses.unshift(analysis);
+  }
   window.localStorage.setItem(MEAL_ANALYSES_KEY, JSON.stringify(analyses));
 }
 
@@ -118,4 +137,26 @@ export function deleteMealAnalysis(id: string): void {
   let analyses = getMealAnalyses();
   analyses = analyses.filter(a => a.id !== id);
   window.localStorage.setItem(MEAL_ANALYSES_KEY, JSON.stringify(analyses));
+}
+
+// User Profile
+export function getUserProfile(): UserProfile | null {
+  if (typeof window === 'undefined') return null;
+  const data = window.localStorage.getItem(USER_PROFILE_KEY);
+  const profile = safelyParseJSON<UserProfile | null>(data, null);
+  // Return a default mock profile if none is found, for demonstration
+  if (!profile) {
+    return {
+      id: 'default-user-01',
+      name: 'Usuário GlicemiaAI',
+      email: 'usuario@glicemia.ai',
+      avatarUrl: 'https://placehold.co/100x100.png',
+    };
+  }
+  return profile;
+}
+
+export function saveUserProfile(profile: UserProfile): void {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(USER_PROFILE_KEY, JSON.stringify(profile));
 }
