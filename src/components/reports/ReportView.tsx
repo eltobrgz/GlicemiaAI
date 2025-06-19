@@ -8,7 +8,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLe
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownToDot, ArrowUpToDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info } from 'lucide-react';
+import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info } from 'lucide-react'; // Corrigido aqui
 import { getGlucoseLevelColor } from '@/lib/utils'; // Para consistência de cores
 
 export interface ReportData {
@@ -123,7 +123,7 @@ export default function ReportView({ data }: ReportViewProps) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <SummaryCard title="Glicemia Média" value={summary.averageGlucose?.toFixed(1) ?? 'N/A'} unit="mg/dL" icon={Activity} />
         {summary.minGlucose && <SummaryCard title="Glicemia Mínima" value={summary.minGlucose.value} unit="mg/dL" description={`Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm', { locale: ptBR })}`} icon={ArrowDownToDot} iconColor="text-blue-500" />}
-        {summary.maxGlucose && <SummaryCard title="Glicemia Máxima" value={summary.maxGlucose.value} unit="mg/dL" description={`Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm', { locale: ptBR })}`} icon={ArrowUpToDot} iconColor="text-red-500" />}
+        {summary.maxGlucose && <SummaryCard title="Glicemia Máxima" value={summary.maxGlucose.value} unit="mg/dL" description={`Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm', { locale: ptBR })}`} icon={ArrowUpFromDot} iconColor="text-red-500" />}
         <SummaryCard title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1) ?? 'N/A'} unit="mg/dL" description="Medida de variabilidade" icon={TrendingUp} />
         <SummaryCard title="Tempo no Alvo" value={summary.timeInTargetPercent?.toFixed(1) ?? 'N/A'} unit="%" description={`${userProfile.target_glucose_low || 'Padrão'}-${userProfile.target_glucose_high || 'Padrão'} mg/dL`} icon={Percent} iconColor="text-green-500" />
         <SummaryCard title="Tempo Abaixo do Alvo" value={summary.timeBelowTargetPercent?.toFixed(1) ?? 'N/A'} unit="%" description={`< ${userProfile.target_glucose_low || userProfile.hypo_glucose_threshold || 'Padrão'} mg/dL`} icon={Percent} iconColor="text-blue-500" />
