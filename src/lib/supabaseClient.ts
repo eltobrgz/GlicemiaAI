@@ -27,3 +27,4 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
 
   Este guia contém todos os scripts SQL e instruções detalhadas.
 */
+

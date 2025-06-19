@@ -38,6 +38,7 @@ Copie esses dois valores.
 
     Substitua `SUA_PROJECT_URL_AQUI` e `SUA_ANON_PUBLIC_KEY_AQUI` pelos valores reais que você copiou.
     **Importante**: O prefixo `NEXT_PUBLIC_` é necessário para que essas variáveis sejam expostas ao navegador.
+    **Lembre-se**: Se você também for usar a funcionalidade de IA, precisará adicionar a `GEMINI_API_KEY` a este arquivo (veja o `README.md`).
 
 ## Passo 4: Configurar o Banco de Dados (Tabelas e RLS)
 
@@ -254,12 +255,13 @@ USING (bucket_id = 'profile-pictures');
 
 -- 2. Permite que usuários autenticados insiram (INSERT) suas próprias fotos de perfil
 -- A estrutura de pasta esperada é 'users/USER_ID/filename.ext'
+-- (storage.foldername(name))[1] seria 'users', (storage.foldername(name))[2] seria o USER_ID
 CREATE POLICY "Users can insert their own profile pictures"
 ON storage.objects FOR INSERT
 TO authenticated
 WITH CHECK (
   bucket_id = 'profile-pictures' AND
-  auth.uid()::text = (storage.foldername(name))[2] -- Checa se o segundo nível da pasta é o UID do usuário
+  auth.uid()::text = (storage.foldername(name))[2]
 );
 
 -- 3. Permite que usuários autenticados atualizem (UPDATE) suas próprias fotos de perfil
@@ -352,9 +354,9 @@ pnpm dev
 
 ## Solução de Problemas Comuns
 
-*   **Erro "Missing env.NEXT_PUBLIC_SUPABASE_..."**:
+*   **Erro "Missing env.NEXT_PUBLIC_SUPABASE_..." ou "Missing env.GEMINI_API_KEY"**:
     *   Verifique se o arquivo `.env.local` está na raiz do projeto.
-    *   Verifique se os nomes das variáveis (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`) estão corretos.
+    *   Verifique se os nomes das variáveis (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `GEMINI_API_KEY`) estão corretos.
     *   Verifique se os valores das chaves estão corretos e não contêm erros de digitação.
     *   **REINICIE O SERVIDOR NEXT.JS.**
 *   **Erros de Permissão (RLS)**: Se você receber erros indicando que não tem permissão para acessar ou modificar dados (inclusive no Storage), verifique suas políticas de RLS nas tabelas do Supabase e as políticas dos Buckets no Storage. Certifique-se de que elas permitem que usuários autenticados (`auth.uid() = ...`) realizem as operações necessárias.
@@ -364,5 +366,8 @@ pnpm dev
     *   Verifique as políticas do bucket (seja via UI ou SQL). A mensagem de erro do Supabase geralmente é informativa.
     *   Verifique o tamanho do arquivo e os tipos permitidos (se configurado).
     *   Confirme que a estrutura de pastas (`users/UID_DO_USUARIO/...`) está sendo respeitada pelo código de upload e que as políticas correspondem a essa estrutura.
+*   **Erro da IA (`FAILED_PRECONDITION` para Gemini)**:
+    *   Confirme que a `GEMINI_API_KEY` está no seu `.env.local` e que o servidor Next.js foi reiniciado.
+    *   Verifique se a chave de API do Gemini é válida e tem as permissões necessárias no Google Cloud Project associado.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente à sua aplicação GlicemiaAI, incluindo o uso do Storage! Se tiver mais dúvidas ou problemas, me diga.
