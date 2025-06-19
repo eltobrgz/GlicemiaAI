@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -13,10 +13,10 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UploadCloud, Loader2, Camera } from 'lucide-react';
-import type { MealAnalysis, AnalyzeMealImageOutput } from '@/types';
+import type { MealAnalysis, AnalyzeMealImageOutput, UserProfile } from '@/types';
 import { analyzeMealImage as analyzeMealImageFlow, type AnalyzeMealImageInput } from '@/ai/flows/analyze-meal-image';
 import { fileToDataUri } from '@/lib/utils';
-import { saveMealAnalysis } from '@/lib/storage';
+import { saveMealAnalysis, getUserProfile } from '@/lib/storage';
 
 const mealAnalysisSchema = z.object({
   mealPhoto: z.instanceof(File, { message: 'Por favor, selecione uma imagem da refeição.' })
@@ -36,6 +36,24 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  useEffect(() => {
+    const fetchProfile = async () => {
+      setIsLoadingProfile(true);
+      try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+      } catch (error) {
+        console.error("Failed to fetch user profile for meal analysis:", error);
+        // User can still proceed, AI will default to pt-BR
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+    fetchProfile();
+  }, []);
 
   const form = useForm<MealAnalysisFormData>({
     resolver: zodResolver(mealAnalysisSchema),
@@ -67,26 +85,25 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
       const aiInput: AnalyzeMealImageInput = {
         mealPhotoDataUri,
         userContext: data.userContext,
+        language: userProfile?.languagePreference || 'pt-BR',
       };
 
       const aiResult: AnalyzeMealImageOutput = await analyzeMealImageFlow(aiInput);
       
-      // Prepare data for saving, including the raw File object for Supabase Storage
       const analysisDataForStorage: Omit<MealAnalysis, 'id' | 'imageUrl' | 'user_id' | 'created_at'> & { mealPhotoFile: File } = {
-        timestamp: new Date().toISOString(), // Timestamp of the analysis request
+        timestamp: new Date().toISOString(), 
         originalImageFileName: data.mealPhoto.name,
         foodIdentification: aiResult.foodIdentification,
         macronutrientEstimates: aiResult.macronutrientEstimates,
         estimatedGlucoseImpact: aiResult.estimatedGlucoseImpact,
         suggestedInsulinDose: aiResult.suggestedInsulinDose,
         improvementTips: aiResult.improvementTips,
-        mealPhotoFile: data.mealPhoto, // Pass the actual file
+        mealPhotoFile: data.mealPhoto, 
       };
       
-      // saveMealAnalysis will handle uploading mealPhotoFile to Supabase Storage and use its public URL
       const savedAnalysis = await saveMealAnalysis(analysisDataForStorage); 
       
-      onAnalysisComplete(savedAnalysis); // Pass the complete analysis with Supabase Storage URL
+      onAnalysisComplete(savedAnalysis); 
 
       toast({
         title: 'Análise Concluída!',
@@ -178,11 +195,11 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full text-lg py-6" disabled={isAnalyzing || !form.formState.isValid || !previewImage}>
-              {isAnalyzing ? (
+            <Button type="submit" className="w-full text-lg py-6" disabled={isAnalyzing || isLoadingProfile || !form.formState.isValid || !previewImage}>
+              {isAnalyzing || isLoadingProfile ? (
                 <>
                   <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Analisando...
+                  {isLoadingProfile ? 'Carregando pref...' : 'Analisando...'}
                 </>
               ) : (
                 'Analisar Refeição e Salvar'
@@ -194,4 +211,3 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
     </Card>
   );
 }
-

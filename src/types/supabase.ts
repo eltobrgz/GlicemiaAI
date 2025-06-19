@@ -24,6 +24,7 @@ export interface Database {
           avatar_url: string | null
           date_of_birth: string | null // ISO date string YYYY-MM-DD
           diabetes_type: string | null // 'tipo1', 'tipo2', 'gestacional', 'outro'
+          language_preference: string | null // e.g., 'pt-BR', 'en-US'
           created_at: string // timestamp with time zone
           updated_at: string // timestamp with time zone
         }
@@ -34,6 +35,7 @@ export interface Database {
           avatar_url?: string | null
           date_of_birth?: string | null
           diabetes_type?: string | null
+          language_preference?: string | null
           created_at?: string
           updated_at?: string
         }
@@ -43,6 +45,7 @@ export interface Database {
           avatar_url?: string | null
           date_of_birth?: string | null
           diabetes_type?: string | null
+          language_preference?: string | null
           updated_at?: string
         }
       }

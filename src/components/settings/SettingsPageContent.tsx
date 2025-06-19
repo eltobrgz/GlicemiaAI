@@ -7,13 +7,20 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
+import { getUserProfile, saveUserProfile } from '@/lib/storage';
+import type { UserProfile } from '@/types';
 
 const THEME_STORAGE_KEY = 'glicemiaai-theme';
+const LANGUAGES = [
+  { value: 'pt-BR', label: 'Português (Brasil)' },
+  { value: 'en-US', label: 'English (United States)' },
+];
 
 export default function SettingsPageContent() {
   const { toast } = useToast();
@@ -21,10 +28,12 @@ export default function SettingsPageContent() {
   const [darkMode, setDarkMode] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [isClient, setIsClient] = useState(false);
-
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('pt-BR');
+  const [isSavingLanguage, setIsSavingLanguage] = useState(false);
 
   useEffect(() => {
-    setIsClient(true); // Component has mounted
+    setIsClient(true); 
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (storedTheme) {
@@ -32,10 +41,23 @@ export default function SettingsPageContent() {
     } else {
       setDarkMode(prefersDark);
     }
+
+    const fetchProfile = async () => {
+      try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+        setSelectedLanguage(profile?.languagePreference || 'pt-BR');
+      } catch (error) {
+        console.error("Failed to fetch user profile for settings:", error);
+        toast({ title: "Erro ao carregar preferências", description: "Não foi possível carregar suas preferências de idioma.", variant: "destructive"});
+      }
+    };
+    fetchProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (!isClient) return; // Don't run on server or before mount
+    if (!isClient) return; 
 
     if (darkMode) {
       document.documentElement.classList.add('dark');
@@ -45,6 +67,24 @@ export default function SettingsPageContent() {
       localStorage.setItem(THEME_STORAGE_KEY, 'light');
     }
   }, [darkMode, isClient]);
+
+  const handleLanguageChange = async (newLanguage: string) => {
+    setSelectedLanguage(newLanguage);
+    if (userProfile) {
+      setIsSavingLanguage(true);
+      try {
+        const updatedProfile = { ...userProfile, languagePreference: newLanguage };
+        await saveUserProfile(updatedProfile);
+        setUserProfile(updatedProfile); // Update local state
+        toast({ title: "Preferência de Idioma Salva", description: `Idioma alterado para ${LANGUAGES.find(l => l.value === newLanguage)?.label}.` });
+      } catch (error: any) {
+        toast({ title: "Erro ao Salvar Idioma", description: error.message, variant: "destructive" });
+        setSelectedLanguage(userProfile.languagePreference || 'pt-BR'); // Revert on error
+      } finally {
+        setIsSavingLanguage(false);
+      }
+    }
+  };
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -66,7 +106,7 @@ export default function SettingsPageContent() {
     setIsLoggingOut(false);
   };
 
-  if (!isClient) { // Render skeleton or null during SSR / pre-hydration
+  if (!isClient || !userProfile) { 
     return (
         <div className="space-y-8 max-w-2xl mx-auto">
             {[1,2,3].map(i => (
@@ -77,6 +117,7 @@ export default function SettingsPageContent() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="h-10 bg-muted rounded"></div>
+                         {i === 2 && <div className="h-10 bg-muted rounded"></div>}
                     </CardContent>
                 </Card>
             ))}
@@ -144,6 +185,36 @@ export default function SettingsPageContent() {
           </div>
         </CardContent>
       </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-headline text-primary flex items-center">
+            <Languages className="mr-2 h-5 w-5" /> Idioma
+          </CardTitle>
+           <CardDescription>Defina o idioma para as respostas da IA e futuras traduções da interface.</CardDescription>
+        </CardHeader>
+        <CardContent className="p-4 rounded-lg border">
+          <div className="space-y-2">
+            <Label htmlFor="language-select">Idioma Preferido</Label>
+            <div className="flex items-center gap-2">
+              <Select value={selectedLanguage} onValueChange={handleLanguageChange} disabled={isSavingLanguage}>
+                <SelectTrigger id="language-select" className="flex-grow">
+                  <SelectValue placeholder="Selecionar idioma" />
+                </SelectTrigger>
+                <SelectContent>
+                  {LANGUAGES.map(lang => (
+                    <SelectItem key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {isSavingLanguage && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">As respostas da IA serão neste idioma. A tradução da interface pode não ser completa.</p>
+          </div>
+        </CardContent>
+      </Card>
       
       <Card className="shadow-lg">
         <CardHeader>
@@ -153,7 +224,6 @@ export default function SettingsPageContent() {
           <CardDescription>Controle como e quando você recebe notificações.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* Example Switch - these would need actual state management if functional */}
           <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
              <div>
               <Label htmlFor="glucose-reminders-switch" className="text-base font-medium">Lembretes de Glicemia</Label>
@@ -171,20 +241,6 @@ export default function SettingsPageContent() {
           <Button variant="outline" onClick={() => router.push('/reminders')} className="w-full sm:w-auto">
             Gerenciar Lembretes Detalhados
           </Button>
-        </CardContent>
-      </Card>
-
-      <Card className="shadow-lg">
-        <CardHeader>
-          <CardTitle className="text-xl font-headline text-primary flex items-center">
-            <Languages className="mr-2 h-5 w-5" /> Idioma e Região
-          </CardTitle>
-           <CardDescription>Defina suas preferências de idioma.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-3 rounded-lg border">
-          <Label htmlFor="language-select">Idioma do Aplicativo</Label>
-          <Input id="language-select" value="Português (Brasil)" readOnly className="mt-1 bg-muted cursor-not-allowed" />
-           <p className="text-xs text-muted-foreground mt-1">Atualmente, apenas Português (Brasil) está disponível.</p>
         </CardContent>
       </Card>
 

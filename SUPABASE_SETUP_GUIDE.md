@@ -62,6 +62,7 @@ CREATE TABLE public.profiles (
   avatar_url text, -- Armazenará a URL pública da imagem do Supabase Storage
   date_of_birth date,
   diabetes_type text, -- Ex: 'tipo1', 'tipo2', 'gestacional', 'outro'
+  language_preference text DEFAULT 'pt-BR', -- Preferência de idioma do usuário, ex: 'pt-BR', 'en-US'
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
   PRIMARY KEY (id)
@@ -80,12 +81,13 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, name, avatar_url)
+  INSERT INTO public.profiles (id, email, name, avatar_url, language_preference)
   VALUES (
     new.id,
     new.email,
     new.raw_user_meta_data->>'full_name', -- Captura o nome dos metadados
-    new.raw_user_meta_data->>'avatar_url' -- Captura avatar_url dos metadados, se houver
+    new.raw_user_meta_data->>'avatar_url', -- Captura avatar_url dos metadados, se houver
+    'pt-BR' -- Define o idioma padrão para novos usuários
   );
   RETURN new;
 END;
@@ -176,6 +178,7 @@ CREATE POLICY "Users can manage their own reminders." ON public.reminders
 Se você executar esta trigger:
 *   Ela criará automaticamente uma entrada na tabela `profiles` quando um novo usuário se cadastrar através do sistema de autenticação do Supabase.
 *   Ela espera que `full_name` (e opcionalmente `avatar_url`) seja passado no campo `options: { data: { full_name: 'Nome do Usuario' } }` durante a chamada de `supabase.auth.signUp()` no seu frontend. O código atual em `SignupForm.tsx` já faz isso para `full_name`.
+*   Ela definirá `language_preference` como 'pt-BR' por padrão para novos usuários.
 
 Se você não quiser usar a trigger, precisará garantir que um perfil seja criado manualmente ou através da lógica do seu app após o cadastro.
 

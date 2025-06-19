@@ -64,9 +64,8 @@ export async function getUserProfile(): Promise<UserProfile | null> {
                 avatarUrl: user.user_metadata?.avatar_url || undefined,
                 dateOfBirth: undefined,
                 diabetesType: undefined,
+                languagePreference: 'pt-BR', // Default language
             };
-            // Não salvamos aqui, apenas retornamos um perfil padrão para ser preenchido
-            // O primeiro save acontecerá quando o usuário editar e salvar o perfil.
             return defaultProfile;
         }
         return null;
@@ -79,6 +78,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       avatarUrl: data.avatar_url || undefined,
       dateOfBirth: data.date_of_birth || undefined,
       diabetesType: data.diabetes_type as UserProfile['diabetesType'] || undefined,
+      languagePreference: data.language_preference || 'pt-BR',
       created_at: data.created_at,
       updated_at: data.updated_at,
     };
@@ -94,7 +94,7 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
     throw new Error("Não é possível salvar o perfil de outro usuário.");
   }
 
-  let newUploadedAvatarUrl: string | undefined = undefined;
+  let newUploadedAvatarUrl: string | undefined = profile.avatarUrl; // Start with existing or undefined
 
   if (avatarFile) {
     const fileExt = avatarFile.name.split('.').pop();
@@ -109,25 +109,20 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
         description: "Sua foto de perfil não pôde ser enviada. As outras informações do perfil foram salvas. Tente enviar a foto novamente mais tarde.",
         variant: "destructive",
       });
-      // newUploadedAvatarUrl permanece undefined, então a avatarUrl existente (profile.avatarUrl) será usada abaixo
+      // newUploadedAvatarUrl remains the initial profile.avatarUrl if upload fails
     }
   }
-
-  const finalAvatarUrl = newUploadedAvatarUrl !== undefined ? newUploadedAvatarUrl : profile.avatarUrl;
 
   const profileDataToSave = {
     id: profile.id,
     name: profile.name,
-    avatar_url: finalAvatarUrl,
-    date_of_birth: profile.dateOfBirth || null, // Garante null se undefined
-    diabetes_type: profile.diabetesType || null, // Garante null se undefined
+    avatar_url: newUploadedAvatarUrl, // Use new or existing URL
+    date_of_birth: profile.dateOfBirth || null,
+    diabetes_type: profile.diabetesType || null,
+    language_preference: profile.languagePreference || 'pt-BR',
     updated_at: new Date().toISOString(),
   };
-  
-  // Não incluímos email aqui, pois ele é gerenciado pela autenticação do Supabase
-  // e geralmente não deve ser alterado diretamente pela tabela de perfis sem sincronia com auth.users.
-  // A RLS e trigger 'handle_new_user' podem lidar com a inserção inicial do email.
-  
+    
   const { data: savedData, error } = await supabase
     .from('profiles')
     .upsert(profileDataToSave, { onConflict: 'id' })
@@ -142,10 +137,11 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
   return {
       id: savedData.id,
       name: savedData.name || '',
-      email: profile.email, // O email original do usuário é mantido, não atualizado aqui.
+      email: profile.email, 
       avatarUrl: savedData.avatar_url || undefined,
       dateOfBirth: savedData.date_of_birth || undefined,
       diabetesType: savedData.diabetes_type as UserProfile['diabetesType'] || undefined,
+      languagePreference: savedData.language_preference || 'pt-BR',
       created_at: savedData.created_at,
       updated_at: savedData.updated_at,
   };
@@ -172,7 +168,7 @@ export async function getGlucoseReadings(): Promise<GlucoseReading[]> {
     timestamp: r.timestamp,
     mealContext: r.meal_context as GlucoseReading['mealContext'] || undefined,
     notes: r.notes || undefined,
-    level: r.level as GlucoseReading['level'] || undefined, // level é calculado no save, mas recuperado aqui
+    level: r.level as GlucoseReading['level'] || undefined, 
     created_at: r.created_at,
   }));
 }
@@ -410,7 +406,7 @@ export async function deleteMealAnalysis(id: string): Promise<void> {
     .eq('user_id', userId)
     .single();
 
-  if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116: no rows found, which is fine if already deleted.
+  if (fetchError && fetchError.code !== 'PGRST116') { 
     console.error('Error fetching meal analysis for deletion:', fetchError);
     throw fetchError;
   }
@@ -423,7 +419,6 @@ export async function deleteMealAnalysis(id: string): Promise<void> {
       }
     } catch (storageError) {
       console.error("Error deleting meal photo from storage, record will still be deleted:", storageError);
-      // Proceed to delete the database record even if storage deletion fails
     }
   }
 

@@ -57,6 +57,7 @@ export interface UserProfile {
   avatarUrl?: string; // Will be Supabase Storage URL
   dateOfBirth?: string; 
   diabetesType?: 'tipo1' | 'tipo2' | 'gestacional' | 'outro'; 
+  languagePreference?: string; // Added for language selection, e.g., 'pt-BR', 'en-US'
   created_at?: string;
   updated_at?: string;
 }
