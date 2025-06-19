@@ -1,6 +1,7 @@
 
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -11,11 +12,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { InsulinLog } from '@/types';
-import { saveInsulinLog } from '@/lib/storage'; // Now async
+import { saveInsulinLog } from '@/lib/storage';
 import { INSULIN_TYPES } from '@/config/constants';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
-import { useState } from 'react';
 
 const insulinSchema = z.object({
   type: z.string().min(1, 'Tipo de insulina é obrigatório.'),
@@ -35,21 +35,38 @@ interface InsulinLogFormProps {
 export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLogFormProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
+
+  const defaultTimestamp = new Date().toISOString().substring(0, 16);
 
   const form = useForm<InsulinFormData>({
     resolver: zodResolver(insulinSchema),
     defaultValues: {
-      type: initialData?.type || '',
-      dose: initialData?.dose ?? '', // Changed from undefined
-      timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
+      type: initialData?.type || searchParams.get('type') || '',
+      dose: initialData?.dose ?? (searchParams.get('dose') ? parseFloat(searchParams.get('dose')!) : ''),
+      timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : defaultTimestamp,
     },
   });
+
+  useEffect(() => {
+    const prefillType = searchParams.get('type');
+    const prefillDose = searchParams.get('dose');
+
+    if (prefillType) {
+      form.setValue('type', prefillType);
+    }
+    if (prefillDose) {
+      form.setValue('dose', parseFloat(prefillDose));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, form.setValue]);
+
 
   const onSubmit = async (data: InsulinFormData) => {
     setIsSaving(true);
     try {
-      const logToSave: Omit<InsulinLog, 'id' | 'user_id' | 'created_at'> & { id?: string } = {
+      const logToSave: Omit<InsulinLog, 'user_id' | 'created_at'> & { id?: string } = {
         id: initialData?.id,
         type: data.type,
         dose: data.dose,
@@ -62,14 +79,15 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
         description: `Registro de insulina ${initialData?.id ? 'atualizado' : 'salvo'}.`,
       });
       form.reset({
-          timestamp: new Date().toISOString().substring(0, 16),
+          timestamp: defaultTimestamp,
           type: '',
-          dose: '' // Changed from undefined
+          dose: ''
       });
       if (onFormSubmit) {
         onFormSubmit();
       }
-      router.push('/dashboard');
+      // Redirect to calendar page, insulin tab after saving
+      router.push('/calendar?tab=insulin'); 
       router.refresh();
     } catch (error: any) {
       toast({
@@ -98,7 +116,7 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
               render={({ field }) => (
                 <FormItem>
                   <FormLabel htmlFor="type">Tipo de Insulina</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger id="type">
                         <SelectValue placeholder="Selecionar tipo de insulina" />

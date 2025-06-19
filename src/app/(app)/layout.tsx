@@ -93,23 +93,61 @@ export default function AppLayout({
 
     let title = 'Lembrete GlicemiaAI';
     let body = `É hora de: ${reminder.name}`;
+    let notificationData: any = { reminderId: reminder.id, reminderType: reminder.type };
 
     if (reminder.type === 'insulina') {
-      body += ` - ${reminder.insulinType || 'Insulina'}`;
+      body = `É hora de aplicar sua insulina ${reminder.insulinType || reminder.name}`;
       if (reminder.insulinDose) {
-        body += ` (${reminder.insulinDose} unidades)`;
+        body += ` (${reminder.insulinDose} unidades). Já aplicou?`;
+      } else {
+        body += `. Já aplicou?`;
       }
+      notificationData = {
+        ...notificationData,
+        insulinType: reminder.insulinType,
+        insulinDose: reminder.insulinDose,
+      };
     }
-    if (reminder.isSimulatedCall) {
+    
+    if (reminder.isSimulatedCall && reminder.enabled) {
       title = `📞 Chamada de: ${reminder.simulatedCallContact || 'GlicemiaAI'}`;
       body = `Lembrete: ${reminder.name}`;
+       if (reminder.type === 'insulina') {
+         body = `Lembrete: Aplicar insulina ${reminder.insulinType || reminder.name}`;
+         if (reminder.insulinDose) body += ` (${reminder.insulinDose} unidades)`;
+      }
     }
 
-    new Notification(title, {
+    const notification = new Notification(title, {
       body: body,
       icon: '/favicon.ico', 
       tag: reminder.id, 
+      data: notificationData, // Store reminder data in the notification
     });
+
+    notification.onclick = (event) => {
+      event.preventDefault(); // Prevent the browser from focusing the Notification's tab
+      window.focus(); // Focus the main window
+      const clickedNotificationData = (event.currentTarget as Notification)?.data;
+
+      if (clickedNotificationData?.reminderType === 'insulina') {
+        let url = '/log/insulin';
+        const queryParams = new URLSearchParams();
+        if (clickedNotificationData.insulinType) {
+          queryParams.append('type', clickedNotificationData.insulinType);
+        }
+        if (clickedNotificationData.insulinDose !== undefined) {
+          queryParams.append('dose', clickedNotificationData.insulinDose.toString());
+        }
+        if (queryParams.toString()) {
+          url += `?${queryParams.toString()}`;
+        }
+        router.push(url);
+      } else if (clickedNotificationData?.reminderType === 'glicemia') {
+        router.push('/log/glucose');
+      }
+      notification.close();
+    };
   };
 
   useEffect(() => {
@@ -141,7 +179,8 @@ export default function AppLayout({
     }, 15000); 
 
     return () => clearInterval(intervalId);
-  }, [reminders, user, lastCheckedMinute, notificationPermission, showNotification]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reminders, user, lastCheckedMinute, notificationPermission, router]);
 
 
   if (loading) {
@@ -177,5 +216,3 @@ export default function AppLayout({
     </div>
   );
 }
-
-    
