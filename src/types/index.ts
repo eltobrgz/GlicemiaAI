@@ -48,9 +48,9 @@ export interface UserProfile {
   name: string;
   email: string;
   avatarUrl?: string; // URL for the user's avatar image
+  dateOfBirth?: string; // ISO string YYYY-MM-DD
+  diabetesType?: 'tipo1' | 'tipo2' | 'gestacional' | 'outro';
   // Add other profile fields as needed, e.g.:
-  // dateOfBirth?: string;
-  // diabetesType?: 'tipo1' | 'tipo2' | 'gestacional' | 'outro';
   // insulinSensitivityFactor?: number;
   // carbohydrateRatio?: number;
 }

@@ -1,7 +1,7 @@
 
 'use client';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, Info, LogOut, User } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
 import {
@@ -12,11 +12,12 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  SidebarTrigger,
+  // SidebarTrigger, // Removido para evitar duplicidade com o trigger no AppLayout
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -29,13 +30,24 @@ const navItems = [
   { href: '/profile', label: 'Meu Perfil', icon: User },
 ];
 
-const bottomNavItems = [
-  // { href: '/settings', label: 'Configurações', icon: Settings },
-  // { href: '/education', label: 'Educação', icon: Info },
+const utilityNavItems = [
+  { href: '/settings', label: 'Configurações', icon: Settings },
+  // { href: '/education', label: 'Educação', icon: Info }, // Mantido comentado como exemplo
 ];
 
 export function SideNavigation() {
   const pathname = usePathname();
+  const router = useRouter();
+  const { toast } = useToast();
+
+  const handleLogout = () => {
+    // Em uma aplicação real, você invalidaria a sessão/token aqui
+    toast({
+      title: "Logout Realizado",
+      description: "Você foi desconectado com sucesso.",
+    });
+    router.push('/login');
+  };
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
@@ -44,7 +56,8 @@ export function SideNavigation() {
         <h2 className="text-xl font-semibold text-primary font-headline group-data-[collapsible=icon]:hidden">
           GlicemiaAI
         </h2>
-        <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:hidden" />
+        {/* O SidebarTrigger foi removido daqui para evitar duplicidade com o AppLayout */}
+        {/* <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:hidden" /> */}
       </SidebarHeader>
       
       <SidebarContent className="flex-grow p-2">
@@ -73,15 +86,20 @@ export function SideNavigation() {
       </SidebarContent>
 
       <SidebarFooter className="p-2">
-        {bottomNavItems.length > 0 && (
+        {utilityNavItems.length > 0 && (
           <>
             <SidebarMenu>
-              {bottomNavItems.map((item) => (
+              {utilityNavItems.map((item) => (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton
                     asChild
                     isActive={pathname === item.href}
-                    className="justify-start w-full"
+                     className={cn(
+                      "justify-start w-full",
+                      (pathname === item.href)
+                        ? "bg-primary/10 text-primary hover:bg-primary/20"
+                        : "hover:bg-accent/10 hover:text-accent-foreground"
+                    )}
                     tooltip={{ children: item.label, side: 'right', align: 'center' }}
                   >
                     <Link href={item.href}>
@@ -95,11 +113,18 @@ export function SideNavigation() {
             <Separator className="my-2" />
           </>
         )}
-        {/* Example Logout or Settings button */}
-        {/* <Button variant="ghost" className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:aspect-square">
-          <LogOut className="h-5 w-5" />
-          <span className="group-data-[collapsible=icon]:hidden ml-2">Sair</span>
-        </Button> */}
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              onClick={handleLogout}
+              className="justify-start w-full hover:bg-destructive/10 hover:text-destructive"
+              tooltip={{ children: 'Sair', side: 'right', align: 'center' }}
+            >
+              <LogOut className="h-5 w-5" />
+              <span className="group-data-[collapsible=icon]:hidden">Sair</span>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );

@@ -143,15 +143,20 @@ export function deleteMealAnalysis(id: string): void {
 export function getUserProfile(): UserProfile | null {
   if (typeof window === 'undefined') return null;
   const data = window.localStorage.getItem(USER_PROFILE_KEY);
-  const profile = safelyParseJSON<UserProfile | null>(data, null);
-  // Return a default mock profile if none is found, for demonstration
-  if (!profile) {
-    return {
+  let profile = safelyParseJSON<UserProfile | null>(data, null);
+  
+  // Return a default mock profile if none is found or if critical fields are missing
+  if (!profile || !profile.id || !profile.name || !profile.email) {
+    profile = {
       id: 'default-user-01',
       name: 'Usuário GlicemiaAI',
       email: 'usuario@glicemia.ai',
       avatarUrl: 'https://placehold.co/100x100.png',
+      dateOfBirth: '1990-01-01', // YYYY-MM-DD
+      diabetesType: 'tipo1',
     };
+    // Optionally save this default profile back to localStorage if it was missing/corrupted
+    // saveUserProfile(profile); 
   }
   return profile;
 }
