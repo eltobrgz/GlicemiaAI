@@ -24,9 +24,9 @@ const navItems = [
   { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
   { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
   { href: '/calendar', label: 'Calendário Glicêmico', icon: CalendarDays },
+  { href: '/profile', label: 'Meu Perfil', icon: User },
   { href: '/reminders', label: 'Lembretes', icon: BellRing },
   { href: '/insights', label: 'Insights IA', icon: BarChart3 },
-  { href: '/profile', label: 'Meu Perfil', icon: User },
 ];
 
 const utilityNavItems = [

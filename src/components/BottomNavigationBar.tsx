@@ -18,29 +18,22 @@ interface NavItemDef {
 export default function BottomNavigationBar() {
   const pathname = usePathname();
 
-  // Itens principais diretamente visíveis
-  const mainNavItems: NavItemDef[] = [
+  // Definindo todos os itens e suas prioridades
+  const allNavItems: NavItemDef[] = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/log/glucose', label: 'Glicemia', icon: Droplet },
+    { href: '/log/insulin', label: 'Insulina', icon: Pill },
     { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
-    // Perfil será o último item visível ou o primeiro no "Mais" se houver muitos itens principais.
-    // Por ora, deixaremos 4 itens principais + "Mais" para testar. Se preferir 5 + Mais, podemos ajustar.
-  ];
-
-  // Itens que irão para o Popover "Mais"
-  const secondaryNavItems: NavItemDef[] = [
-    { href: '/profile', label: 'Perfil', icon: User }, // Movido para cá para testar 4+1
-    { href: '/log/insulin', label: 'Insulina', icon: Pill },
+    { href: '/profile', label: 'Perfil', icon: User },
     { href: '/reminders', label: 'Lembretes', icon: BellRing },
     { href: '/insights', label: 'Insights IA', icon: BarChart3 },
     { href: '/settings', label: 'Ajustes', icon: Settings },
   ];
 
-  const allNavItemsForPopover = [...mainNavItems, ...secondaryNavItems];
-  const visibleMainItemsCount = 4; // Quantos itens principais mostrar antes do "Mais"
-  const directVisibleItems = allNavItemsForPopover.slice(0, visibleMainItemsCount);
-  const popoverItems = allNavItemsForPopover.slice(visibleMainItemsCount);
+  const visibleMainItemsCount = 4; // Mostrar 4 itens principais + "Mais"
+  const directVisibleItems = allNavItems.slice(0, visibleMainItemsCount);
+  const popoverItems = allNavItems.slice(visibleMainItemsCount);
 
 
   return (
@@ -71,7 +64,6 @@ export default function BottomNavigationBar() {
               variant="ghost"
               className={cn(
                 'flex flex-col items-center justify-center text-center p-1 rounded-md w-1/5 group h-full',
-                 // Lógica de ativo para o botão "Mais" se algum item dentro dele estiver ativo
                 popoverItems.some(pItem => pathname === pItem.href || (pItem.href !== '/dashboard' && pItem.href !== '/' && pathname.startsWith(pItem.href)))
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-primary/90',
