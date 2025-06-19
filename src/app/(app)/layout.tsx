@@ -1,7 +1,7 @@
 
 'use client'; 
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { SideNavigation } from '@/components/SideNavigation';
@@ -9,7 +9,14 @@ import BottomNavigationBar from '@/components/BottomNavigationBar';
 import { SidebarInset, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
 import AppLogo from '@/components/AppLogo';
 import { Loader2 } from 'lucide-react';
-import type { Session } from '@supabase/supabase-js';
+import type { Session, User } from '@supabase/supabase-js';
+import type { ReminderConfig } from '@/types';
+import { getReminders } from '@/lib/storage';
+import { DAYS_OF_WEEK } from '@/config/constants';
+
+const DAY_MAP: Record<number, typeof DAYS_OF_WEEK[number]['key']> = {
+  0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
+};
 
 export default function AppLayout({
   children,
@@ -20,31 +27,123 @@ export default function AppLayout({
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [reminders, setReminders] = useState<ReminderConfig[]>([]);
+  const [lastCheckedMinute, setLastCheckedMinute] = useState<number>(-1);
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
-    const getSession = async () => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
+
+  const fetchUserReminders = useCallback(async (currentUserId?: string) => {
+    if (!currentUserId) return;
+    try {
+      const userReminders = await getReminders(); // getReminders should be context-aware or use userId
+      setReminders(userReminders);
+    } catch (error) {
+      console.error("Error fetching reminders:", error);
+      // Optionally, toast an error message to the user
+    }
+  }, []);
+
+  useEffect(() => {
+    const getSessionAndUser = async () => {
       const { data: { session: currentSession } } = await supabase.auth.getSession();
       setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
       if (!currentSession) {
         router.replace('/login');
+        setLoading(false);
+        return;
       }
+      
+      await fetchUserReminders(currentSession.user.id);
       setLoading(false);
     };
 
-    getSession();
+    getSessionAndUser();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, newSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       setSession(newSession);
+      setUser(newSession?.user ?? null);
+      
       if (event === 'SIGNED_OUT' || (!newSession && event !== 'INITIAL_SESSION')) {
         router.replace('/login');
+        setReminders([]); // Clear reminders on logout
+      } else if (newSession?.user) {
+        await fetchUserReminders(newSession.user.id);
       }
-      setLoading(false); // Also set loading to false on auth changes
+      setLoading(false);
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, fetchUserReminders]);
+
+
+  const showNotification = (reminder: ReminderConfig) => {
+    if (notificationPermission !== 'granted') {
+      console.warn('Notification permission not granted.');
+      return;
+    }
+
+    let title = 'Lembrete GlicemiaAI';
+    let body = `É hora de: ${reminder.name}`;
+
+    if (reminder.type === 'insulina') {
+      body += ` - ${reminder.insulinType || 'Insulina'}`;
+      if (reminder.insulinDose) {
+        body += ` (${reminder.insulinDose} unidades)`;
+      }
+    }
+    if (reminder.isSimulatedCall) {
+      title = `📞 Chamada de: ${reminder.simulatedCallContact || 'GlicemiaAI'}`;
+      body = `Lembrete: ${reminder.name}`;
+    }
+
+    new Notification(title, {
+      body: body,
+      icon: '/favicon.ico', // Optional: You can use a specific icon
+      // tag: reminder.id, // Optional: to prevent multiple notifications for the same reminder if logic allows
+    });
+  };
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (!user || reminders.length === 0 || notificationPermission !== 'granted') {
+        return;
+      }
+
+      const now = new Date();
+      const currentDay = DAY_MAP[now.getDay() as keyof typeof DAY_MAP];
+      const currentTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+      const currentMinute = now.getMinutes();
+
+      if (currentMinute === lastCheckedMinute) {
+        return; // Already checked this minute
+      }
+      setLastCheckedMinute(currentMinute);
+
+      reminders.forEach(reminder => {
+        if (!reminder.enabled) return;
+
+        const isToday = reminder.days === 'todos_os_dias' || (Array.isArray(reminder.days) && reminder.days.includes(currentDay));
+        
+        if (isToday && reminder.time === currentTime) {
+          console.log(`Firing reminder: ${reminder.name} at ${currentTime}`);
+          showNotification(reminder);
+        }
+      });
+    }, 15000); // Check every 15 seconds
+
+    return () => clearInterval(intervalId);
+  }, [reminders, user, lastCheckedMinute, notificationPermission]);
+
 
   if (loading) {
     return (
@@ -55,12 +154,6 @@ export default function AppLayout({
     );
   }
   
-  // if (!session && !loading) { // Should be caught by the effect, but as a fallback
-  //    router.replace('/login'); // This might cause a brief flicker if not handled well
-  //    return null; // Or a redirect component
-  // }
-
-
   return (
     <div className="flex min-h-screen bg-background">
       <SideNavigation />
@@ -85,3 +178,5 @@ export default function AppLayout({
     </div>
   );
 }
+
+    
