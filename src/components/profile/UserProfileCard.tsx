@@ -172,7 +172,7 @@ export default function UserProfileCard() {
       label: "Data de Nascimento", 
       value: user.dateOfBirth ? new Date(user.dateOfBirth + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado', 
       formValue: editForm.dateOfBirth, 
-      key: 'dateOfBirth',
+      key: 'dateOfBirth', // This 'key' property is distinct from React's 'key' prop
       formKey: 'dateOfBirth',
       type: 'date',
       editable: true 
@@ -182,7 +182,7 @@ export default function UserProfileCard() {
       label: "Tipo de Diabetes", 
       value: user.diabetesType ? (user.diabetesType.charAt(0).toUpperCase() + user.diabetesType.slice(1)).replace('tipo', 'Tipo ') : 'Não informado',
       formValue: editForm.diabetesType,
-      key: 'diabetesType', 
+      key: 'diabetesType',  // This 'key' property is distinct from React's 'key' prop
       formKey: 'diabetesType',
       type: 'select',
       editable: true,
@@ -244,7 +244,7 @@ export default function UserProfileCard() {
       </CardHeader>
       <CardContent className="p-6 space-y-6">
         {profileInfoItems.map(item => (
-            <div key={item.key} className="flex items-start space-x-4">
+            <div key={item.formKey} className="flex items-start space-x-4">
               <item.icon className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
               <div className="flex-grow">
                 <Label htmlFor={item.formKey} className="text-sm text-muted-foreground">{item.label}</Label>
