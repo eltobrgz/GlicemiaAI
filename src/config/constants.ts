@@ -1,3 +1,4 @@
+
 export const GLUCOSE_THRESHOLDS = {
   low: 70, // mg/dL
   normalIdealMax: 140, // mg/dL (e.g. post-meal for non-diabetic, or general target)
@@ -6,7 +7,7 @@ export const GLUCOSE_THRESHOLDS = {
 };
 
 export const MEAL_CONTEXT_OPTIONS = [
-  { value: '', label: 'Selecionar contexto' },
+  // { value: '', label: 'Selecionar contexto' }, // Removed to prevent Select.Item error
   { value: 'antes_refeicao', label: 'Antes da Refeição' },
   { value: 'depois_refeicao', label: 'Depois da Refeição' },
   { value: 'jejum', label: 'Jejum' },
@@ -21,6 +22,8 @@ export const INSULIN_TYPES = [
   'Pré-misturada',
   'Outra'
 ];
+
+export type DayOfWeek = 'Dom' | 'Seg' | 'Ter' | 'Qua' | 'Qui' | 'Sex' | 'Sab';
 
 export const DAYS_OF_WEEK: { key: DayOfWeek; label: string }[] = [
   { key: 'Dom', label: 'Domingo' },
