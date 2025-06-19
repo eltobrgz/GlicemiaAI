@@ -9,7 +9,8 @@ import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info } from 'lucide-react';
-import { getGlucoseLevelColor } from '@/lib/utils'; 
+import { getGlucoseLevelColor } from '@/lib/utils';
+import { useMemo } from 'react';
 
 export interface ReportData {
   period: { start: Date; end: Date };
@@ -38,7 +39,7 @@ interface ReportViewProps {
   data: ReportData;
 }
 
-const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']; 
+const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
 const SummaryCard: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; icon?: React.ElementType; iconColor?: string }> = ({ title, value, unit, description, icon: Icon, iconColor }) => (
   <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -69,7 +70,7 @@ export default function ReportView({ data }: ReportViewProps) {
         date: format(day, 'dd/MM', { locale: ptBR }),
         glicemia: avg !== null ? parseFloat(avg.toFixed(1)) : null,
       };
-    }).filter(d => d.glicemia !== null); 
+    }).filter(d => d.glicemia !== null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [glucoseReadings, period.start, period.end]);
 
@@ -99,15 +100,15 @@ export default function ReportView({ data }: ReportViewProps) {
       const totalDose = logsForDay.reduce((sum, log) => sum + log.dose, 0);
       return {
         date: format(day, 'dd/MM', { locale: ptBR }),
-        dose: totalDose > 0 ? parseFloat(totalDose.toFixed(1)) : null, 
+        dose: totalDose > 0 ? parseFloat(totalDose.toFixed(1)) : null,
       };
-    }).filter(d => d.dose !== null); 
+    }).filter(d => d.dose !== null);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insulinLogs, period.start, period.end]);
 
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 bg-background text-foreground"> {/* Added bg-background and text-foreground for PDF export consistency */}
+    <div className="space-y-6 p-4 sm:p-6 bg-background text-foreground">
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary">
@@ -134,7 +135,7 @@ export default function ReportView({ data }: ReportViewProps) {
         <SummaryCard title="Média Diária Insulina" value={summary.averageDailyInsulin?.toFixed(1) ?? 'N/A'} unit="U/dia" icon={Syringe} iconColor="text-accent" />
         <SummaryCard title="Aplicações de Insulina" value={summary.insulinApplications} icon={Syringe} iconColor="text-accent" />
       </div>
-      
+
       {glucoseReadings.length > 0 && (
         <Card className="shadow-lg">
           <CardHeader>
@@ -145,12 +146,12 @@ export default function ReportView({ data }: ReportViewProps) {
               <LineChart data={glucoseTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
-                <YAxis 
-                    tickLine={false} 
-                    axisLine={false} 
-                    tickMargin={8} 
-                    domain={['dataMin - 20', 'dataMax + 20']} 
-                    allowDataOverflow 
+                <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={8}
+                    domain={['dataMin - 20', 'dataMax + 20']}
+                    allowDataOverflow
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Line type="monotone" dataKey="glicemia" stroke="var(--color-glicemia)" strokeWidth={2} dot={{ r: 4, fill: 'var(--color-glicemia)' }} activeDot={{ r: 6 }} connectNulls={false} />
@@ -213,7 +214,7 @@ export default function ReportView({ data }: ReportViewProps) {
           </CardContent>
         </Card>
       )}
-      
+
       {!glucoseReadings.length && !insulinLogs.length && (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
@@ -223,3 +224,7 @@ export default function ReportView({ data }: ReportViewProps) {
             Por favor, registre seus dados ou selecione um período diferente.
           </CardContent>
         </Card>
+      )}
+    </div>
+  );
+}
