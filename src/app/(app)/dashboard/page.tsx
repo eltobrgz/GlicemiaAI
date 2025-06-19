@@ -6,26 +6,33 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2 } from 'lucide-react';
+import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2, Bike } from 'lucide-react';
 import type { GlucoseReading, InsulinLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; // Now async
-import { formatDateTime, classifyGlucoseLevel, getGlucoseLevelColor } from '@/lib/utils';
+import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; 
+import { formatDateTime, getGlucoseLevelColor } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { getUserProfile } from '@/lib/storage';
+import type { UserProfile } from '@/types';
 
 export default function DashboardPage() {
   const [lastGlucose, setLastGlucose] = useState<GlucoseReading | null>(null);
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
   const [isLoadingGlucose, setIsLoadingGlucose] = useState(true);
   const [isLoadingInsulin, setIsLoadingInsulin] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchInitialData = async () => {
+      setIsLoadingGlucose(true);
+      setIsLoadingInsulin(true);
       try {
-        setIsLoadingGlucose(true);
-        const glucoseReadings = await getGlucoseReadings();
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+
+        const glucoseReadings = await getGlucoseReadings(profile); // Pass profile
         if (glucoseReadings.length > 0) {
-          setLastGlucose(glucoseReadings[0]); // Already sorted by desc timestamp in storage function
+          setLastGlucose(glucoseReadings[0]);
         }
       } catch (error: any) {
         toast({ title: "Erro ao buscar glicemias", description: error.message, variant: "destructive" });
@@ -34,10 +41,9 @@ export default function DashboardPage() {
       }
 
       try {
-        setIsLoadingInsulin(true);
         const insulinLogs = await getInsulinLogs();
         if (insulinLogs.length > 0) {
-          setLastInsulin(insulinLogs[0]); // Already sorted by desc timestamp
+          setLastInsulin(insulinLogs[0]);
         }
       } catch (error: any) {
         toast({ title: "Erro ao buscar registros de insulina", description: error.message, variant: "destructive" });
@@ -46,12 +52,13 @@ export default function DashboardPage() {
       }
     };
 
-    fetchData();
+    fetchInitialData();
   }, [toast]);
 
   const quickAccessItems = [
     { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet, iconColor: 'text-blue-500' },
     { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill, iconColor: 'text-green-500' },
+    { href: '/log/activity', label: 'Registrar Atividade', icon: Bike, iconColor: 'text-orange-500' },
     { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera, iconColor: 'text-purple-500' },
   ];
 
@@ -61,7 +68,7 @@ export default function DashboardPage() {
 
       <section>
         <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"> {/* Adjusted for 4 items */}
           {quickAccessItems.map((item) => (
             <Link href={item.href} key={item.href} className="block group">
                 <Card className="shadow-md hover:shadow-lg transition-all duration-200 ease-in-out group-hover:border-primary">
@@ -94,7 +101,7 @@ export default function DashboardPage() {
               </div>
             ) : lastGlucose ? (
               <div>
-                <p className={`text-4xl font-bold ${getGlucoseLevelColor(lastGlucose.level)}`}>
+                <p className={`text-4xl font-bold ${getGlucoseLevelColor(lastGlucose.level, userProfile || undefined)}`}>
                   {lastGlucose.value} <span className="text-xl text-muted-foreground">mg/dL</span>
                 </p>
                 {lastGlucose.mealContext && <p className="text-sm text-muted-foreground capitalize">Contexto: {lastGlucose.mealContext.replace('_', ' ')}</p>}

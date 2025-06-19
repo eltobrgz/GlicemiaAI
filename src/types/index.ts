@@ -58,7 +58,41 @@ export interface UserProfile {
   dateOfBirth?: string; 
   diabetesType?: 'tipo1' | 'tipo2' | 'gestacional' | 'outro'; 
   languagePreference?: string; // Added for language selection, e.g., 'pt-BR', 'en-US'
+  // Metas personalizadas de glicemia
+  target_glucose_low?: number;
+  target_glucose_high?: number;
+  hyper_glucose_threshold?: number;
+  hypo_glucose_threshold?: number;
   created_at?: string;
   updated_at?: string;
 }
 
+export interface ActivityLog {
+  id: string;
+  user_id: string;
+  timestamp: string; // Data e hora do início da atividade
+  activity_type: string; // Ex: 'caminhada', 'corrida', 'musculacao', 'ciclismo', 'natacao', 'outro'
+  duration_minutes: number; // Duração em minutos
+  intensity?: 'leve' | 'moderada' | 'intensa';
+  notes?: string;
+  created_at: string;
+}
+
+export const ACTIVITY_TYPES = [
+  { value: 'caminhada', label: 'Caminhada' },
+  { value: 'corrida', label: 'Corrida' },
+  { value: 'musculacao', label: 'Musculação' },
+  { value: 'ciclismo', label: 'Ciclismo' },
+  { value: 'natacao', label: 'Natação' },
+  { value: 'danca', label: 'Dança' },
+  { value: 'funcional', label: 'Treino Funcional' },
+  { value: 'esportes_coletivos', label: 'Esportes Coletivos (Futebol, Basquete, etc.)'},
+  { value: 'yoga_pilates', label: 'Yoga / Pilates' },
+  { value: 'outro', label: 'Outro' },
+];
+
+export const ACTIVITY_INTENSITIES = [
+  { value: 'leve', label: 'Leve' },
+  { value: 'moderada', label: 'Moderada' },
+  { value: 'intensa', label: 'Intensa' },
+];

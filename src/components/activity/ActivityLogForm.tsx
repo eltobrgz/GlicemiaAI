@@ -11,85 +11,79 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { GlucoseReading, UserProfile } from '@/types';
-import { saveGlucoseReading, getUserProfile } from '@/lib/storage'; 
-import { MEAL_CONTEXT_OPTIONS } from '@/config/constants';
+import type { ActivityLog } from '@/types';
+import { saveActivityLog } from '@/lib/storage';
+import { ACTIVITY_TYPES_OPTIONS, ACTIVITY_INTENSITY_OPTIONS } from '@/config/constants'; // Usar de types
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { Loader2, Bike } from 'lucide-react';
+import { useState } from 'react';
 
-const glucoseSchema = z.object({
-  value: z.coerce.number().min(1, 'Valor da glicemia é obrigatório e deve ser positivo.'),
+const activitySchema = z.object({
+  activity_type: z.string().min(1, 'Tipo de atividade é obrigatório.'),
+  duration_minutes: z.coerce.number().min(1, 'Duração deve ser de pelo menos 1 minuto.'),
   timestamp: z.string().refine((val) => !isNaN(Date.parse(val)), {
     message: 'Data e hora são obrigatórias.',
   }),
-  mealContext: z.enum(['antes_refeicao', 'depois_refeicao', 'jejum', 'outro', '']).optional(),
+  intensity: z.enum(['leve', 'moderada', 'intensa', '']).optional(),
   notes: z.string().max(500, 'Notas podem ter no máximo 500 caracteres.').optional(),
 });
 
-type GlucoseFormData = z.infer<typeof glucoseSchema>;
+type ActivityFormData = z.infer<typeof activitySchema>;
 
-interface GlucoseLogFormProps {
+interface ActivityLogFormProps {
   onFormSubmit?: () => void;
-  initialData?: Partial<GlucoseReading>;
+  initialData?: Partial<ActivityLog>;
 }
 
-export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLogFormProps) {
+export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityLogFormProps) {
   const { toast } = useToast();
   const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      const profile = await getUserProfile();
-      setUserProfile(profile);
-    };
-    fetchProfile();
-  }, []);
-
-  const form = useForm<GlucoseFormData>({
-    resolver: zodResolver(glucoseSchema),
+  const form = useForm<ActivityFormData>({
+    resolver: zodResolver(activitySchema),
     defaultValues: {
-      value: initialData?.value ?? '', 
+      activity_type: initialData?.activity_type || '',
+      duration_minutes: initialData?.duration_minutes ?? undefined,
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
-      mealContext: initialData?.mealContext || '',
+      intensity: initialData?.intensity || '',
       notes: initialData?.notes || '',
     },
   });
 
-  const onSubmit = async (data: GlucoseFormData) => {
+  const onSubmit = async (data: ActivityFormData) => {
     setIsSaving(true);
     try {
-      const readingToSave: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'> & {id?:string} = {
-        id: initialData?.id, 
-        value: data.value,
+      const logToSave: Omit<ActivityLog, 'user_id' | 'created_at'> & {id?:string} = {
+        id: initialData?.id,
+        activity_type: data.activity_type,
+        duration_minutes: data.duration_minutes,
         timestamp: new Date(data.timestamp).toISOString(),
-        mealContext: data.mealContext || undefined,
+        intensity: data.intensity as ActivityLog['intensity'] || undefined,
         notes: data.notes || undefined,
       };
 
-      await saveGlucoseReading(readingToSave, userProfile); // Pass profile
+      await saveActivityLog(logToSave);
       toast({
         title: 'Sucesso!',
-        description: `Registro de glicemia ${initialData?.id ? 'atualizado' : 'salvo'}.`,
-        variant: 'default',
+        description: `Registro de atividade ${initialData?.id ? 'atualizado' : 'salvo'}.`,
       });
       form.reset({
+          activity_type: '',
+          duration_minutes: undefined,
           timestamp: new Date().toISOString().substring(0, 16),
-          value: '', 
-          mealContext: '',
+          intensity: '',
           notes: ''
       });
       if (onFormSubmit) {
         onFormSubmit();
       }
-      router.push('/calendar');
-      router.refresh(); 
+      router.push('/calendar?tab=activity'); 
+      router.refresh();
     } catch (error: any) {
       toast({
         title: 'Erro ao Salvar',
-        description: error.message || "Não foi possível salvar o registro.",
+        description: error.message || "Não foi possível salvar o registro de atividade.",
         variant: 'destructive',
       });
     } finally {
@@ -100,8 +94,9 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
   return (
     <Card className="w-full max-w-lg mx-auto shadow-xl">
       <CardHeader>
-        <CardTitle className="text-2xl font-headline text-primary">
-          {initialData?.id ? 'Editar Registro de Glicemia' : 'Registrar Glicemia'}
+        <CardTitle className="text-2xl font-headline text-primary flex items-center">
+          <Bike className="mr-2 h-6 w-6" />
+          {initialData?.id ? 'Editar Registro de Atividade' : 'Registrar Atividade Física'}
         </CardTitle>
       </CardHeader>
       <Form {...form}>
@@ -109,13 +104,24 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
           <CardContent className="space-y-6">
             <FormField
               control={form.control}
-              name="value"
+              name="activity_type"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="value">Valor da Glicemia (mg/dL)</FormLabel>
-                  <FormControl>
-                    <Input id="value" type="number" placeholder="Ex: 98" {...field} />
-                  </FormControl>
+                  <FormLabel htmlFor="activity_type">Tipo de Atividade</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
+                    <FormControl>
+                      <SelectTrigger id="activity_type">
+                        <SelectValue placeholder="Selecionar tipo de atividade" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {ACTIVITY_TYPES_OPTIONS.map(option => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -123,10 +129,24 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
 
             <FormField
               control={form.control}
+              name="duration_minutes"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel htmlFor="duration_minutes">Duração (minutos)</FormLabel>
+                  <FormControl>
+                    <Input id="duration_minutes" type="number" placeholder="Ex: 30" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
               name="timestamp"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="timestamp">Data e Hora</FormLabel>
+                  <FormLabel htmlFor="timestamp">Data e Hora de Início</FormLabel>
                   <FormControl>
                     <Input id="timestamp" type="datetime-local" {...field} />
                   </FormControl>
@@ -137,18 +157,18 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
 
             <FormField
               control={form.control}
-              name="mealContext"
+              name="intensity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="mealContext">Contexto da Refeição</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormLabel htmlFor="intensity">Intensidade (Opcional)</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
-                      <SelectTrigger id="mealContext">
-                        <SelectValue placeholder="Selecionar contexto" />
+                      <SelectTrigger id="intensity">
+                        <SelectValue placeholder="Selecionar intensidade" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {MEAL_CONTEXT_OPTIONS.map(option => (
+                      {ACTIVITY_INTENSITY_OPTIONS.map(option => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
@@ -165,18 +185,15 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel htmlFor="notes">Notas Adicionais</FormLabel>
+                  <FormLabel htmlFor="notes">Notas Adicionais (Opcional)</FormLabel>
                   <FormControl>
                     <Textarea
                       id="notes"
-                      placeholder="Ex: Senti-me cansado, após caminhada leve..."
+                      placeholder="Ex: Ritmo leve, senti um pouco de cansaço no final..."
                       className="resize-none"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Eventos, sintomas, atividades físicas, etc.
-                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
@@ -185,7 +202,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
           <CardFooter>
             <Button type="submit" className="w-full" disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Registro' : 'Salvar Registro')}
+              {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Atividade' : 'Salvar Atividade')}
             </Button>
           </CardFooter>
         </form>

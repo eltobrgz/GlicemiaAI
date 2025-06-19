@@ -4,11 +4,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import type { GlucoseReading } from '@/types';
-import { getGlucoseReadings, deleteGlucoseReading } from '@/lib/storage'; // Now async
+import type { GlucoseReading, UserProfile } from '@/types';
+import { getGlucoseReadings, deleteGlucoseReading, getUserProfile } from '@/lib/storage'; 
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { classifyGlucoseLevel, getGlucoseLevelColor, formatDateTime } from '@/lib/utils';
+import { getGlucoseLevelColor, formatDateTime } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trash2, PlusCircle, Loader2 } from 'lucide-react';
@@ -20,22 +20,25 @@ export default function GlucoseHistoryCalendar() {
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [selectedDayReadings, setSelectedDayReadings] = useState<GlucoseReading[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
 
-  const fetchReadings = async () => {
+  const fetchReadingsAndProfile = async () => {
     setIsLoading(true);
     try {
-      const readings = await getGlucoseReadings();
+      const profile = await getUserProfile();
+      setUserProfile(profile);
+      const readings = await getGlucoseReadings(profile); // Pass profile
       setGlucoseReadings(readings);
     } catch (error: any) {
-      toast({ title: "Erro ao buscar registros", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao buscar dados", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchReadings();
+    fetchReadingsAndProfile();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -52,7 +55,7 @@ export default function GlucoseHistoryCalendar() {
     try {
       await deleteGlucoseReading(id);
       toast({ title: "Registro apagado", description: "O registro de glicemia foi apagado." });
-      fetchReadings(); // Refetch all readings
+      fetchReadingsAndProfile(); // Refetch all readings and profile
     } catch (error: any) {
       toast({ title: "Erro ao apagar", description: error.message, variant: "destructive" });
     }
@@ -66,6 +69,7 @@ export default function GlucoseHistoryCalendar() {
     const readingsForDay = glucoseReadings.filter(r => isSameDay(parseISO(r.timestamp), day));
     if (readingsForDay.length === 0) return undefined;
     
+    // As leituras já devem ter o 'level' classificado com base no perfil do usuário.
     if (readingsForDay.some(r => r.level === 'muito_alta')) return 'muito_alta';
     if (readingsForDay.some(r => r.level === 'alta')) return 'alta';
     if (readingsForDay.some(r => r.level === 'baixa')) return 'baixa';
@@ -112,12 +116,12 @@ export default function GlucoseHistoryCalendar() {
                 const baseClasses = "w-full h-full flex items-center justify-center relative";
                 let indicatorClasses = "";
                 if (level) {
-                  switch(level) {
-                    case 'baixa': indicatorClasses = 'bg-blue-500'; break;
-                    case 'normal': indicatorClasses = 'bg-green-500'; break;
-                    case 'alta': indicatorClasses = 'bg-yellow-500'; break;
-                    case 'muito_alta': indicatorClasses = 'bg-red-500'; break;
-                  }
+                   // Use getGlucoseLevelColor para consistência, mas pegue a cor de fundo
+                  const colorClass = getGlucoseLevelColor(level, userProfile || undefined);
+                  if (colorClass.includes('blue')) indicatorClasses = 'bg-blue-500';
+                  else if (colorClass.includes('green')) indicatorClasses = 'bg-green-500';
+                  else if (colorClass.includes('yellow')) indicatorClasses = 'bg-yellow-500';
+                  else if (colorClass.includes('red')) indicatorClasses = 'bg-red-500';
                 }
                 return (
                   <div className={baseClasses}>
@@ -150,13 +154,12 @@ export default function GlucoseHistoryCalendar() {
               <div key={reading.id} className="p-3 border rounded-md bg-card hover:shadow-md transition-shadow">
                 <div className="flex justify-between items-start">
                   <div>
-                    <p className={`text-2xl font-bold ${getGlucoseLevelColor(reading.level)}`}>
+                    <p className={`text-2xl font-bold ${getGlucoseLevelColor(reading.level, userProfile || undefined)}`}>
                       {reading.value} <span className="text-sm text-muted-foreground">mg/dL</span>
                     </p>
                     <p className="text-xs text-muted-foreground">{format(parseISO(reading.timestamp), 'HH:mm')}</p>
                   </div>
                   <div className="flex space-x-1">
-                    {/* Edit button can be re-enabled later with Supabase update logic */}
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(reading.id)}>
                       <Trash2 size={16} />
                     </Button>

@@ -4,30 +4,38 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { GlucoseReading, InsulinLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage';
+import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile } from '@/lib/storage';
 import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity, CheckCircle, Loader2, Pill } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { format, subDays, eachDayOfInterval, parseISO, isSameDay, differenceInDays } from 'date-fns';
+import { format, subDays, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 
 
 export default function InsightsDisplay() {
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [insulinLogs, setInsulinLogs] = useState<InsulinLog[]>([]);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoadingGlucose, setIsLoadingGlucose] = useState(true);
   const [isLoadingInsulin, setIsLoadingInsulin] = useState(true);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchData = async () => {
       setIsLoadingGlucose(true);
       setIsLoadingInsulin(true);
+      setIsLoadingProfile(true);
       try {
+        const profile = await getUserProfile();
+        setUserProfile(profile);
+        setIsLoadingProfile(false);
+
         const [fetchedGlucoseReadings, fetchedInsulinLogs] = await Promise.all([
-          getGlucoseReadings(),
+          getGlucoseReadings(profile), // Pass profile
           getInsulinLogs()
         ]);
         setGlucoseReadings(fetchedGlucoseReadings);
@@ -42,7 +50,17 @@ export default function InsightsDisplay() {
     fetchData();
   }, [toast]);
 
-  const isLoading = isLoadingGlucose || isLoadingInsulin;
+  const isLoading = isLoadingGlucose || isLoadingInsulin || isLoadingProfile;
+
+  const currentGlucoseTargets = useMemo(() => {
+    return {
+      low: userProfile?.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low,
+      normalIdealMin: userProfile?.target_glucose_low ?? GLUCOSE_THRESHOLDS.low, // Assuming target_glucose_low as ideal min
+      normalIdealMax: userProfile?.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax,
+      high: userProfile?.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high,
+    };
+  }, [userProfile]);
+
 
   const averageGlucose = useMemo(() => {
     if (glucoseReadings.length === 0) return null;
@@ -52,11 +70,11 @@ export default function InsightsDisplay() {
 
   const timeInTarget = useMemo(() => {
     if (glucoseReadings.length === 0) return null;
-    const targetMin = 70;
-    const targetMax = 180;
+    const targetMin = currentGlucoseTargets.normalIdealMin;
+    const targetMax = currentGlucoseTargets.normalIdealMax;
     const inTargetCount = glucoseReadings.filter(r => r.value >= targetMin && r.value <= targetMax).length;
     return (inTargetCount / glucoseReadings.length) * 100;
-  }, [glucoseReadings]);
+  }, [glucoseReadings, currentGlucoseTargets]);
 
   const recentTrend = useMemo(() => {
     if (glucoseReadings.length < 2) return null;
@@ -128,7 +146,7 @@ export default function InsightsDisplay() {
   }
 
   const hasEnoughGlucoseData = glucoseReadings.length >= 5;
-  const hasEnoughInsulinData = insulinLogs.length >=1; // Example threshold, can be adjusted
+  const hasEnoughInsulinData = insulinLogs.length >=1; 
 
   return (
     <div className="space-y-6">
@@ -136,7 +154,7 @@ export default function InsightsDisplay() {
          <Lightbulb className="h-5 w-5 text-primary" />
         <AlertTitle className="text-primary font-semibold">Análise da IA (Simplificada)</AlertTitle>
         <AlertDescription className="text-primary/90">
-          Esta seção apresenta uma análise básica dos seus dados de glicemia e insulina. Uma IA mais avançada poderia identificar padrões complexos, prever tendências e fornecer dicas ainda mais personalizadas.
+          Esta seção apresenta uma análise básica dos seus dados de glicemia e insulina. Uma IA mais avançada poderia identificar padrões complexos, prever tendências e fornecer dicas ainda mais personalizadas. As faixas de referência usadas aqui são: Baixa (&lt;{currentGlucoseTargets.low}), Normal ({currentGlucoseTargets.normalIdealMin}-{currentGlucoseTargets.normalIdealMax}), Alta (&gt;{currentGlucoseTargets.normalIdealMax} e &lt;={currentGlucoseTargets.high}), Muito Alta (&gt;{currentGlucoseTargets.high}).
         </AlertDescription>
       </Alert>
 
@@ -176,7 +194,7 @@ export default function InsightsDisplay() {
                 </Card>
                 <Card className="shadow-lg">
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Tempo no Alvo (70-180 mg/dL)</CardTitle>
+                    <CardTitle className="text-sm font-medium">Tempo no Alvo ({currentGlucoseTargets.normalIdealMin}-{currentGlucoseTargets.normalIdealMax} mg/dL)</CardTitle>
                     <CheckCircle className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
@@ -267,7 +285,7 @@ export default function InsightsDisplay() {
                 let tip = "Continue monitorando seus níveis de glicemia e insulina para que possamos identificar padrões e tendências.";
                 if (hasEnoughGlucoseData && recentTrend === 'increasing') {
                   tip = "Percebemos que sua glicemia média aumentou recentemente. ";
-                  if (hasEnoughInsulinData && insulinStatsLast7Days.administrations < 3 && insulinStatsLast7Days.totalDose < 20) { // Example condition
+                  if (hasEnoughInsulinData && insulinStatsLast7Days.administrations < 3 && insulinStatsLast7Days.totalDose < 20) { 
                      tip += "Seus registros de insulina parecem baixos. Considere revisar sua rotina de aplicação ou alimentação. ";
                   } else if (hasEnoughInsulinData) {
                      tip += "Verifique se sua dosagem de insulina está adequada ou se houve mudanças na dieta/atividade. ";
@@ -277,7 +295,7 @@ export default function InsightsDisplay() {
                   tip += "Se persistir, consulte seu médico.";
                 } else if (hasEnoughGlucoseData && recentTrend === 'decreasing') {
                   tip = "Sua glicemia média tem diminuído. Isso pode ser positivo, mas fique atento(a) a possíveis hipoglicemias. ";
-                   if (hasEnoughInsulinData && insulinStatsLast7Days.administrations > 7 && insulinStatsLast7Days.totalDose > 50) { // Example condition
+                   if (hasEnoughInsulinData && insulinStatsLast7Days.administrations > 7 && insulinStatsLast7Days.totalDose > 50) { 
                      tip += "Suas doses de insulina parecem frequentes. Certifique-se que não está causando hipoglicemias. ";
                   }
                   tip += "Mantenha sua rotina e monitore.";
@@ -306,6 +324,3 @@ export default function InsightsDisplay() {
     </div>
   );
 }
-
-
-    

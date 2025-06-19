@@ -1,5 +1,5 @@
 
-import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile } from '@/types';
+import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog } from '@/types';
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
 import { toast } from '@/hooks/use-toast'; // Import toast
@@ -62,9 +62,12 @@ export async function getUserProfile(): Promise<UserProfile | null> {
                 name: user.user_metadata?.full_name || user.email || 'Novo Usuário',
                 email: user.email || '',
                 avatarUrl: user.user_metadata?.avatar_url || undefined,
-                dateOfBirth: undefined,
-                diabetesType: undefined,
                 languagePreference: 'pt-BR', // Default language
+                // Metas padrão podem ser nulas/undefined inicialmente
+                target_glucose_low: undefined, 
+                target_glucose_high: undefined,
+                hypo_glucose_threshold: undefined, 
+                hyper_glucose_threshold: undefined,
             };
             return defaultProfile;
         }
@@ -79,6 +82,10 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       dateOfBirth: data.date_of_birth || undefined,
       diabetesType: data.diabetes_type as UserProfile['diabetesType'] || undefined,
       languagePreference: data.language_preference || 'pt-BR',
+      target_glucose_low: data.target_glucose_low === null ? undefined : data.target_glucose_low,
+      target_glucose_high: data.target_glucose_high === null ? undefined : data.target_glucose_high,
+      hypo_glucose_threshold: data.hypo_glucose_threshold === null ? undefined : data.hypo_glucose_threshold,
+      hyper_glucose_threshold: data.hyper_glucose_threshold === null ? undefined : data.hyper_glucose_threshold,
       created_at: data.created_at,
       updated_at: data.updated_at,
     };
@@ -94,7 +101,7 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
     throw new Error("Não é possível salvar o perfil de outro usuário.");
   }
 
-  let newUploadedAvatarUrl: string | undefined = profile.avatarUrl; // Start with existing or undefined
+  let newUploadedAvatarUrl: string | undefined = profile.avatarUrl; 
 
   if (avatarFile) {
     const fileExt = avatarFile.name.split('.').pop();
@@ -109,17 +116,20 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
         description: "Sua foto de perfil não pôde ser enviada. As outras informações do perfil foram salvas. Tente enviar a foto novamente mais tarde.",
         variant: "destructive",
       });
-      // newUploadedAvatarUrl remains the initial profile.avatarUrl if upload fails
     }
   }
 
   const profileDataToSave = {
     id: profile.id,
     name: profile.name,
-    avatar_url: newUploadedAvatarUrl, // Use new or existing URL
+    avatar_url: newUploadedAvatarUrl, 
     date_of_birth: profile.dateOfBirth || null,
     diabetes_type: profile.diabetesType || null,
     language_preference: profile.languagePreference || 'pt-BR',
+    target_glucose_low: profile.target_glucose_low === undefined ? null : profile.target_glucose_low,
+    target_glucose_high: profile.target_glucose_high === undefined ? null : profile.target_glucose_high,
+    hypo_glucose_threshold: profile.hypo_glucose_threshold === undefined ? null : profile.hypo_glucose_threshold,
+    hyper_glucose_threshold: profile.hyper_glucose_threshold === undefined ? null : profile.hyper_glucose_threshold,
     updated_at: new Date().toISOString(),
   };
     
@@ -142,6 +152,10 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
       dateOfBirth: savedData.date_of_birth || undefined,
       diabetesType: savedData.diabetes_type as UserProfile['diabetesType'] || undefined,
       languagePreference: savedData.language_preference || 'pt-BR',
+      target_glucose_low: savedData.target_glucose_low === null ? undefined : savedData.target_glucose_low,
+      target_glucose_high: savedData.target_glucose_high === null ? undefined : savedData.target_glucose_high,
+      hypo_glucose_threshold: savedData.hypo_glucose_threshold === null ? undefined : savedData.hypo_glucose_threshold,
+      hyper_glucose_threshold: savedData.hyper_glucose_threshold === null ? undefined : savedData.hyper_glucose_threshold,
       created_at: savedData.created_at,
       updated_at: savedData.updated_at,
   };
@@ -149,7 +163,7 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
 
 
 // Glucose Readings
-export async function getGlucoseReadings(): Promise<GlucoseReading[]> {
+export async function getGlucoseReadings(userProfile?: UserProfile | null): Promise<GlucoseReading[]> {
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('glucose_readings')
@@ -168,14 +182,14 @@ export async function getGlucoseReadings(): Promise<GlucoseReading[]> {
     timestamp: r.timestamp,
     mealContext: r.meal_context as GlucoseReading['mealContext'] || undefined,
     notes: r.notes || undefined,
-    level: r.level as GlucoseReading['level'] || undefined, 
+    level: classifyGlucoseLevel(r.value, userProfile) as GlucoseReading['level'] || undefined, 
     created_at: r.created_at,
   }));
 }
 
-export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'> & {id?: string}): Promise<GlucoseReading> {
+export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'> & {id?: string}, userProfile?: UserProfile | null): Promise<GlucoseReading> {
   const userId = await getCurrentUserId();
-  const level = classifyGlucoseLevel(reading.value);
+  const level = classifyGlucoseLevel(reading.value, userProfile);
   
   const readingToSave = {
     id: reading.id, 
@@ -201,11 +215,11 @@ export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' |
         ...updatedDbData, 
         mealContext: updatedDbData.meal_context as GlucoseReading['mealContext'] || undefined,
         notes: updatedDbData.notes || undefined,
-        level: updatedDbData.level as GlucoseReading['level'] || undefined,
+        level: classifyGlucoseLevel(updatedDbData.value, userProfile) as GlucoseReading['level'] || undefined,
     } as GlucoseReading;
   } else { 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { id, ...insertData } = readingToSave; // Remove id para inserção
+    const { id, ...insertData } = readingToSave; 
     const { data: insertedDbData, error } = await supabase
       .from('glucose_readings')
       .insert(insertData)
@@ -216,7 +230,7 @@ export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' |
         ...insertedDbData, 
         mealContext: insertedDbData.meal_context as GlucoseReading['mealContext'] || undefined,
         notes: insertedDbData.notes || undefined,
-        level: insertedDbData.level as GlucoseReading['level'] || undefined,
+        level: classifyGlucoseLevel(insertedDbData.value, userProfile) as GlucoseReading['level'] || undefined,
     } as GlucoseReading;
   }
 }
@@ -529,4 +543,85 @@ export async function deleteReminder(id: string): Promise<void> {
   if (error) throw error;
 }
 
-    
+
+// Activity Logs
+export async function getActivityLogs(): Promise<ActivityLog[]> {
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('activity_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching activity logs:', error);
+    throw error;
+  }
+  return data.map(log => ({
+    id: log.id,
+    user_id: log.user_id,
+    timestamp: log.timestamp,
+    activity_type: log.activity_type,
+    duration_minutes: log.duration_minutes,
+    intensity: log.intensity as ActivityLog['intensity'] || undefined,
+    notes: log.notes || undefined,
+    created_at: log.created_at,
+  }));
+}
+
+export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'created_at'> & { id?: string }): Promise<ActivityLog> {
+  const userId = await getCurrentUserId();
+  const logToSave = {
+    id: log.id,
+    user_id: userId,
+    timestamp: log.timestamp,
+    activity_type: log.activity_type,
+    duration_minutes: log.duration_minutes,
+    intensity: log.intensity || null,
+    notes: log.notes || null,
+  };
+
+  let savedData;
+  if (log.id) {
+    const { id, ...updateData } = logToSave;
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .update(updateData)
+      .eq('id', log.id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    savedData = data;
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...insertData } = logToSave;
+    const { data, error } = await supabase
+      .from('activity_logs')
+      .insert(insertData)
+      .select()
+      .single();
+    if (error) throw error;
+    savedData = data;
+  }
+  
+  return {
+    ...savedData,
+    intensity: savedData.intensity as ActivityLog['intensity'] || undefined,
+    notes: savedData.notes || undefined,
+  } as ActivityLog;
+}
+
+export async function deleteActivityLog(id: string): Promise<void> {
+  const userId = await getCurrentUserId();
+  const { error } = await supabase
+    .from('activity_logs')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting activity log:', error);
+    throw error;
+  }
+}

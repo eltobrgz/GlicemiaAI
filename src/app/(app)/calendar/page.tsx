@@ -5,8 +5,9 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GlucoseHistoryCalendar from '@/components/glucose/GlucoseHistoryCalendar';
-import InsulinHistoryCalendar from '@/components/insulin/InsulinHistoryCalendar'; // To be created
-import { Droplet, Pill } from 'lucide-react';
+import InsulinHistoryCalendar from '@/components/insulin/InsulinHistoryCalendar';
+import ActivityHistoryCalendar from '@/components/activity/ActivityHistoryCalendar'; // Novo
+import { Droplet, Pill, Bike } from 'lucide-react'; // Bike adicionado
 
 export default function CalendarPage() {
   const searchParams = useSearchParams();
@@ -21,10 +22,10 @@ export default function CalendarPage() {
     <div className="space-y-6">
       <PageHeader
         title="Calendário de Acompanhamento"
-        description="Visualize suas medições de glicemia e registros de insulina, identifique padrões e acompanhe seu progresso."
+        description="Visualize suas medições de glicemia, registros de insulina e atividades físicas."
       />
       <Tabs defaultValue={defaultTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3"> {/* Alterado para 3 colunas */}
           <TabsTrigger value="glucose">
             <Droplet className="mr-2 h-4 w-4" />
             Glicemia
@@ -33,12 +34,19 @@ export default function CalendarPage() {
             <Pill className="mr-2 h-4 w-4" />
             Insulina
           </TabsTrigger>
+          <TabsTrigger value="activity"> {/* Nova aba */}
+            <Bike className="mr-2 h-4 w-4" />
+            Atividade
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="glucose">
           <GlucoseHistoryCalendar />
         </TabsContent>
         <TabsContent value="insulin">
           <InsulinHistoryCalendar />
+        </TabsContent>
+        <TabsContent value="activity"> {/* Novo conteúdo de aba */}
+          <ActivityHistoryCalendar />
         </TabsContent>
       </Tabs>
     </div>

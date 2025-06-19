@@ -25,6 +25,11 @@ export interface Database {
           date_of_birth: string | null // ISO date string YYYY-MM-DD
           diabetes_type: string | null // 'tipo1', 'tipo2', 'gestacional', 'outro'
           language_preference: string | null // e.g., 'pt-BR', 'en-US'
+          // Metas personalizadas de glicemia
+          target_glucose_low: number | null
+          target_glucose_high: number | null
+          hypo_glucose_threshold: number | null
+          hyper_glucose_threshold: number | null
           created_at: string // timestamp with time zone
           updated_at: string // timestamp with time zone
         }
@@ -36,6 +41,10 @@ export interface Database {
           date_of_birth?: string | null
           diabetes_type?: string | null
           language_preference?: string | null
+          target_glucose_low?: number | null
+          target_glucose_high?: number | null
+          hypo_glucose_threshold?: number | null
+          hyper_glucose_threshold?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -46,6 +55,10 @@ export interface Database {
           date_of_birth?: string | null
           diabetes_type?: string | null
           language_preference?: string | null
+          target_glucose_low?: number | null
+          target_glucose_high?: number | null
+          hypo_glucose_threshold?: number | null
+          hyper_glucose_threshold?: number | null
           updated_at?: string
         }
       }
@@ -181,6 +194,35 @@ export interface Database {
           is_simulated_call?: boolean | null
           simulated_call_contact?: string | null
           custom_sound?: string | null
+        }
+      }
+      activity_logs: { // Nova tabela
+        Row: {
+          id: string // uuid, primary key
+          user_id: string // uuid, foreign key to auth.users.id
+          timestamp: string // timestamp with time zone, data e hora do início
+          activity_type: string
+          duration_minutes: number
+          intensity: string | null // 'leve', 'moderada', 'intensa'
+          notes: string | null
+          created_at: string // timestamp with time zone
+        }
+        Insert: {
+          id?: string // uuid
+          user_id: string
+          timestamp: string
+          activity_type: string
+          duration_minutes: number
+          intensity?: string | null
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          timestamp?: string
+          activity_type?: string
+          duration_minutes?: number
+          intensity?: string | null
+          notes?: string | null
         }
       }
     }
