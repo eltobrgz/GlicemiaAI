@@ -1,54 +1,78 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import type { GlucoseReading } from '@/types';
-import { getGlucoseReadings } from '@/lib/storage';
-import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity, CheckCircle } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip as RechartsTooltip } from 'recharts';
+import { getGlucoseReadings } from '@/lib/storage'; // Now async
+import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity, CheckCircle, Loader2 } from 'lucide-react';
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { format, subDays, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { useToast } from '@/hooks/use-toast';
 
 
 export default function InsightsDisplay() {
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
-  const [averageGlucose, setAverageGlucose] = useState<number | null>(null);
-  const [timeInTarget, setTimeInTarget] = useState<number | null>(null); // Percentage
-  const [recentTrend, setRecentTrend] = useState<'increasing' | 'decreasing' | 'stable' | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const readings = getGlucoseReadings();
-    setGlucoseReadings(readings);
+    const fetchReadings = async () => {
+      setIsLoading(true);
+      try {
+        const readings = await getGlucoseReadings();
+        setGlucoseReadings(readings);
+      } catch (error: any) {
+        toast({ title: "Erro ao buscar dados para insights", description: error.message, variant: "destructive" });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchReadings();
+  }, [toast]);
 
-    if (readings.length > 0) {
-      const sum = readings.reduce((acc, r) => acc + r.value, 0);
-      setAverageGlucose(sum / readings.length);
+  const averageGlucose = useMemo(() => {
+    if (glucoseReadings.length === 0) return null;
+    const sum = glucoseReadings.reduce((acc, r) => acc + r.value, 0);
+    return sum / glucoseReadings.length;
+  }, [glucoseReadings]);
 
-      // Example: Time in target (70-180 mg/dL)
-      const targetMin = 70;
-      const targetMax = 180;
-      const inTargetCount = readings.filter(r => r.value >= targetMin && r.value <= targetMax).length;
-      setTimeInTarget((inTargetCount / readings.length) * 100);
+  const timeInTarget = useMemo(() => {
+    if (glucoseReadings.length === 0) return null;
+    const targetMin = 70;
+    const targetMax = 180;
+    const inTargetCount = glucoseReadings.filter(r => r.value >= targetMin && r.value <= targetMax).length;
+    return (inTargetCount / glucoseReadings.length) * 100;
+  }, [glucoseReadings]);
 
-      // Basic trend analysis (last 7 days vs previous 7 days)
-      // This is a very simplified trend analysis. Real AI would be more sophisticated.
-      const last7DaysReadings = readings.filter(r => parseISO(r.timestamp) > subDays(new Date(), 7));
-      const prev7DaysReadings = readings.filter(r => {
+  const recentTrend = useMemo(() => {
+    if (glucoseReadings.length < 2) return null; // Need at least some data for trend
+    
+    const readingsSorted = [...glucoseReadings].sort((a,b) => parseISO(a.timestamp).getTime() - parseISO(b.timestamp).getTime());
+    const last7DaysReadings = readingsSorted.filter(r => parseISO(r.timestamp) > subDays(new Date(), 7));
+    
+    if(last7DaysReadings.length < 2) return 'stable'; // Not enough recent data for a strong trend
+
+    const prevPeriodEnd = subDays(new Date(), 7);
+    const prevPeriodStart = subDays(new Date(), 14);
+    const prev7DaysReadings = readingsSorted.filter(r => {
         const date = parseISO(r.timestamp);
-        return date <= subDays(new Date(), 7) && date > subDays(new Date(), 14);
+        return date <= prevPeriodEnd && date > prevPeriodStart;
       });
 
-      if (last7DaysReadings.length > 0 && prev7DaysReadings.length > 0) {
-        const avgLast7 = last7DaysReadings.reduce((acc, r) => acc + r.value, 0) / last7DaysReadings.length;
-        const avgPrev7 = prev7DaysReadings.reduce((acc, r) => acc + r.value, 0) / prev7DaysReadings.length;
-        if (avgLast7 > avgPrev7 * 1.1) setRecentTrend('increasing'); // 10% increase
-        else if (avgLast7 < avgPrev7 * 0.9) setRecentTrend('decreasing'); // 10% decrease
-        else setRecentTrend('stable');
-      }
+    if (last7DaysReadings.length > 0 && prev7DaysReadings.length > 0) {
+      const avgLast7 = last7DaysReadings.reduce((acc, r) => acc + r.value, 0) / last7DaysReadings.length;
+      const avgPrev7 = prev7DaysReadings.reduce((acc, r) => acc + r.value, 0) / prev7DaysReadings.length;
+      if (avgLast7 > avgPrev7 * 1.1) return 'increasing';
+      else if (avgLast7 < avgPrev7 * 0.9) return 'decreasing';
+      else return 'stable';
     }
-  }, []);
+    return 'stable'; // Default to stable if not enough comparative data
+  }, [glucoseReadings]);
+
 
   const last7DaysData = useMemo(() => {
     const today = new Date();
@@ -70,6 +94,14 @@ export default function InsightsDisplay() {
     },
   };
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg">Carregando insights...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -87,7 +119,7 @@ export default function InsightsDisplay() {
             <CardTitle>Mais Dados Necessários</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground">Continue registrando seus dados de glicemia para obter insights mais detalhados.</p>
+            <p className="text-muted-foreground">Continue registrando seus dados de glicemia (pelo menos 5 registros) para obter insights mais detalhados.</p>
           </CardContent>
         </Card>
       )}
@@ -176,7 +208,7 @@ export default function InsightsDisplay() {
               {!recentTrend && glucoseReadings.length > 0 && (
                  <p className="text-accent-foreground/90">"Continue monitorando sua glicemia para que possamos identificar padrões e tendências."</p>
               )}
-              {glucoseReadings.length === 0 && (
+               {glucoseReadings.length === 0 && !isLoading && (
                  <p className="text-accent-foreground/90">"Registre seus dados para receber dicas personalizadas."</p>
               )}
             </CardContent>

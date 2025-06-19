@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -5,25 +6,48 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, PlusCircle } from 'lucide-react';
+import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2 } from 'lucide-react';
 import type { GlucoseReading, InsulinLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage';
+import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; // Now async
 import { formatDateTime, classifyGlucoseLevel, getGlucoseLevelColor } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DashboardPage() {
   const [lastGlucose, setLastGlucose] = useState<GlucoseReading | null>(null);
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
+  const [isLoadingGlucose, setIsLoadingGlucose] = useState(true);
+  const [isLoadingInsulin, setIsLoadingInsulin] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const glucoseReadings = getGlucoseReadings();
-    if (glucoseReadings.length > 0) {
-      setLastGlucose(glucoseReadings[0]);
-    }
-    const insulinLogs = getInsulinLogs();
-    if (insulinLogs.length > 0) {
-      setLastInsulin(insulinLogs[0]);
-    }
-  }, []);
+    const fetchData = async () => {
+      try {
+        setIsLoadingGlucose(true);
+        const glucoseReadings = await getGlucoseReadings();
+        if (glucoseReadings.length > 0) {
+          setLastGlucose(glucoseReadings[0]); // Already sorted by desc timestamp in storage function
+        }
+      } catch (error: any) {
+        toast({ title: "Erro ao buscar glicemias", description: error.message, variant: "destructive" });
+      } finally {
+        setIsLoadingGlucose(false);
+      }
+
+      try {
+        setIsLoadingInsulin(true);
+        const insulinLogs = await getInsulinLogs();
+        if (insulinLogs.length > 0) {
+          setLastInsulin(insulinLogs[0]); // Already sorted by desc timestamp
+        }
+      } catch (error: any) {
+        toast({ title: "Erro ao buscar registros de insulina", description: error.message, variant: "destructive" });
+      } finally {
+        setIsLoadingInsulin(false);
+      }
+    };
+
+    fetchData();
+  }, [toast]);
 
   const quickAccessItems = [
     { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet, iconColor: 'text-blue-500' },
@@ -58,14 +82,19 @@ export default function DashboardPage() {
               <Droplet className="mr-2 h-6 w-6 text-primary" />
               Última Glicemia Registrada
             </CardTitle>
-            {lastGlucose && (
+            {isLoadingGlucose && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+            {!isLoadingGlucose && lastGlucose && (
                <CardDescription>{formatDateTime(lastGlucose.timestamp)}</CardDescription>
             )}
           </CardHeader>
           <CardContent>
-            {lastGlucose ? (
+            {isLoadingGlucose ? (
+              <div className="flex items-center justify-center h-20">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : lastGlucose ? (
               <div>
-                <p className={`text-4xl font-bold ${getGlucoseLevelColor(classifyGlucoseLevel(lastGlucose.value))}`}>
+                <p className={`text-4xl font-bold ${getGlucoseLevelColor(lastGlucose.level)}`}>
                   {lastGlucose.value} <span className="text-xl text-muted-foreground">mg/dL</span>
                 </p>
                 {lastGlucose.mealContext && <p className="text-sm text-muted-foreground capitalize">Contexto: {lastGlucose.mealContext.replace('_', ' ')}</p>}
@@ -88,12 +117,17 @@ export default function DashboardPage() {
               <Pill className="mr-2 h-6 w-6 text-accent" />
               Última Insulina Registrada
             </CardTitle>
-            {lastInsulin && (
+             {isLoadingInsulin && <Loader2 className="h-5 w-5 animate-spin text-accent" />}
+            {!isLoadingInsulin && lastInsulin && (
                <CardDescription>{formatDateTime(lastInsulin.timestamp)}</CardDescription>
             )}
           </CardHeader>
           <CardContent>
-            {lastInsulin ? (
+            {isLoadingInsulin ? (
+               <div className="flex items-center justify-center h-20">
+                <Loader2 className="h-8 w-8 animate-spin text-accent" />
+              </div>
+            ) : lastInsulin ? (
               <div>
                 <p className="text-3xl font-bold">
                   {lastInsulin.dose} <span className="text-xl text-muted-foreground">unidades</span>

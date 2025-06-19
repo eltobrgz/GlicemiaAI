@@ -1,20 +1,21 @@
+
 'use client';
 
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { InsulinLog } from '@/types';
-import { saveInsulinLog } from '@/lib/storage';
-import { generateId } from '@/lib/utils';
+import { saveInsulinLog } from '@/lib/storage'; // Now async
 import { INSULIN_TYPES } from '@/config/constants';
 import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
+import { useState } from 'react';
 
 const insulinSchema = z.object({
   type: z.string().min(1, 'Tipo de insulina é obrigatório.'),
@@ -28,12 +29,14 @@ type InsulinFormData = z.infer<typeof insulinSchema>;
 
 interface InsulinLogFormProps {
   onFormSubmit?: () => void;
-  initialData?: Partial<InsulinLog>; // For editing
+  initialData?: Partial<InsulinLog>; 
 }
 
 export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLogFormProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+
   const form = useForm<InsulinFormData>({
     resolver: zodResolver(insulinSchema),
     defaultValues: {
@@ -43,35 +46,48 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
     },
   });
 
-  const onSubmit = (data: InsulinFormData) => {
-    const newLog: InsulinLog = {
-      id: initialData?.id || generateId(),
-      type: data.type,
-      dose: data.dose,
-      timestamp: new Date(data.timestamp).toISOString(),
-    };
+  const onSubmit = async (data: InsulinFormData) => {
+    setIsSaving(true);
+    try {
+      const logToSave: Omit<InsulinLog, 'id'> & { id?: string } = {
+        id: initialData?.id,
+        type: data.type,
+        dose: data.dose,
+        timestamp: new Date(data.timestamp).toISOString(),
+      };
 
-    saveInsulinLog(newLog);
-    toast({
-      title: 'Sucesso!',
-      description: 'Registro de insulina salvo.',
-    });
-    form.reset({ 
-        timestamp: new Date().toISOString().substring(0, 16), 
-        type: '', 
-        dose: undefined 
-    });
-    if (onFormSubmit) {
-      onFormSubmit();
+      await saveInsulinLog(logToSave);
+      toast({
+        title: 'Sucesso!',
+        description: `Registro de insulina ${initialData?.id ? 'atualizado' : 'salvo'}.`,
+      });
+      form.reset({ 
+          timestamp: new Date().toISOString().substring(0, 16), 
+          type: '', 
+          dose: undefined 
+      });
+      if (onFormSubmit) {
+        onFormSubmit();
+      }
+      router.push('/dashboard');
+      router.refresh(); 
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao Salvar',
+        description: error.message || "Não foi possível salvar o registro de insulina.",
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
     }
-    // Potentially navigate to a list of insulin logs or back to dashboard
-    router.push('/dashboard'); 
   };
 
   return (
     <Card className="w-full max-w-lg mx-auto shadow-xl">
       <CardHeader>
-        <CardTitle className="text-2xl font-headline text-primary">Registrar Insulina</CardTitle>
+        <CardTitle className="text-2xl font-headline text-primary">
+          {initialData?.id ? 'Editar Registro de Insulina' : 'Registrar Insulina'}
+        </CardTitle>
       </CardHeader>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)}>
@@ -130,8 +146,9 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
             />
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? 'Salvando...' : 'Salvar Registro de Insulina'}
+            <Button type="submit" className="w-full" disabled={isSaving}>
+              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Registro' : 'Salvar Registro de Insulina')}
             </Button>
           </CardFooter>
         </form>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -5,26 +6,45 @@ import PageHeader from '@/components/PageHeader';
 import MealImageForm from '@/components/meal/MealImageForm';
 import MealAnalysisDisplay from '@/components/meal/MealAnalysisDisplay';
 import type { MealAnalysis } from '@/types';
-import { getMealAnalyses, deleteMealAnalysis } from '@/lib/storage';
+import { getMealAnalyses, deleteMealAnalysis, saveMealAnalysis } from '@/lib/storage'; // save is async now
 import { Button } from '@/components/ui/button';
-import { Trash2, RotateCcw } from 'lucide-react';
+import { Trash2, RotateCcw, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import { formatDateTime } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MealAnalysisPage() {
   const [currentAnalysis, setCurrentAnalysis] = useState<MealAnalysis | null>(null);
   const [pastAnalyses, setPastAnalyses] = useState<MealAnalysis[]>([]);
   const [showForm, setShowForm] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchAnalyses = async () => {
+    setIsLoading(true);
+    try {
+      const analyses = await getMealAnalyses();
+      setPastAnalyses(analyses);
+    } catch (error: any) {
+      toast({ title: "Erro ao buscar análises", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setPastAnalyses(getMealAnalyses());
+    fetchAnalyses();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleAnalysisComplete = (analysisResult: MealAnalysis) => {
+  const handleAnalysisComplete = async (analysisResult: MealAnalysis) => {
+    // The MealImageForm now handles saving to Supabase via saveMealAnalysis from storage.ts
     setCurrentAnalysis(analysisResult);
-    setPastAnalyses(prev => [analysisResult, ...prev]); // Add to top of the list
+    // Prepend to local state for immediate UI update, then refetch for consistency
+    setPastAnalyses(prev => [analysisResult, ...prev.filter(p => p.id !== analysisResult.id)]);
     setShowForm(false);
+    await fetchAnalyses(); // Refetch to ensure data consistency
   };
 
   const handleShowNewAnalysisForm = () => {
@@ -32,12 +52,17 @@ export default function MealAnalysisPage() {
     setShowForm(true);
   };
 
-  const handleDeleteAnalysis = (id: string) => {
-    deleteMealAnalysis(id);
-    setPastAnalyses(prev => prev.filter(a => a.id !== id));
-    if (currentAnalysis?.id === id) {
-      setCurrentAnalysis(null);
-      setShowForm(true);
+  const handleDeleteAnalysis = async (id: string) => {
+    try {
+      await deleteMealAnalysis(id);
+      toast({ title: "Análise apagada" });
+      setPastAnalyses(prev => prev.filter(a => a.id !== id));
+      if (currentAnalysis?.id === id) {
+        setCurrentAnalysis(null);
+        setShowForm(true);
+      }
+    } catch (error: any) {
+      toast({ title: "Erro ao apagar análise", description: error.message, variant: "destructive" });
     }
   };
   
@@ -61,7 +86,7 @@ export default function MealAnalysisPage() {
 
       {showForm && <MealImageForm onAnalysisComplete={handleAnalysisComplete} />}
       
-      {currentAnalysis && (
+      {currentAnalysis && !showForm && (
         <>
           <MealAnalysisDisplay analysis={currentAnalysis} />
           <div className="text-center mt-4">
@@ -72,7 +97,14 @@ export default function MealAnalysisPage() {
         </>
       )}
 
-      {pastAnalyses.length > 0 && (
+      {isLoading && (
+        <div className="flex justify-center items-center py-10">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+          <p className="ml-3">Carregando histórico de análises...</p>
+        </div>
+      )}
+
+      {!isLoading && pastAnalyses.length > 0 && (
         <Card className="mt-12 shadow-lg">
           <CardHeader>
             <CardTitle className="font-headline">Histórico de Análises</CardTitle>
@@ -112,6 +144,9 @@ export default function MealAnalysisPage() {
           </CardContent>
         </Card>
       )}
+       {!isLoading && pastAnalyses.length === 0 && !showForm && !currentAnalysis &&(
+         <p className="text-center text-muted-foreground py-10">Nenhuma análise de refeição encontrada.</p>
+       )}
     </div>
   );
 }

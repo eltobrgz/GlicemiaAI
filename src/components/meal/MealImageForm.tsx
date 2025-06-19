@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, type ChangeEvent } from 'react';
@@ -6,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
@@ -15,8 +15,8 @@ import Image from 'next/image';
 import { UploadCloud, Loader2, Camera } from 'lucide-react';
 import type { MealAnalysis, AnalyzeMealImageOutput } from '@/types';
 import { analyzeMealImage as analyzeMealImageFlow, type AnalyzeMealImageInput } from '@/ai/flows/analyze-meal-image';
-import { generateId, fileToDataUri } from '@/lib/utils';
-import { saveMealAnalysis } from '@/lib/storage';
+import { fileToDataUri } from '@/lib/utils';
+import { saveMealAnalysis } from '@/lib/storage'; // Now async and saves to Supabase
 
 const mealAnalysisSchema = z.object({
   mealPhoto: z.instanceof(File, { message: 'Por favor, selecione uma imagem da refeição.' })
@@ -61,7 +61,8 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
   
   const onSubmit = async (data: MealAnalysisFormData) => {
     setIsAnalyzing(true);
-    setPreviewImage(null); // Clear preview while analyzing if desired, or keep it
+    // Keep previewImage during analysis for better UX
+    // setPreviewImage(null); 
 
     try {
       const mealPhotoDataUri = await fileToDataUri(data.mealPhoto);
@@ -73,22 +74,24 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
 
       const aiResult: AnalyzeMealImageOutput = await analyzeMealImageFlow(input);
       
-      const fullAnalysis: MealAnalysis = {
-        id: generateId(),
+      // Prepare data for saving, without 'id' for new entries
+      const analysisDataForStorage: Omit<MealAnalysis, 'id'> = {
         timestamp: new Date().toISOString(),
-        imageUrl: mealPhotoDataUri, // Store the data URI for display
+        imageUrl: mealPhotoDataUri, 
         originalImageFileName: data.mealPhoto.name,
         ...aiResult,
       };
       
-      saveMealAnalysis(fullAnalysis); // Save to localStorage
-      onAnalysisComplete(fullAnalysis);
+      const savedAnalysis = await saveMealAnalysis(analysisDataForStorage); // saveMealAnalysis now returns the saved object with an ID
+      
+      onAnalysisComplete(savedAnalysis); // Pass the complete analysis with ID from DB
 
       toast({
         title: 'Análise Concluída!',
         description: 'Sua refeição foi analisada com sucesso.',
       });
       form.reset();
+      setPreviewImage(null); // Clear preview after successful submission
 
     } catch (error: any) {
       console.error('Meal analysis error:', error);
@@ -118,7 +121,7 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
             <FormField
               control={form.control}
               name="mealPhoto"
-              render={({ field }) => ( // We don't use field directly for input type="file"
+              render={({ field }) => ( 
                 <FormItem>
                   <FormLabel htmlFor="mealPhoto" className="text-base">Foto da Refeição</FormLabel>
                   <FormControl>
@@ -135,7 +138,7 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
                             className="relative cursor-pointer rounded-md bg-background font-semibold text-primary focus-within:outline-none focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2 hover:text-primary/80"
                           >
                             <span>Carregar um arquivo</span>
-                            <input id="mealPhoto" name="mealPhoto" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} />
+                            <input id="mealPhoto" name="mealPhoto" type="file" className="sr-only" accept="image/*" onChange={handleFileChange} disabled={isAnalyzing} />
                           </label>
                           <p className="pl-1">ou arraste e solte</p>
                         </div>
@@ -161,6 +164,7 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
                       className="resize-none"
                       rows={3}
                       {...field}
+                      disabled={isAnalyzing}
                     />
                   </FormControl>
                   <FormDescription>

@@ -12,8 +12,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, LogIn } from 'lucide-react';
+import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 const loginSchema = z.object({
   email: z.string().email('Email inválido.'),
@@ -26,6 +27,7 @@ export default function LoginForm() {
   const { toast } = useToast();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -35,15 +37,33 @@ export default function LoginForm() {
     },
   });
 
-  const onSubmit = (data: LoginFormData) => {
-    // Placeholder para lógica de login real
-    console.log('Login data:', data);
-    toast({
-      title: 'Login Simulado',
-      description: 'Login efetuado com sucesso! Redirecionando...',
-    });
-    // Em uma aplicação real, você validaria as credenciais e redirecionaria
-    router.push('/dashboard');
+  const onSubmit = async (data: LoginFormData) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      toast({
+        title: 'Login Bem-sucedido!',
+        description: 'Redirecionando para o painel...',
+      });
+      router.push('/dashboard'); // Or router.refresh() if dashboard handles auth state
+      router.refresh(); // To ensure layout re-renders with new auth state
+    } catch (error: any) {
+      toast({
+        title: 'Erro no Login',
+        description: error.message || 'Falha ao tentar fazer login. Verifique suas credenciais.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -107,9 +127,9 @@ export default function LoginForm() {
             </div>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              <LogIn className="mr-2 h-5 w-5" />
-              {form.formState.isSubmitting ? 'Entrando...' : 'Entrar'}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <LogIn className="mr-2 h-5 w-5" />}
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Não tem uma conta?{' '}
@@ -123,4 +143,3 @@ export default function LoginForm() {
     </Card>
   );
 }
-

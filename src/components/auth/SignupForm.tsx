@@ -12,8 +12,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import { UserPlus, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
@@ -22,7 +23,7 @@ const signupSchema = z.object({
   confirmPassword: z.string(),
 }).refine((data) => data.password === data.confirmPassword, {
   message: 'As senhas não coincidem.',
-  path: ['confirmPassword'], // Path to show error on confirmPassword field
+  path: ['confirmPassword'],
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
@@ -32,7 +33,7 @@ export default function SignupForm() {
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
@@ -44,15 +45,58 @@ export default function SignupForm() {
     },
   });
 
-  const onSubmit = (data: SignupFormData) => {
-    // Placeholder para lógica de cadastro real
-    console.log('Signup data:', data);
-    toast({
-      title: 'Cadastro Simulado',
-      description: 'Conta criada com sucesso! Redirecionando para login...',
-    });
-    // Em uma aplicação real, você criaria o usuário e redirecionaria
-    router.push('/login');
+  const onSubmit = async (data: SignupFormData) => {
+    setIsLoading(true);
+    try {
+      const { data: signUpData, error } = await supabase.auth.signUp({
+        email: data.email,
+        password: data.password,
+        options: {
+          data: {
+            full_name: data.name, // This will be used by the handle_new_user trigger
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (signUpData.user && signUpData.user.identities && signUpData.user.identities.length === 0) {
+        // This case might indicate an existing user trying to sign up again with an unverified email from a previous attempt.
+        // Supabase might return a user object but with no identities if email needs confirmation but already exists.
+         toast({
+          title: 'Verifique seu Email',
+          description: 'Um email de confirmação foi enviado. Por favor, verifique sua caixa de entrada e spam. Se você já se cadastrou, tente fazer login.',
+          variant: 'default',
+        });
+      } else if (signUpData.session) {
+         // User signed up and is logged in (e.g. autoConfirm is true in Supabase)
+        toast({
+          title: 'Cadastro Realizado!',
+          description: 'Sua conta foi criada com sucesso. Redirecionando...',
+        });
+        router.push('/dashboard');
+        router.refresh();
+      } else {
+        // Standard flow: email confirmation required
+        toast({
+          title: 'Verifique seu Email',
+          description: 'Um email de confirmação foi enviado para ' + data.email + '. Por favor, verifique sua caixa de entrada e spam.',
+        });
+        // router.push('/login'); // Or a dedicated "check your email" page
+      }
+      form.reset();
+
+    } catch (error: any) {
+      toast({
+        title: 'Erro no Cadastro',
+        description: error.message || 'Não foi possível criar a conta. Tente novamente.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -156,9 +200,9 @@ export default function SignupForm() {
             />
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-              <UserPlus className="mr-2 h-5 w-5" />
-              {form.formState.isSubmitting ? 'Criando conta...' : 'Criar Conta'}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <UserPlus className="mr-2 h-5 w-5" />}
+              {isLoading ? 'Criando conta...' : 'Criar Conta'}
             </Button>
             <p className="text-sm text-center text-muted-foreground">
               Já tem uma conta?{' '}
@@ -172,4 +216,3 @@ export default function SignupForm() {
     </Card>
   );
 }
-

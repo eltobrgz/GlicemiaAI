@@ -1,48 +1,60 @@
+
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import type { GlucoseReading } from '@/types';
-import { getGlucoseReadings, deleteGlucoseReading } from '@/lib/storage';
+import { getGlucoseReadings, deleteGlucoseReading } from '@/lib/storage'; // Now async
 import { format, parseISO, isSameDay, startOfDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { classifyGlucoseLevel, getGlucoseLevelColor, formatDateTime } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit3, PlusCircle } from 'lucide-react';
+import { Trash2, PlusCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-// Note: Editing is not fully implemented, this is a placeholder for the button.
-// import GlucoseLogForm from './GlucoseLogForm'; 
+import { useToast } from '@/hooks/use-toast';
 
 export default function GlucoseHistoryCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [selectedDayReadings, setSelectedDayReadings] = useState<GlucoseReading[]>([]);
-  const [isClient, setIsClient] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  const fetchReadings = async () => {
+    setIsLoading(true);
+    try {
+      const readings = await getGlucoseReadings();
+      setGlucoseReadings(readings);
+    } catch (error: any) {
+      toast({ title: "Erro ao buscar registros", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setIsClient(true);
-    setGlucoseReadings(getGlucoseReadings());
+    fetchReadings();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    if (date && isClient) {
+    if (date && !isLoading) {
       const readingsForDay = glucoseReadings.filter(r => isSameDay(parseISO(r.timestamp), date));
       setSelectedDayReadings(readingsForDay.sort((a,b) => parseISO(b.timestamp).getTime() - parseISO(a.timestamp).getTime()));
     } else {
       setSelectedDayReadings([]);
     }
-  }, [date, glucoseReadings, isClient]);
+  }, [date, glucoseReadings, isLoading]);
 
-  const handleDelete = (id: string) => {
-    deleteGlucoseReading(id);
-    const updatedReadings = getGlucoseReadings();
-    setGlucoseReadings(updatedReadings);
-    // Also update selectedDayReadings if the deleted item was part of it
-    if (date) {
-      setSelectedDayReadings(updatedReadings.filter(r => isSameDay(parseISO(r.timestamp), date)));
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteGlucoseReading(id);
+      toast({ title: "Registro apagado", description: "O registro de glicemia foi apagado." });
+      fetchReadings(); // Refetch all readings
+    } catch (error: any) {
+      toast({ title: "Erro ao apagar", description: error.message, variant: "destructive" });
     }
   };
   
@@ -54,15 +66,13 @@ export default function GlucoseHistoryCalendar() {
     const readingsForDay = glucoseReadings.filter(r => isSameDay(parseISO(r.timestamp), day));
     if (readingsForDay.length === 0) return undefined;
     
-    // Simple logic: if any reading is very high, mark day as very high. Then high, then low. Otherwise normal.
     if (readingsForDay.some(r => r.level === 'muito_alta')) return 'muito_alta';
     if (readingsForDay.some(r => r.level === 'alta')) return 'alta';
     if (readingsForDay.some(r => r.level === 'baixa')) return 'baixa';
     return 'normal';
   };
 
-  if (!isClient) {
-    // Render a loading state or null on the server
+  if (isLoading) {
     return (
       <Card className="shadow-xl">
         <CardHeader>
@@ -70,7 +80,7 @@ export default function GlucoseHistoryCalendar() {
           <CardDescription>Carregando dados do calendário...</CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center items-center h-64">
-          <div className="animate-pulse rounded-md bg-muted h-full w-full"></div>
+          <Loader2 className="h-12 w-12 animate-spin text-primary" />
         </CardContent>
       </Card>
     );
@@ -146,20 +156,7 @@ export default function GlucoseHistoryCalendar() {
                     <p className="text-xs text-muted-foreground">{format(parseISO(reading.timestamp), 'HH:mm')}</p>
                   </div>
                   <div className="flex space-x-1">
-                    {/* <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary">
-                          <Edit3 size={16} />
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent>
-                        <DialogHeader>
-                          <DialogTitle>Editar Registro (Não Implementado)</DialogTitle>
-                        </DialogHeader>
-                         <p className="py-4">A funcionalidade de edição será implementada em breve.</p>
-                         <GlucoseLogForm initialData={reading} onFormSubmit={() => {}} />
-                      </DialogContent>
-                    </Dialog> */}
+                    {/* Edit button can be re-enabled later with Supabase update logic */}
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-destructive" onClick={() => handleDelete(reading.id)}>
                       <Trash2 size={16} />
                     </Button>

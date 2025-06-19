@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useForm, Controller, useFieldArray } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -13,11 +14,11 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
-import type { ReminderConfig, DayOfWeek } from '@/types';
-import { getReminders, saveReminder, deleteReminder } from '@/lib/storage';
-import { generateId, formatTime } from '@/lib/utils';
+import type { ReminderConfig } from '@/types';
+import { getReminders, saveReminder, deleteReminder } from '@/lib/storage'; // Now async
+import { formatTime } from '@/lib/utils';
 import { DAYS_OF_WEEK, INSULIN_TYPES } from '@/config/constants';
-import { PlusCircle, Trash2, Bell, Phone } from 'lucide-react';
+import { PlusCircle, Trash2, Bell, Phone, Loader2, Edit3 } from 'lucide-react';
 
 const reminderSchema = z.object({
   id: z.string().optional(),
@@ -30,7 +31,7 @@ const reminderSchema = z.object({
   insulinDose: z.coerce.number().optional(),
   isSimulatedCall: z.boolean().optional(),
   simulatedCallContact: z.string().optional(),
-  customSound: z.string().optional(), // Placeholder for custom sound selection
+  customSound: z.string().optional(),
 });
 
 type ReminderFormData = z.infer<typeof reminderSchema>;
@@ -38,10 +39,25 @@ type ReminderFormData = z.infer<typeof reminderSchema>;
 export default function ReminderSetup() {
   const [reminders, setReminders] = useState<ReminderConfig[]>([]);
   const [editingReminder, setEditingReminder] = useState<ReminderConfig | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const { toast } = useToast();
 
+  const fetchReminders = async () => {
+    setIsLoading(true);
+    try {
+      const fetchedReminders = await getReminders();
+      setReminders(fetchedReminders);
+    } catch (error: any) {
+      toast({ title: "Erro ao buscar lembretes", description: error.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    setReminders(getReminders());
+    fetchReminders();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const form = useForm<ReminderFormData>({
@@ -64,7 +80,7 @@ export default function ReminderSetup() {
         id: editingReminder.id,
         type: editingReminder.type,
         name: editingReminder.name,
-        time: editingReminder.time,
+        time: editingReminder.time, // Already HH:MM
         days: editingReminder.days,
         enabled: editingReminder.enabled,
         insulinType: editingReminder.insulinType,
@@ -81,44 +97,51 @@ export default function ReminderSetup() {
     }
   }, [editingReminder, form]);
 
-  const onSubmit = (data: ReminderFormData) => {
-    const reminderToSave: ReminderConfig = {
-      id: data.id || generateId(),
-      ...data,
-      // Ensure optional fields are undefined if empty, based on type
-      insulinType: data.type === 'insulina' ? data.insulinType : undefined,
-      insulinDose: data.type === 'insulina' ? data.insulinDose : undefined,
-      isSimulatedCall: data.type === 'insulina' ? data.isSimulatedCall : undefined,
-      simulatedCallContact: data.type === 'insulina' && data.isSimulatedCall ? data.simulatedCallContact : undefined,
-    };
+  const onSubmit = async (data: ReminderFormData) => {
+    setIsSaving(true);
+    try {
+      const reminderToSave: Omit<ReminderConfig, 'id'> & { id?: string } = {
+        id: data.id,
+        ...data,
+        insulinType: data.type === 'insulina' ? data.insulinType : undefined,
+        insulinDose: data.type === 'insulina' ? data.insulinDose : undefined,
+        isSimulatedCall: data.isSimulatedCall,
+        simulatedCallContact: data.isSimulatedCall ? data.simulatedCallContact : undefined,
+      };
 
-    saveReminder(reminderToSave);
-    setReminders(getReminders());
-    toast({
-      title: editingReminder ? 'Lembrete Atualizado!' : 'Lembrete Salvo!',
-      description: `Lembrete "${data.name}" foi ${editingReminder ? 'atualizado' : 'salvo'} com sucesso.`,
-    });
-    setEditingReminder(null);
+      await saveReminder(reminderToSave);
+      toast({
+        title: editingReminder ? 'Lembrete Atualizado!' : 'Lembrete Salvo!',
+        description: `Lembrete "${data.name}" foi ${editingReminder ? 'atualizado' : 'salvo'} com sucesso.`,
+      });
+      setEditingReminder(null); // Resets form via useEffect
+      fetchReminders(); // Refresh list
+    } catch (error: any) {
+      toast({ title: "Erro ao salvar lembrete", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEdit = (reminder: ReminderConfig) => {
     setEditingReminder(reminder);
   };
 
-  const handleDelete = (id: string) => {
-    deleteReminder(id);
-    setReminders(getReminders());
-    toast({
-      title: 'Lembrete Apagado!',
-      variant: 'destructive',
-    });
-    if (editingReminder?.id === id) {
-      setEditingReminder(null);
+  const handleDelete = async (id: string) => {
+    try {
+      await deleteReminder(id);
+      toast({ title: 'Lembrete Apagado!', variant: 'default' }); // Changed variant
+      fetchReminders(); // Refresh list
+      if (editingReminder?.id === id) {
+        setEditingReminder(null);
+      }
+    } catch (error: any) {
+      toast({ title: "Erro ao apagar lembrete", description: error.message, variant: "destructive" });
     }
   };
 
   const handleAddNew = () => {
-    setEditingReminder(null); // This will trigger useEffect to reset the form
+    setEditingReminder(null); 
   };
 
   return (
@@ -208,7 +231,7 @@ export default function ReminderSetup() {
                 <>
                   <FormField control={form.control} name="insulinType" render={({ field }) => (
                     <FormItem><FormLabel>Tipo de Insulina (Opcional)</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value || ''}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Selecionar tipo" /></SelectTrigger></FormControl>
                         <SelectContent>
                           {INSULIN_TYPES.map(type => <SelectItem key={type} value={type}>{type}</SelectItem>)}
@@ -216,26 +239,24 @@ export default function ReminderSetup() {
                       </Select><FormMessage /></FormItem>
                   )}/>
                   <FormField control={form.control} name="insulinDose" render={({ field }) => (
-                    <FormItem><FormLabel>Dose de Insulina (Opcional)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="Ex: 5.5" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Dose de Insulina (Opcional)</FormLabel><FormControl><Input type="number" step="0.1" placeholder="Ex: 5.5" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
                   )}/>
-                  <FormField control={form.control} name="isSimulatedCall" render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                      <div className="space-y-0.5">
-                        <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4" /> Chamada Simulada</FormLabel>
-                        <FormDescription>Receber uma notificação parecida com uma chamada.</FormDescription>
-                      </div>
-                      <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
-                    </FormItem>
-                  )}/>
-                  {isSimulatedCallEnabled && (
-                     <FormField control={form.control} name="simulatedCallContact" render={({ field }) => (
-                      <FormItem><FormLabel>Nome do Contato (Chamada Simulada)</FormLabel><FormControl><Input placeholder="Ex: Mãe, Dr. Silva" {...field} /></FormControl><FormMessage /></FormItem>
-                    )}/>
-                  )}
                 </>
               )}
-              {/* Placeholder for custom sound selection */}
-              {/* <FormField control={form.control} name="customSound" render={({ field }) => (...)}/> */}
+               <FormField control={form.control} name="isSimulatedCall" render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4" /> Chamada Simulada (apenas visual)</FormLabel>
+                    <FormDescription>Exibir notificação como uma chamada.</FormDescription>
+                  </div>
+                  <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                </FormItem>
+              )}/>
+              {isSimulatedCallEnabled && (
+                  <FormField control={form.control} name="simulatedCallContact" render={({ field }) => (
+                  <FormItem><FormLabel>Nome do Contato (Chamada Simulada)</FormLabel><FormControl><Input placeholder="Ex: Mãe, Dr. Silva" {...field} value={field.value ?? ''} /></FormControl><FormMessage /></FormItem>
+                )}/>
+              )}
               <FormField control={form.control} name="enabled" render={({ field }) => (
                 <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                   <div className="space-y-0.5"><FormLabel>Ativado</FormLabel><FormDescription>Este lembrete está ativo?</FormDescription></div>
@@ -244,11 +265,12 @@ export default function ReminderSetup() {
               )}/>
             </CardContent>
             <CardFooter className="flex justify-between">
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting ? 'Salvando...' : (editingReminder ? 'Atualizar Lembrete' : 'Salvar Lembrete')}
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                {isSaving ? 'Salvando...' : (editingReminder ? 'Atualizar Lembrete' : 'Salvar Lembrete')}
               </Button>
               {editingReminder && (
-                <Button type="button" variant="outline" onClick={handleAddNew}>
+                <Button type="button" variant="outline" onClick={handleAddNew} disabled={isSaving}>
                   Cancelar Edição / Novo
                 </Button>
               )}
@@ -263,8 +285,9 @@ export default function ReminderSetup() {
           <CardDescription>Gerencie seus lembretes configurados.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 max-h-[600px] overflow-y-auto">
-          {reminders.length === 0 && <p className="text-muted-foreground">Nenhum lembrete configurado.</p>}
-          {reminders.map(rem => (
+          {isLoading && <div className="flex justify-center py-4"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>}
+          {!isLoading && reminders.length === 0 && <p className="text-muted-foreground">Nenhum lembrete configurado.</p>}
+          {!isLoading && reminders.map(rem => (
             <div key={rem.id} className={`p-4 border rounded-md ${rem.enabled ? 'opacity-100' : 'opacity-60 bg-muted/50'}`}>
               <div className="flex justify-between items-start">
                 <div>
@@ -284,12 +307,11 @@ export default function ReminderSetup() {
                 </div>
                 <div className="flex space-x-1">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleEdit(rem)}><Edit3 size={16} /></Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(rem.id)}><Trash2 size={16} /></Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => handleDelete(rem.id)}><Trash2 size={16} /></Button>
                 </div>
               </div>
               <div className="mt-2 flex items-center justify-between">
                  <Badge variant={rem.enabled ? "default" : "outline"}>{rem.enabled ? 'Ativo' : 'Inativo'}</Badge>
-                  {/* Notification Example (Conceptual) */}
                   {rem.isSimulatedCall && rem.enabled && (
                     <div className="text-xs p-1 px-2 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded-md flex items-center">
                       <Phone size={12} className="mr-1"/> Chamada Simulada Ativa
@@ -299,7 +321,7 @@ export default function ReminderSetup() {
 
             </div>
           ))}
-           {reminders.length > 0 && !editingReminder && (
+           {!isLoading && reminders.length > 0 && !editingReminder && (
             <Button variant="outline" className="w-full mt-4" onClick={handleAddNew}>
               <PlusCircle className="mr-2 h-4 w-4" /> Configurar Novo Lembrete
             </Button>

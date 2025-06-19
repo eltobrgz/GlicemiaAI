@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, Info, LogOut, User } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
@@ -12,12 +12,11 @@ import {
   SidebarMenuItem,
   SidebarMenuButton,
   SidebarFooter,
-  // SidebarTrigger, // Removido para evitar duplicidade com o trigger no AppLayout
 } from '@/components/ui/sidebar';
-import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabaseClient';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
@@ -32,7 +31,6 @@ const navItems = [
 
 const utilityNavItems = [
   { href: '/settings', label: 'Configurações', icon: Settings },
-  // { href: '/education', label: 'Educação', icon: Info }, // Mantido comentado como exemplo
 ];
 
 export function SideNavigation() {
@@ -40,13 +38,22 @@ export function SideNavigation() {
   const router = useRouter();
   const { toast } = useToast();
 
-  const handleLogout = () => {
-    // Em uma aplicação real, você invalidaria a sessão/token aqui
-    toast({
-      title: "Logout Realizado",
-      description: "Você foi desconectado com sucesso.",
-    });
-    router.push('/login');
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Erro ao Sair",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Logout Realizado",
+        description: "Você foi desconectado com sucesso.",
+      });
+      router.push('/login');
+      router.refresh(); // Important to update auth state across app
+    }
   };
 
   return (
@@ -56,8 +63,6 @@ export function SideNavigation() {
         <h2 className="text-xl font-semibold text-primary font-headline group-data-[collapsible=icon]:hidden">
           GlicemiaAI
         </h2>
-        {/* O SidebarTrigger foi removido daqui para evitar duplicidade com o AppLayout */}
-        {/* <SidebarTrigger className="ml-auto group-data-[collapsible=icon]:hidden" /> */}
       </SidebarHeader>
       
       <SidebarContent className="flex-grow p-2">

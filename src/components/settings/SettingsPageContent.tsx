@@ -8,9 +8,10 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun } from 'lucide-react';
+import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 const THEME_STORAGE_KEY = 'glicemiaai-theme';
 
@@ -18,8 +19,12 @@ export default function SettingsPageContent() {
   const { toast } = useToast();
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isClient, setIsClient] = useState(false);
+
 
   useEffect(() => {
+    setIsClient(true); // Component has mounted
     const storedTheme = localStorage.getItem(THEME_STORAGE_KEY);
     const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
     if (storedTheme) {
@@ -30,6 +35,8 @@ export default function SettingsPageContent() {
   }, []);
 
   useEffect(() => {
+    if (!isClient) return; // Don't run on server or before mount
+
     if (darkMode) {
       document.documentElement.classList.add('dark');
       localStorage.setItem(THEME_STORAGE_KEY, 'dark');
@@ -37,18 +44,49 @@ export default function SettingsPageContent() {
       document.documentElement.classList.remove('dark');
       localStorage.setItem(THEME_STORAGE_KEY, 'light');
     }
-  }, [darkMode]);
+  }, [darkMode, isClient]);
 
-  const handleLogout = () => {
-    toast({
-      title: "Logout Realizado",
-      description: "Você foi desconectado com sucesso.",
-    });
-    router.push('/login');
+  const handleLogout = async () => {
+    setIsLoggingOut(true);
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      toast({
+        title: "Erro ao Sair",
+        description: error.message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "Logout Realizado",
+        description: "Você foi desconectado com sucesso.",
+      });
+      router.push('/login');
+      router.refresh();
+    }
+    setIsLoggingOut(false);
   };
 
+  if (!isClient) { // Render skeleton or null during SSR / pre-hydration
+    return (
+        <div className="space-y-8 max-w-2xl mx-auto">
+            {[1,2,3].map(i => (
+                <Card key={i} className="shadow-lg animate-pulse">
+                    <CardHeader>
+                        <div className="h-6 w-3/4 bg-muted rounded"></div>
+                        <div className="h-4 w-1/2 bg-muted rounded mt-1"></div>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="h-10 bg-muted rounded"></div>
+                    </CardContent>
+                </Card>
+            ))}
+        </div>
+    );
+  }
+
+
   return (
-    <div className="space-y-8 max-w-2xl mx-auto"> {/* Centering classes added here */}
+    <div className="space-y-8 max-w-2xl mx-auto">
       <Card className="shadow-lg">
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary flex items-center">
@@ -59,7 +97,7 @@ export default function SettingsPageContent() {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="change-password">Alterar Senha</Label>
-            <Button variant="outline" id="change-password" className="mt-1 w-full sm:w-auto">
+            <Button variant="outline" id="change-password" className="mt-1 w-full sm:w-auto" onClick={() => toast({title: "Funcionalidade Pendente", description: "Alteração de senha será implementada."})}>
               Redefinir minha senha
             </Button>
             <p className="text-xs text-muted-foreground mt-1">Você será redirecionado para alterar sua senha.</p>
@@ -67,15 +105,16 @@ export default function SettingsPageContent() {
           <Separator />
            <div>
             <Label htmlFor="manage-data">Gerenciamento de Dados</Label>
-            <Button variant="outline" id="manage-data" className="mt-1 w-full sm:w-auto">
+            <Button variant="outline" id="manage-data" className="mt-1 w-full sm:w-auto" onClick={() => toast({title: "Funcionalidade Pendente", description: "Exportação de dados será implementada."})}>
               <FileText className="mr-2 h-4 w-4" /> Exportar meus dados
             </Button>
              <p className="text-xs text-muted-foreground mt-1">Solicite uma cópia dos seus dados armazenados.</p>
           </div>
         </CardContent>
         <CardFooter>
-          <Button variant="destructive" onClick={handleLogout} className="w-full sm:w-auto">
-            <LogOut className="mr-2 h-4 w-4" /> Sair da Conta
+          <Button variant="destructive" onClick={handleLogout} className="w-full sm:w-auto" disabled={isLoggingOut}>
+            {isLoggingOut ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <LogOut className="mr-2 h-4 w-4" />}
+            {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
           </Button>
         </CardFooter>
       </Card>
@@ -114,19 +153,20 @@ export default function SettingsPageContent() {
           <CardDescription>Controle como e quando você recebe notificações.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Example Switch - these would need actual state management if functional */}
           <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
              <div>
-              <Label htmlFor="glucose-reminders" className="text-base font-medium">Lembretes de Glicemia</Label>
+              <Label htmlFor="glucose-reminders-switch" className="text-base font-medium">Lembretes de Glicemia</Label>
                <p className="text-xs text-muted-foreground">Receber notificações para registrar glicemia.</p>
             </div>
-            <Switch id="glucose-reminders" defaultChecked />
+            <Switch id="glucose-reminders-switch" defaultChecked />
           </div>
            <div className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors">
              <div>
-              <Label htmlFor="insulin-reminders" className="text-base font-medium">Lembretes de Insulina</Label>
+              <Label htmlFor="insulin-reminders-switch" className="text-base font-medium">Lembretes de Insulina</Label>
                <p className="text-xs text-muted-foreground">Receber notificações para administrar insulina.</p>
             </div>
-            <Switch id="insulin-reminders" defaultChecked />
+            <Switch id="insulin-reminders-switch" defaultChecked />
           </div>
           <Button variant="outline" onClick={() => router.push('/reminders')} className="w-full sm:w-auto">
             Gerenciar Lembretes Detalhados
@@ -143,7 +183,7 @@ export default function SettingsPageContent() {
         </CardHeader>
         <CardContent className="p-3 rounded-lg border">
           <Label htmlFor="language-select">Idioma do Aplicativo</Label>
-          <Input id="language-select" value="Português (Brasil)" readOnly className="mt-1 bg-input cursor-not-allowed" />
+          <Input id="language-select" value="Português (Brasil)" readOnly className="mt-1 bg-muted cursor-not-allowed" />
            <p className="text-xs text-muted-foreground mt-1">Atualmente, apenas Português (Brasil) está disponível.</p>
         </CardContent>
       </Card>
@@ -151,4 +191,3 @@ export default function SettingsPageContent() {
     </div>
   );
 }
-
