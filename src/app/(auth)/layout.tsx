@@ -40,7 +40,7 @@ export default function AuthLayout({
           <p className="text-sm text-muted-foreground">Seu assistente para o controle da glicemia.</p>
         </div>
         
-        <main className="w-full max-w-md">
+        <main className="w-full max-w-lg"> {/* Alterado de max-w-md para max-w-lg */}
           {children}
         </main>
         
