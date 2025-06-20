@@ -48,9 +48,14 @@ Agora você precisa criar as tabelas no seu banco de dados Supabase e configurar
 2.  Clique em "**New query**".
 3.  Copie e cole os scripts SQL abaixo, um de cada vez ou todos juntos, e execute-os.
 
-### Script SQL para Criação de Tabelas e RLS
+### Script SQL para Criação de Tabelas e RLS (Esquema Mais Recente)
+
+Este script contém a definição completa e mais recente das tabelas. Se você está começando ou pode recriar suas tabelas (após backup, se necessário), este é o script a ser usado.
 
 ```sql
+-- 0. GARANTIR QUE A EXTENSÃO pgcrypto ESTÁ HABILITADA (necessária para bcrypt no script de povoamento)
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
 -- 1. Habilitar extensão UUID (se ainda não estiver habilitada)
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -84,13 +89,15 @@ LANGUAGE plpgsql
 SECURITY DEFINER SET search_path = public
 AS $$
 BEGIN
-  INSERT INTO public.profiles (id, email, name, avatar_url, language_preference)
+  INSERT INTO public.profiles (id, email, name, avatar_url, language_preference, created_at, updated_at)
   VALUES (
     new.id,
     new.email,
-    new.raw_user_meta_data->>'full_name', 
-    new.raw_user_meta_data->>'avatar_url', 
-    new.raw_user_meta_data->>'language_preference'
+    new.raw_user_meta_data->>'full_name',
+    new.raw_user_meta_data->>'avatar_url',
+    new.raw_user_meta_data->>'language_preference',
+    timezone('utc'::text, now()),
+    timezone('utc'::text, now())
   );
   RETURN new;
 END;
@@ -106,9 +113,9 @@ CREATE TABLE public.glucose_readings (
   user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   value integer NOT NULL,
   timestamp timestamp with time zone NOT NULL,
-  meal_context text, 
+  meal_context text,
   notes text,
-  level text, 
+  level text,
   created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 -- RLS para glucose_readings:
@@ -137,10 +144,10 @@ CREATE TABLE public.meal_analyses (
   id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
   timestamp timestamp with time zone NOT NULL,
-  image_url text, 
+  image_url text,
   original_image_file_name text,
   food_identification text NOT NULL,
-  macronutrient_estimates jsonb NOT NULL, 
+  macronutrient_estimates jsonb NOT NULL,
   estimated_glucose_impact text NOT NULL,
   suggested_insulin_dose text NOT NULL,
   improvement_tips text NOT NULL,
@@ -156,10 +163,10 @@ CREATE POLICY "Users can manage their own meal analyses." ON public.meal_analyse
 CREATE TABLE public.reminders (
   id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
   user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  type text NOT NULL, 
+  type text NOT NULL,
   name text NOT NULL,
-  time time without time zone NOT NULL, 
-  days jsonb NOT NULL, 
+  time time without time zone NOT NULL,
+  days jsonb NOT NULL,
   enabled boolean DEFAULT true NOT NULL,
   insulin_type text,
   insulin_dose numeric,
@@ -191,13 +198,41 @@ CREATE POLICY "Users can manage their own activity logs." ON public.activity_log
 
 ```
 
+### Opção para Atualizar a Tabela `profiles` Existente (se colunas de metas estiverem faltando)
+
+Se você já tem uma tabela `profiles` e dados nela, mas está recebendo erros sobre colunas como `target_glucose_low` não existirem, você pode tentar adicionar essas colunas à sua tabela existente. **Faça um backup dos seus dados antes de executar estes comandos!**
+
+Execute os seguintes comandos `ALTER TABLE` no SQL Editor do Supabase. Eles só adicionarão a coluna se ela ainda não existir:
+
+```sql
+-- COMANDOS PARA ADICIONAR COLUNAS DE METAS À TABELA 'profiles' SE ESTIVEREM FALTANDO
+-- Execute estes ANTES de rodar scripts de povoamento que dependam dessas colunas.
+-- É recomendável fazer backup dos seus dados antes de alterar o esquema.
+
+ALTER TABLE public.profiles
+ADD COLUMN IF NOT EXISTS language_preference text DEFAULT 'pt-BR',
+ADD COLUMN IF NOT EXISTS target_glucose_low integer,
+ADD COLUMN IF NOT EXISTS target_glucose_high integer,
+ADD COLUMN IF NOT EXISTS hypo_glucose_threshold integer,
+ADD COLUMN IF NOT EXISTS hyper_glucose_threshold integer,
+ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
+
+-- Se a coluna created_at também estiver faltando (menos provável, mas possível):
+-- ALTER TABLE public.profiles
+-- ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
+
+-- Após adicionar as colunas, você pode querer atualizar os valores de 'updated_at' para os registros existentes se eles não foram definidos
+-- UPDATE public.profiles SET updated_at = created_at WHERE updated_at IS NULL;
+-- UPDATE public.profiles SET updated_at = timezone('utc'::text, now()) WHERE updated_at IS NULL; -- Ou para o tempo atual
+```
+
 **Importante sobre RLS**: As políticas de Row Level Security são essenciais. Sem elas, qualquer usuário com a chave `anon public` poderia, teoricamente, acessar dados de outros usuários. As políticas acima garantem que os usuários só possam interagir com seus próprios registros.
 
 **Importante sobre a Trigger `handle_new_user`**:
 Se você executar esta trigger:
 *   Ela criará automaticamente uma entrada na tabela `profiles` quando um novo usuário se cadastrar através do sistema de autenticação do Supabase.
 *   Ela espera que `full_name` (e opcionalmente `avatar_url` e `language_preference`) seja passado no campo `options: { data: { full_name: 'Nome do Usuario', language_preference: 'pt-BR' } }` durante a chamada de `supabase.auth.signUp()` no seu frontend.
-*   Se você já tem usuários, talvez precise adicionar manualmente os novos campos (`target_glucose_low`, etc.) aos perfis existentes ou definir valores padrão.
+*   Se você já tem usuários e adicionou as novas colunas (`target_glucose_low`, etc.) via `ALTER TABLE`, talvez precise atualizar manualmente os perfis existentes ou definir valores padrão para essas novas colunas nos registros já existentes.
 
 ## Passo 5: Configurar o Supabase Storage (Buckets e Políticas)
 
@@ -238,29 +273,39 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
             *   **Policy name**: `Users can manage their own profile pictures`
             *   **Allowed operations**: Marque `INSERT`, `UPDATE`, `DELETE`.
             *   **Target roles**: Marque `authenticated`.
-            *   **Policy definition (USING expression para UPDATE/DELETE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[2])`
-            *   **Policy definition (WITH CHECK expression para INSERT/UPDATE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[2])`
+            *   **Policy definition (USING expression para UPDATE/DELETE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[1])`
+            *   **Policy definition (WITH CHECK expression para INSERT/UPDATE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[1])`
+            *   **Nota:** O caminho da imagem no storage deve ser `bucket_id/user_id/nome_arquivo.ext`. O `(storage.foldername(name))[1]` refere-se ao `user_id`. Ajuste se sua estrutura de pastas for diferente (ex: `users/user_id/...` seria `(storage.foldername(name))[2]`). Para o guia atual, estamos usando `users/user_id/...`, então `(storage.foldername(name))[2]` está correto.
+
             *   Clique em "**Review**" e "**Save policy**".
 
 4.  Repita o processo para o bucket `meal-photos`:
     *   **Tornar o Bucket Público (se necessário):** Siga o passo 2 acima para o bucket `meal-photos`. Teste a URL pública no navegador.
     *   **Configurar Políticas de Objeto:**
         *   **Política 1: Leitura Pública para Fotos de Refeição** (Mesma configuração da Política 1 de `profile-pictures`, mas com `bucket_id = 'meal-photos'`)
-        *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)** (Mesma configuração da Política 2 de `profile-pictures` para INSERT, mas com `bucket_id = 'meal-photos'`)
-        *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição (DELETE)** (Mesma configuração da Política 2 de `profile-pictures` para DELETE, mas com `bucket_id = 'meal-photos'`)
+        *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)** (Mesma configuração da Política 2 de `profile-pictures` para INSERT, mas com `bucket_id = 'meal-photos'` e `(storage.foldername(name))[2]` se o caminho for `users/user_id/meals/...`)
+        *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição (DELETE)** (Mesma configuração da Política 2 de `profile-pictures` para DELETE, mas com `bucket_id = 'meal-photos'` e `(storage.foldername(name))[2]` se o caminho for `users/user_id/meals/...`)
 
 #### Opção B: Configurar Políticas de Storage via SQL Editor (Apenas para RLS dos Objetos)
 
 Se preferir, você pode criar as políticas RLS dos objetos usando o SQL Editor. **Isso NÃO tornará o bucket público em si; isso ainda precisa ser feito pela UI se você estiver recebendo "Bucket not found" para URLs `/object/public/`.**
+Assumindo que o caminho no storage seja `users/USER_ID/profile.ext` ou `users/USER_ID/meals/MEAL_ID.ext`.
 
 ```sql
 -- Políticas para o bucket 'profile-pictures'
+-- Caminho esperado no storage: users/USER_ID/nome_da_foto.ext
+-- (storage.foldername(name))[1] será 'users'
+-- (storage.foldername(name))[2] será USER_ID
 CREATE POLICY "Public Read Access for Profile Pictures" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'profile-pictures');
 CREATE POLICY "Users can insert their own profile pictures" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]);
 CREATE POLICY "Users can update their own profile pictures" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]) WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]);
 CREATE POLICY "Users can delete their own profile pictures" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]);
 
 -- Políticas para o bucket 'meal-photos'
+-- Caminho esperado no storage: users/USER_ID/meals/nome_da_foto_refeicao.ext
+-- (storage.foldername(name))[1] será 'users'
+-- (storage.foldername(name))[2] será USER_ID
+-- (storage.foldername(name))[3] será 'meals'
 CREATE POLICY "Public Read Access for Meal Photos" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'meal-photos');
 CREATE POLICY "Users can upload their own meal photos" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'meal-photos' AND auth.uid()::text = (storage.foldername(name))[2]);
 CREATE POLICY "Users can delete their own meal photos" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'meal-photos' AND auth.uid()::text = (storage.foldername(name))[2]);
@@ -286,3 +331,5 @@ CREATE POLICY "Users can delete their own meal photos" ON storage.objects FOR DE
     *   Verifique se o `hostname` no `next.config.ts` está correto e se o servidor Next.js foi reiniciado.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente!
+
+    
