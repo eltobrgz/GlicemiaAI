@@ -1,4 +1,4 @@
-
+ush
 # GlicemiaAI - Seu Assistente Inteligente para Controle Glicêmico
 
 Bem-vindo ao GlicemiaAI! Este aplicativo foi desenvolvido para auxiliar no monitoramento e gerenciamento da diabetes, combinando registros manuais, análises com Inteligência Artificial e insights personalizados para uma jornada de saúde mais informada e eficaz.
