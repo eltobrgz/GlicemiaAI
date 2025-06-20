@@ -16,7 +16,7 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen flex-col md:flex-row bg-background">
       {/* Coluna Esquerda - Visível em Telas Maiores (md e acima) */}
-      <div className="hidden md:flex md:w-2/5 lg:w-1/2 xl:w-2/5 flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-accent/5 p-8 text-center relative overflow-hidden">
+      <div className="hidden md:flex md:w-1/2 xl:w-3/5 flex-col items-center justify-center bg-gradient-to-br from-primary/10 to-accent/5 p-8 text-center relative overflow-hidden">
         <div className="relative z-10 flex flex-col items-center max-w-lg">
           <AppLogo className="h-20 w-20 text-primary mb-6" />
           <h1 className="text-4xl lg:text-5xl font-bold text-primary font-headline mb-4">
@@ -25,7 +25,6 @@ export default function AuthLayout({
           <p className="text-lg lg:text-xl text-foreground/80 mb-8">
             Seu assistente inteligente para um controle glicêmico mais fácil e eficaz. Registre, analise e transforme sua jornada com o diabetes.
           </p>
-          {/* Imagem removida daqui */}
           <p className="mt-12 text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} GlicemiaAI. Todos os direitos reservados.
           </p>
@@ -33,7 +32,7 @@ export default function AuthLayout({
       </div>
 
       {/* Coluna Direita (Formulário) - Ocupa a tela inteira em mobile */}
-      <div className="w-full md:w-3/5 lg:w-1/2 xl:w-3/5 flex flex-col items-center justify-center p-4 sm:p-8">
+      <div className="w-full md:w-1/2 xl:w-2/5 flex flex-col items-center justify-center p-4 sm:p-8">
         {/* Logo e Título para Mobile (aparece acima do formulário) */}
         <div className="md:hidden mb-8 flex flex-col items-center text-center">
           <AppLogo className="h-16 w-16 text-primary mb-4" />
