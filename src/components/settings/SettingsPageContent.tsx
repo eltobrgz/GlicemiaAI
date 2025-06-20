@@ -2,25 +2,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Keep if used elsewhere, FormLabel is preferred in Forms
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
-import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun, Loader2 } from 'lucide-react';
+import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun, Loader2, Mail, KeyRound, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { getUserProfile, saveUserProfile } from '@/lib/storage';
 import type { UserProfile } from '@/types';
+import { Form, FormControl, FormField, FormItem, FormLabel as ShadFormLabel, FormMessage } from '@/components/ui/form'; // Renamed FormLabel
 
 const THEME_STORAGE_KEY = 'glicemiaai-theme';
 const LANGUAGES = [
   { value: 'pt-BR', label: 'Português (Brasil)' },
   { value: 'en-US', label: 'English (United States)' },
 ];
+
+const changeEmailSchema = z.object({
+  newEmail: z.string().email('Por favor, insira um email válido.'),
+  // confirmNewEmail: z.string().email('Please enter a valid email.'), // Optional: for confirmation field
+});
+// .refine((data) => data.newEmail === data.confirmNewEmail, { // Optional
+//   message: "Os emails não coincidem.",
+//   path: ["confirmNewEmail"],
+// });
+
+type ChangeEmailFormData = z.infer<typeof changeEmailSchema>;
+
 
 export default function SettingsPageContent() {
   const { toast } = useToast();
@@ -31,6 +47,16 @@ export default function SettingsPageContent() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('pt-BR');
   const [isSavingLanguage, setIsSavingLanguage] = useState(false);
+  const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
+  const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+
+  const changeEmailForm = useForm<ChangeEmailFormData>({
+    resolver: zodResolver(changeEmailSchema),
+    defaultValues: {
+      newEmail: '',
+      // confirmNewEmail: '', // Optional
+    },
+  });
 
   useEffect(() => {
     setIsClient(true); 
@@ -47,9 +73,12 @@ export default function SettingsPageContent() {
         const profile = await getUserProfile();
         setUserProfile(profile);
         setSelectedLanguage(profile?.languagePreference || 'pt-BR');
+        if (profile?.email) {
+          // changeEmailForm.setValue('newEmail', profile.email); // Pre-fill if desired, or leave blank
+        }
       } catch (error) {
         console.error("Failed to fetch user profile for settings:", error);
-        toast({ title: "Erro ao carregar preferências", description: "Não foi possível carregar suas preferências de idioma.", variant: "destructive"});
+        toast({ title: "Erro ao carregar preferências", description: "Não foi possível carregar suas preferências.", variant: "destructive"});
       }
     };
     fetchProfile();
@@ -75,11 +104,11 @@ export default function SettingsPageContent() {
       try {
         const updatedProfile = { ...userProfile, languagePreference: newLanguage };
         await saveUserProfile(updatedProfile);
-        setUserProfile(updatedProfile); // Update local state
+        setUserProfile(updatedProfile); 
         toast({ title: "Preferência de Idioma Salva", description: `Idioma alterado para ${LANGUAGES.find(l => l.value === newLanguage)?.label}.` });
       } catch (error: any) {
         toast({ title: "Erro ao Salvar Idioma", description: error.message, variant: "destructive" });
-        setSelectedLanguage(userProfile.languagePreference || 'pt-BR'); // Revert on error
+        setSelectedLanguage(userProfile.languagePreference || 'pt-BR'); 
       } finally {
         setIsSavingLanguage(false);
       }
@@ -90,21 +119,64 @@ export default function SettingsPageContent() {
     setIsLoggingOut(true);
     const { error } = await supabase.auth.signOut();
     if (error) {
-      toast({
-        title: "Erro ao Sair",
-        description: error.message,
-        variant: "destructive",
-      });
+      toast({ title: "Erro ao Sair", description: error.message, variant: "destructive" });
     } else {
-      toast({
-        title: "Logout Realizado",
-        description: "Você foi desconectado com sucesso.",
-      });
+      toast({ title: "Logout Realizado", description: "Você foi desconectado com sucesso." });
       router.push('/login');
       router.refresh();
     }
     setIsLoggingOut(false);
   };
+
+  const handleChangePassword = async () => {
+    if (!userProfile?.email) {
+      toast({ title: "Erro", description: "Email do usuário não encontrado.", variant: "destructive" });
+      return;
+    }
+    setIsSendingResetEmail(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(userProfile.email, {
+        // redirectTo: `${window.location.origin}/update-password`, // Set your app's update password page
+      });
+      if (error) throw error;
+      toast({
+        title: "Email de Redefinição Enviado",
+        description: `Um email com instruções para redefinir sua senha foi enviado para ${userProfile.email}.`,
+      });
+    } catch (error: any) {
+      toast({ title: "Erro ao Redefinir Senha", description: error.message, variant: "destructive" });
+    } finally {
+      setIsSendingResetEmail(false);
+    }
+  };
+
+  const onUpdateEmailSubmit = async (data: ChangeEmailFormData) => {
+    if (!userProfile) return;
+    if (data.newEmail === userProfile.email) {
+      toast({ title: "Email Inalterado", description: "O novo email é o mesmo que o atual.", variant: "default" });
+      return;
+    }
+
+    setIsUpdatingEmail(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ email: data.newEmail });
+      if (error) throw error;
+      toast({
+        title: "Confirmação de Email Necessária",
+        description: `Um email de confirmação foi enviado para ${data.newEmail}. Siga as instruções para concluir a alteração. Pode ser necessário fazer login novamente.`,
+        duration: 10000, // Longer duration for this important message
+      });
+      // It's good practice to also update the email in the `profiles` table if you store it there,
+      // perhaps after the user confirms the new email, or via a Supabase function/trigger.
+      // For now, this only updates the auth.users.email.
+      changeEmailForm.reset();
+    } catch (error: any) {
+      toast({ title: "Erro ao Alterar Email", description: error.message, variant: "destructive" });
+    } finally {
+      setIsUpdatingEmail(false);
+    }
+  };
+
 
   if (!isClient || !userProfile) { 
     return (
@@ -138,10 +210,17 @@ export default function SettingsPageContent() {
         <CardContent className="space-y-4">
           <div>
             <Label htmlFor="change-password">Alterar Senha</Label>
-            <Button variant="outline" id="change-password" className="mt-1 w-full sm:w-auto" onClick={() => toast({title: "Funcionalidade Pendente", description: "Alteração de senha será implementada."})}>
-              Redefinir minha senha
+            <Button 
+              variant="outline" 
+              id="change-password" 
+              className="mt-1 w-full sm:w-auto" 
+              onClick={handleChangePassword}
+              disabled={isSendingResetEmail}
+            >
+              {isSendingResetEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+              {isSendingResetEmail ? 'Enviando email...' : 'Redefinir minha senha'}
             </Button>
-            <p className="text-xs text-muted-foreground mt-1">Você será redirecionado para alterar sua senha.</p>
+            <p className="text-xs text-muted-foreground mt-1">Um email será enviado para {userProfile.email} com instruções.</p>
           </div>
           <Separator />
            <div>
@@ -158,6 +237,56 @@ export default function SettingsPageContent() {
             {isLoggingOut ? 'Saindo...' : 'Sair da Conta'}
           </Button>
         </CardFooter>
+      </Card>
+
+      <Card className="shadow-lg">
+        <CardHeader>
+          <CardTitle className="text-xl font-headline text-primary flex items-center">
+            <Mail className="mr-2 h-5 w-5" /> Alterar Endereço de Email
+          </CardTitle>
+          <CardDescription>Altere o email associado à sua conta GlicemiaAI.</CardDescription>
+        </CardHeader>
+        <Form {...changeEmailForm}>
+          <form onSubmit={changeEmailForm.handleSubmit(onUpdateEmailSubmit)}>
+            <CardContent className="space-y-4">
+                <FormField
+                  control={changeEmailForm.control}
+                  name="newEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <ShadFormLabel htmlFor="newEmail">Novo Email</ShadFormLabel>
+                      <FormControl>
+                        <Input id="newEmail" type="email" placeholder="novo@email.com" {...field} disabled={isUpdatingEmail} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                {/* Optional: Confirm New Email Field
+                <FormField
+                  control={changeEmailForm.control}
+                  name="confirmNewEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <ShadFormLabel htmlFor="confirmNewEmail">Confirmar Novo Email</ShadFormLabel>
+                      <FormControl>
+                        <Input id="confirmNewEmail" type="email" placeholder="Confirme o novo email" {...field} disabled={isUpdatingEmail} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                */}
+                 <p className="text-xs text-muted-foreground">Seu email atual é: {userProfile.email}</p>
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" disabled={isUpdatingEmail} className="w-full sm:w-auto">
+                {isUpdatingEmail ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Edit className="mr-2 h-4 w-4" />}
+                {isUpdatingEmail ? 'Salvando...' : 'Salvar Novo Email'}
+              </Button>
+            </CardFooter>
+          </form>
+        </Form>
       </Card>
 
       <Card className="shadow-lg">

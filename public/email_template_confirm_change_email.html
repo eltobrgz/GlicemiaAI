@@ -1,0 +1,116 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirme a Alteração do seu Email - GlicemiaAI</title>
+  <style>
+    body {
+      font-family: 'Inter', Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f0f5; /* Cor de fundo do app (light gray) */
+      color: #333; /* Cor de texto padrão */
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .email-container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff; /* Fundo do card */
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid #e0e0e0; /* Borda suave */
+    }
+    .email-header {
+      background-color: #A050BE; /* Cor primária (roxo) */
+      padding: 30px 20px;
+      text-align: center;
+    }
+    .email-header img {
+      max-width: 100px;
+      margin-bottom: 10px;
+    }
+    .email-header h1 {
+      color: #ffffff; /* Texto do header (branco) */
+      font-size: 24px;
+      margin: 0;
+      font-weight: 600;
+    }
+    .email-body {
+      padding: 30px 30px 40px;
+      text-align: left;
+      font-size: 16px;
+      line-height: 1.6;
+    }
+    .email-body p {
+      margin-bottom: 15px;
+    }
+    .button-cta {
+      display: inline-block;
+      background-color: #468189; /* Cor de destaque (teal) */
+      color: #ffffff !important; /* Cor de texto do botão (branco) */
+      padding: 12px 25px;
+      text-decoration: none;
+      border-radius: 5px;
+      font-weight: bold;
+      margin-top: 15px;
+      margin-bottom: 20px;
+      text-align: center;
+      border: none;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .button-cta-container {
+        text-align: center;
+    }
+    .link-alternative {
+      font-size: 12px;
+      color: #555;
+      word-break: break-all;
+    }
+    .email-footer {
+      background-color: #f9fafb; /* Fundo suave para o rodapé */
+      padding: 20px;
+      text-align: center;
+      font-size: 12px;
+      color: #777;
+      border-top: 1px solid #e0e0e0;
+    }
+    .email-footer a {
+      color: #A050BE; /* Links no rodapé com a cor primária */
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-container">
+    <div class="email-header">
+      <!-- Substitua pelo URL do seu logo hospedado. Se não tiver, pode remover a tag img -->
+      <!-- <img src="URL_DO_SEU_LOGO_AQUI" alt="GlicemiaAI Logo"> -->
+      <h1>GlicemiaAI</h1>
+    </div>
+    <div class="email-body">
+      <h2>Confirme seu Novo Endereço de E-mail</h2>
+      <p>Olá,</p>
+      <p>Você solicitou a alteração do endereço de e-mail associado à sua conta GlicemiaAI para <strong>{{ .NewEmail }}</strong>.</p>
+      <p>Para confirmar esta alteração e começar a usar seu novo e-mail para login, por favor, clique no botão abaixo:</p>
+      <div class="button-cta-container">
+        <a href="{{ .ConfirmationURL }}" class="button-cta">Confirmar Novo E-mail</a>
+      </div>
+      <p>Este link de confirmação é válido por um período limitado.</p>
+      <p>Se você não solicitou esta alteração de e-mail, por favor, ignore esta mensagem. Seu endereço de e-mail atual ({{ .Email }}) permanecerá ativo.</p>
+      <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;">
+      <p class="link-alternative">Se o botão não funcionar, copie e cole o seguinte URL no seu navegador:<br>
+        <a href="{{ .ConfirmationURL }}" style="color: #A050BE;">{{ .ConfirmationURL }}</a>
+      </p>
+    </div>
+    <div class="email-footer">
+      <p>&copy; {{ .Year }} GlicemiaAI. Todos os direitos reservados.</p>
+      <p>Se precisar de ajuda, entre em contato com nosso suporte.</p>
+      <!-- <p><a href="{{ .SiteURL }}">Visite nosso site</a></p> -->
+    </div>
+  </div>
+</body>
+</html>
