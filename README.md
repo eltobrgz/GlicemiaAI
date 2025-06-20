@@ -5,7 +5,7 @@ Bem-vindo ao GlicemiaAI! Este aplicativo foi desenvolvido para auxiliar no monit
 
 ## Sobre o GlicemiaAI
 
-O GlicemiaAI é uma aplicação web moderna construída com Next.js, React, Tailwind CSS e Supabase para o backend e banco de dados, além de Genkit para funcionalidades de IA. Ele permite que usuários registrem seus níveis de glicose, doses de insulina, atividades físicas e analisem refeições com o auxílio da IA para estimar macronutrientes e impacto glicêmico.
+O GlicemiaAI é uma aplicação web moderna que permite que usuários registrem seus níveis de glicose, doses de insulina, atividades físicas e analisem refeições com o auxílio da IA para estimar macronutrientes e impacto glicêmico. Nosso objetivo é fornecer uma ferramenta intuitiva e poderosa para o seu dia a dia.
 
 ## Funcionalidades Principais
 
@@ -17,7 +17,7 @@ O GlicemiaAI é uma aplicação web moderna construída com Next.js, React, Tail
 ### 2. Painel Principal (Dashboard)
 Ao fazer login, você é recebido pelo Dashboard, que oferece:
 -   **Acesso Rápido:** Atalhos para as funcionalidades mais usadas (Registrar Glicemia, Insulina, Atividade, Analisar Refeição).
--   **Última Glicemia Registrada:** Visualize rapidamente seu último valor de glicemia, com destaque de cor indicando o nível (baixo, normal, alto, muito alto) com base nas suas metas personalizadas.
+-   **Última Glicemia Registrada:** Visualize rapidamente seu último valor de glicemia, com destaque de cor indicando o nível (baixo, normal, alto, muito alto).
 -   **Última Insulina Registrada:** Veja sua última dose de insulina aplicada.
 -   **Teaser de Insights da IA:** Uma prévia de futuras análises e dicas personalizadas pela IA.
 
@@ -34,14 +34,14 @@ Mantenha um histórico preciso de seus dados de saúde:
     -   Data e hora da aplicação.
 -   **Registrar Atividade Física:**
     -   Tipo de atividade (caminhada, corrida, etc.).
-    *   Duração em minutos.
-    *   Data e hora de início.
-    *   Intensidade (opcional).
-    *   Notas adicionais.
+    -   Duração em minutos.
+    -   Data e hora de início.
+    -   Intensidade (opcional).
+    -   Notas adicionais.
 
 ### 4. Análise de Refeição com Inteligência Artificial
 -   **Upload de Imagem:** Tire uma foto da sua refeição e envie para análise.
--   **Análise pela IA:** A IA (Google Gemini) analisa a imagem e fornece:
+-   **Análise pela IA:** A IA analisa a imagem e fornece:
     -   Identificação dos alimentos.
     -   Estimativa de macronutrientes (carboidratos, proteínas, gorduras).
     -   Estimativa do impacto glicêmico.
@@ -75,13 +75,13 @@ Gere relatórios para analisar suas tendências ao longo do tempo:
     -   Distribuição do tempo nos alvos glicêmicos (gráfico de pizza).
     -   Tendência da dose total de insulina diária (gráfico de barras).
     -   Tendência da duração total de atividade física diária (gráfico de barras).
--   **Exportação para PDF (em desenvolvimento):** Funcionalidade para exportar o relatório em PDF.
+-   **Exportação para PDF:** Funcionalidade para exportar o relatório em PDF.
 
 ### 7. Perfil do Usuário
 Gerencie suas informações pessoais e preferências:
 -   **Visualização e Edição:** Atualize seu nome, data de nascimento, tipo de diabetes.
 -   **Foto de Perfil:** Faça upload de uma foto para personalizar seu avatar.
--   **Metas Glicêmicas (em breve):** A funcionalidade de definir metas personalizadas de glicemia (hipoglicemia, alvo baixo/alto, hiperglicemia) diretamente no perfil será integrada com a classificação de níveis e relatórios.
+-   **Metas Glicêmicas:** Defina metas personalizadas de glicemia (hipoglicemia, alvo baixo/alto, hiperglicemia) diretamente no perfil. Essas metas são usadas para classificar seus níveis de glicemia e nos relatórios.
 -   **Preferência de Idioma:** Defina o idioma para as respostas da IA.
 
 ### 8. Lembretes Inteligentes
@@ -97,19 +97,18 @@ Configure notificações para não esquecer seus cuidados:
 -   **Chamada Simulada (Visual):** Opção para exibir a notificação com um estilo visual de "chamada telefônica" (o texto é adaptado para o lembrete).
 
 ### 9. Insights da IA (Beta)
-Uma seção dedicada a análises e dicas geradas pela IA (atualmente simplificada):
+Uma seção dedicada a análises e dicas geradas pela IA:
 -   **Métricas Resumidas:** Glicemia média, tempo no alvo, tendência glicêmica (comparando os últimos 7 dias com os 7 anteriores).
 -   **Estatísticas Recentes:** Resumo de administrações de insulina, atividades físicas e refeições analisadas nos últimos 7 dias.
 -   **Gráfico de Tendência Glicêmica:** Visualização da glicemia média nos últimos 7 dias.
--   **Dica Personalizada (Exemplo):** Uma sugestão baseada nos dados recentes, com potencial para evoluir para análises mais complexas.
--   **Aviso:** As faixas de referência para classificação glicêmica podem ser personalizadas no perfil do usuário.
+-   **Dica Personalizada:** Uma sugestão baseada nos dados recentes, com potencial para evoluir para análises mais complexas.
 
 ### 10. Configurações do Aplicativo
 Ajuste o GlicemiaAI às suas preferências:
 -   **Segurança e Conta:**
     -   Opção para redefinir senha (envia e-mail).
     -   Opção para alterar e-mail da conta (com confirmação).
-    -   Exportação de dados (funcionalidade pendente).
+    -   Exportação de dados (em breve).
     -   Sair da conta.
 -   **Aparência:**
     -   Modo Escuro/Claro: Alterne entre temas para melhor visualização.
@@ -117,11 +116,9 @@ Ajuste o GlicemiaAI às suas preferências:
     -   Selecione o idioma preferido para interações com a IA (ex: análise de refeição).
 -   **Notificações:**
     -   Links para gerenciamento detalhado de lembretes.
-    -   Controles básicos para ativar/desativar tipos de lembretes (funcionalidade futura).
 
 ### 11. Progressive Web App (PWA)
 -   **Instalável:** O GlicemiaAI pode ser "instalado" no seu dispositivo (desktop ou mobile) para uma experiência mais próxima a um aplicativo nativo.
--   **Acesso Offline (limitado):** Algumas funcionalidades podem ser acessadas ou dados podem ser armazenados temporariamente para uso offline (dependendo da implementação específica).
 -   **Ícones e Tela de Splash:** Configurados para uma boa experiência PWA.
 
 ## Como Começar a Usar
@@ -135,30 +132,4 @@ Ajuste o GlicemiaAI às suas preferências:
 7.  **Verifique os Relatórios e Insights:** Acompanhe seu progresso e tendências.
 8.  **Personalize seu Perfil e Configurações:** Ajuste o app às suas necessidades.
 
-## Configuração Adicional para Funcionalidades de IA (Análise de Refeição)
-
-Para utilizar a funcionalidade de análise de refeição por Inteligência Artificial, você precisará de uma chave de API do Google Gemini.
-
-1.  **Obtenha uma Chave de API:**
-    *   Acesse o [Google AI Studio](https://aistudio.google.com/app/apikey).
-    *   Crie ou selecione um projeto e gere uma nova chave de API.
-
-2.  **Configure a Variável de Ambiente:**
-    *   No seu arquivo `.env.local` (crie um se não existir, na raiz do projeto), adicione a seguinte linha, substituindo `SUA_GEMINI_API_KEY_AQUI` pela chave que você obteve:
-        ```env
-        GEMINI_API_KEY=SUA_GEMINI_API_KEY_AQUI
-        ```
-    *   **Importante:** Este arquivo `.env.local` também deve conter suas chaves do Supabase (`NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Certifique-se de que TODAS as três variáveis estão presentes no seu `.env.local`.
-
-3.  **Reinicie o Servidor:**
-    *   Após adicionar TODAS as chaves necessárias ao `.env.local`, pare e reinicie o servidor de desenvolvimento Next.js.
-
-Sem a `GEMINI_API_KEY`, as chamadas para a IA de análise de refeição resultarão em erro de `FAILED_PRECONDITION` ou similar, indicando a ausência da chave de API.
-Sem as chaves `NEXT_PUBLIC_SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_ANON_KEY`, a aplicação não conseguirá se conectar ao Supabase e exibirá erros relacionados.
-
-## Configuração do Banco de Dados Supabase
-
-Para configurar as tabelas e as Row Level Security (RLS) policies no seu projeto Supabase, por favor, consulte o arquivo:
-[SUPABASE_SETUP_GUIDE.md](docs/supabase/SUPABASE_SETUP_GUIDE.md)
-localizado na pasta `docs/supabase/` do seu projeto.
-Este guia contém todos os scripts SQL e instruções detalhadas.
+**Lembre-se:** As informações e sugestões fornecidas pelo GlicemiaAI, especialmente as geradas por Inteligência Artificial, não substituem o aconselhamento médico profissional. Sempre consulte seu médico ou profissional de saúde para decisões relacionadas ao seu tratamento.
