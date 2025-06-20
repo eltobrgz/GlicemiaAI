@@ -185,9 +185,11 @@ export default function AppLayout({
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-primary">
-        <Loader2 className="h-12 w-12 animate-spin" />
-        <p className="ml-4 text-lg">Carregando...</p>
+      <div className="flex h-screen flex-col items-center justify-center bg-background">
+        <AppLogo className="h-20 w-20 text-primary mb-8" />
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-6 text-2xl font-semibold text-primary">Carregando GlicemiaAI...</p>
+        <p className="mt-2 text-muted-foreground">Por favor, aguarde um momento.</p>
       </div>
     );
   }

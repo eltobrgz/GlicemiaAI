@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { Loader2 } from 'lucide-react';
+import AppLogo from '@/components/AppLogo'; // Added import
 
 export default function HomePage() {
   const router = useRouter();
@@ -39,17 +40,21 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-background text-primary">
-        <Loader2 className="h-12 w-12 animate-spin" />
-        <p className="ml-4 text-lg">Verificando autenticação...</p>
+      <div className="flex h-screen flex-col items-center justify-center bg-background">
+        <AppLogo className="h-20 w-20 text-primary mb-8" />
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="mt-6 text-2xl font-semibold text-primary">Verificando sua sessão...</p>
+        <p className="mt-2 text-muted-foreground">Quase lá!</p>
       </div>
     );
   }
 
-  // This content is unlikely to be seen due to immediate redirection
   return (
-    <div className="flex h-screen items-center justify-center">
-      <p>Redirecionando...</p>
+    <div className="flex h-screen flex-col items-center justify-center bg-background">
+      <AppLogo className="h-20 w-20 text-primary mb-8" />
+      <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      <p className="mt-6 text-2xl font-semibold text-primary">Redirecionando...</p>
+      <p className="mt-2 text-muted-foreground">Aguarde, estamos levando você para o app.</p>
     </div>
   );
 }
