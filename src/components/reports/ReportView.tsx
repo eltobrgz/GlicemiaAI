@@ -10,6 +10,7 @@ import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info, Bike, Utensils } from 'lucide-react';
 import { getGlucoseLevelColor } from '@/lib/utils';
+import { GLUCOSE_THRESHOLDS } from '@/config/constants'; // Added import
 import { useMemo } from 'react';
 
 export interface ReportData {
