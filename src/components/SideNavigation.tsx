@@ -53,7 +53,7 @@ export function SideNavigation() {
         title: "Logout Realizado",
         description: "Você foi desconectado com sucesso.",
       });
-      router.push('/login');
+      router.replace('/login'); // Use replace for better auth flow
       router.refresh(); 
     }
   };

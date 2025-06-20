@@ -122,7 +122,7 @@ export default function SettingsPageContent() {
       toast({ title: "Erro ao Sair", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "Logout Realizado", description: "Você foi desconectado com sucesso." });
-      router.push('/login');
+      router.replace('/login'); // Use replace for better auth flow
       router.refresh();
     }
     setIsLoggingOut(false);
@@ -136,7 +136,7 @@ export default function SettingsPageContent() {
     setIsSendingResetEmail(true);
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(userProfile.email, {
-        // redirectTo: `${window.location.origin}/update-password`, // Set your app's update password page
+        // redirectTo: `${window.location.origin}/auth/update-password`, // Set your app's update password page
       });
       if (error) throw error;
       toast({
