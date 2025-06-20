@@ -42,197 +42,24 @@ Copie esses dois valores. Certifique-se de que o Project URL é o correto (ex: `
 
 ## Passo 4: Configurar o Banco de Dados (Tabelas e RLS)
 
-Agora você precisa criar as tabelas no seu banco de dados Supabase e configurar as políticas de Row Level Security (RLS). RLS é crucial para garantir que os usuários só possam acessar e modificar seus próprios dados.
+Para configurar as tabelas e as políticas de segurança (RLS) no seu banco de dados Supabase:
 
-1.  No painel do seu projeto Supabase, vá para o **SQL Editor** (ícone de banco de dados com "SQL").
-2.  Clique em "**New query**".
-3.  Copie e cole os scripts SQL abaixo, um de cada vez ou todos juntos, e execute-os.
+1.  **Use o Arquivo de Gerenciamento de Esquema:**
+    *   No seu projeto, você encontrará um arquivo chamado `supabase_schema_management.sql`.
+    *   Este arquivo contém dois scripts principais:
+        *   **SCRIPT 1: APAGAR COMPLETAMENTE TODAS AS TABELAS DA APLICAÇÃO**
+        *   **SCRIPT 2: CRIAR (OU RECRIAR) TODAS AS TABELAS DA APLICAÇÃO COM A VERSÃO MAIS RECENTE**
 
-### Script SQL para Criação de Tabelas e RLS (Esquema Mais Recente)
+2.  **Executando os Scripts no SQL Editor do Supabase:**
+    *   No painel do seu projeto Supabase, vá para o **SQL Editor** (ícone de banco de dados com "SQL").
+    *   Clique em "**New query**".
+    *   **Para Criar ou Recriar o Esquema:**
+        *   Abra o arquivo `supabase_schema_management.sql` no seu editor de código.
+        *   Se você deseja começar do zero ou garantir que está com o esquema mais recente (e **APAGARÁ TODOS OS DADOS EXISTENTES NAS TABELAS DA APLICAÇÃO**), primeiro copie e execute a seção "SCRIPT 1: APAGAR..." (lembre-se de descomentar as linhas `DROP TABLE`).
+        *   Em seguida (ou se estiver configurando pela primeira vez), copie e execute a seção "SCRIPT 2: CRIAR..." no SQL Editor.
+    *   Clique em "**RUN**" para cada script.
 
-Este script contém a definição completa e mais recente das tabelas. Se você está começando ou pode recriar suas tabelas (após backup, se necessário), este é o script a ser usado.
-
-```sql
--- 0. GARANTIR QUE A EXTENSÃO pgcrypto ESTÁ HABILITADA (necessária para bcrypt no script de povoamento)
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
-
--- 1. Habilitar extensão UUID (se ainda não estiver habilitada)
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- 2. Tabela de Perfis (profiles)
-CREATE TABLE public.profiles (
-  id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  name text,
-  email text UNIQUE, -- Pode ser sincronizado de auth.users
-  avatar_url text, -- Armazenará a URL pública da imagem do Supabase Storage
-  date_of_birth date,
-  diabetes_type text, -- Ex: 'tipo1', 'tipo2', 'gestacional', 'outro'
-  language_preference text DEFAULT 'pt-BR', -- Preferência de idioma do usuário, ex: 'pt-BR', 'en-US'
-  target_glucose_low integer, -- Meta mínima de glicemia ideal
-  target_glucose_high integer, -- Meta máxima de glicemia ideal
-  hypo_glucose_threshold integer, -- Limite para hipoglicemia
-  hyper_glucose_threshold integer, -- Limite para hiperglicemia (antes de muito_alta)
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
-  PRIMARY KEY (id)
-);
--- RLS para profiles:
-ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Public profiles are viewable by authenticated users." ON public.profiles FOR SELECT TO authenticated USING (true);
-CREATE POLICY "Users can insert their own profile." ON public.profiles FOR INSERT TO authenticated WITH CHECK (auth.uid() = id);
-CREATE POLICY "Users can update their own profile." ON public.profiles FOR UPDATE TO authenticated USING (auth.uid() = id) WITH CHECK (auth.uid() = id);
-
--- Opcional: Trigger para criar um perfil quando um novo usuário se cadastra (em auth.users)
-CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS TRIGGER
-LANGUAGE plpgsql
-SECURITY DEFINER SET search_path = public
-AS $$
-BEGIN
-  INSERT INTO public.profiles (id, email, name, avatar_url, language_preference, created_at, updated_at)
-  VALUES (
-    new.id,
-    new.email,
-    new.raw_user_meta_data->>'full_name',
-    new.raw_user_meta_data->>'avatar_url',
-    new.raw_user_meta_data->>'language_preference',
-    timezone('utc'::text, now()),
-    timezone('utc'::text, now())
-  );
-  RETURN new;
-END;
-$$;
-CREATE TRIGGER on_auth_user_created
-  AFTER INSERT ON auth.users
-  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
-
-
--- 3. Tabela de Leituras de Glicemia (glucose_readings)
-CREATE TABLE public.glucose_readings (
-  id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  value integer NOT NULL,
-  timestamp timestamp with time zone NOT NULL,
-  meal_context text,
-  notes text,
-  level text,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
--- RLS para glucose_readings:
-ALTER TABLE public.glucose_readings ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own glucose readings." ON public.glucose_readings
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-
--- 4. Tabela de Registros de Insulina (insulin_logs)
-CREATE TABLE public.insulin_logs (
-  id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  type text NOT NULL,
-  dose numeric NOT NULL,
-  timestamp timestamp with time zone NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
--- RLS para insulin_logs:
-ALTER TABLE public.insulin_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own insulin logs." ON public.insulin_logs
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-
--- 5. Tabela de Análises de Refeição (meal_analyses)
-CREATE TABLE public.meal_analyses (
-  id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  timestamp timestamp with time zone NOT NULL,
-  image_url text,
-  original_image_file_name text,
-  food_identification text NOT NULL,
-  macronutrient_estimates jsonb NOT NULL,
-  estimated_glucose_impact text NOT NULL,
-  suggested_insulin_dose text NOT NULL,
-  improvement_tips text NOT NULL,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
--- RLS para meal_analyses:
-ALTER TABLE public.meal_analyses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own meal analyses." ON public.meal_analyses
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-
--- 6. Tabela de Lembretes (reminders)
-CREATE TABLE public.reminders (
-  id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  type text NOT NULL,
-  name text NOT NULL,
-  time time without time zone NOT NULL,
-  days jsonb NOT NULL,
-  enabled boolean DEFAULT true NOT NULL,
-  insulin_type text,
-  insulin_dose numeric,
-  is_simulated_call boolean,
-  simulated_call_contact text,
-  custom_sound text,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
--- RLS para reminders:
-ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own reminders." ON public.reminders
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
--- 7. Tabela de Registros de Atividade Física (activity_logs)
-CREATE TABLE public.activity_logs (
-  id uuid DEFAULT uuid_generate_v4() NOT NULL PRIMARY KEY,
-  user_id uuid NOT NULL REFERENCES auth.users ON DELETE CASCADE,
-  timestamp timestamp with time zone NOT NULL, -- Data e hora do início da atividade
-  activity_type text NOT NULL, -- Ex: 'caminhada', 'corrida', 'musculacao', 'outro'
-  duration_minutes integer NOT NULL, -- Duração em minutos
-  intensity text, -- Ex: 'leve', 'moderada', 'intensa'
-  notes text,
-  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL
-);
--- RLS para activity_logs:
-ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Users can manage their own activity logs." ON public.activity_logs
-  FOR ALL USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id);
-
-```
-
-### Opção para Atualizar a Tabela `profiles` Existente (se colunas de metas estiverem faltando)
-
-Se você já tem uma tabela `profiles` e dados nela, mas está recebendo erros sobre colunas como `target_glucose_low` não existirem, você pode tentar adicionar essas colunas à sua tabela existente. **Faça um backup dos seus dados antes de executar estes comandos!**
-
-Execute os seguintes comandos `ALTER TABLE` no SQL Editor do Supabase. Eles só adicionarão a coluna se ela ainda não existir:
-
-```sql
--- COMANDOS PARA ADICIONAR COLUNAS DE METAS À TABELA 'profiles' SE ESTIVEREM FALTANDO
--- Execute estes ANTES de rodar scripts de povoamento que dependam dessas colunas.
--- É recomendável fazer backup dos seus dados antes de alterar o esquema.
-
-ALTER TABLE public.profiles
-ADD COLUMN IF NOT EXISTS language_preference text DEFAULT 'pt-BR',
-ADD COLUMN IF NOT EXISTS target_glucose_low integer,
-ADD COLUMN IF NOT EXISTS target_glucose_high integer,
-ADD COLUMN IF NOT EXISTS hypo_glucose_threshold integer,
-ADD COLUMN IF NOT EXISTS hyper_glucose_threshold integer,
-ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
-
--- Se a coluna created_at também estiver faltando (menos provável, mas possível):
--- ALTER TABLE public.profiles
--- ADD COLUMN IF NOT EXISTS created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
-
--- Após adicionar as colunas, você pode querer atualizar os valores de 'updated_at' para os registros existentes se eles não foram definidos
--- UPDATE public.profiles SET updated_at = created_at WHERE updated_at IS NULL;
--- UPDATE public.profiles SET updated_at = timezone('utc'::text, now()) WHERE updated_at IS NULL; -- Ou para o tempo atual
-```
-
-**Importante sobre RLS**: As políticas de Row Level Security são essenciais. Sem elas, qualquer usuário com a chave `anon public` poderia, teoricamente, acessar dados de outros usuários. As políticas acima garantem que os usuários só possam interagir com seus próprios registros.
-
-**Importante sobre a Trigger `handle_new_user`**:
-Se você executar esta trigger:
-*   Ela criará automaticamente uma entrada na tabela `profiles` quando um novo usuário se cadastrar através do sistema de autenticação do Supabase.
-*   Ela espera que `full_name` (e opcionalmente `avatar_url` e `language_preference`) seja passado no campo `options: { data: { full_name: 'Nome do Usuario', language_preference: 'pt-BR' } }` durante a chamada de `supabase.auth.signUp()` no seu frontend.
-*   Se você já tem usuários e adicionou as novas colunas (`target_glucose_low`, etc.) via `ALTER TABLE`, talvez precise atualizar manualmente os perfis existentes ou definir valores padrão para essas novas colunas nos registros já existentes.
+    **Atenção:** O "SCRIPT 1" apagará todas as tabelas da aplicação e seus dados. Use com cautela e faça backups se necessário. O "SCRIPT 2" criará as tabelas com as colunas, RLS e triggers mais recentes, incluindo `target_glucose_low`, `target_glucose_high`, etc., na tabela `profiles`.
 
 ## Passo 5: Configurar o Supabase Storage (Buckets e Políticas)
 
@@ -313,14 +140,192 @@ CREATE POLICY "Users can delete their own meal photos" ON storage.objects FOR DE
 
 **DIAGNÓSTICO CRÍTICO:** Se você tentar acessar uma URL como `https://[SEU_ID_DE_PROJETO].supabase.co/storage/v1/object/public/[NOME_DO_BUCKET]/caminho/para/imagem.jpg` diretamente no seu navegador e receber `{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}`, a causa mais provável é que o bucket em si não está marcado como "Public" nas configurações do bucket na UI do Supabase. **Marcar o bucket como "Public" na UI do Supabase geralmente resolve isso.** As políticas RLS acima ainda são importantes para controlar o acesso aos objetos dentro do bucket.
 
-## Passo 6: Configurações de Autenticação no Supabase
-(Sem alterações nesta seção, mas garanta que está configurado)
+## Passo 6: Script SQL para Povoamento de Dados (Opcional)
 
-## Passo 7: Reiniciar a Aplicação Next.js
-(Crucial após qualquer alteração no `.env.local` ou `next.config.ts`)
+Se desejar povoar seu banco de dados com dados de exemplo para testar a aplicação, você pode usar o script abaixo. Execute-o no **SQL Editor** do Supabase.
+**Atenção:** Este script criará usuários com senhas fixas (`password123`). Use apenas para desenvolvimento/teste.
 
-## Passo 8: Testar a Integração
-(Teste todas as funcionalidades, especialmente o upload e exibição de imagens de perfil e refeição)
+```sql
+-- #####################################################################
+-- # SCRIPT PARA POVOAR O BANCO DE DADOS COM DADOS DE EXEMPLO         #
+-- #####################################################################
+-- Este script insere usuários de exemplo e dados associados.
+-- Assegure-se de que as tabelas (profiles, glucose_readings, etc.)
+-- já foram criadas com o SCRIPT 2 do arquivo supabase_schema_management.sql.
+--
+-- ATENÇÃO: Este script assume que a extensão pgcrypto está habilitada.
+-- CREATE EXTENSION IF NOT EXISTS "pgcrypto"; (Já incluído no script de criação de tabelas)
+--
+-- As senhas dos usuários de exemplo são 'password123'.
+
+DO $$
+DECLARE
+    user_ana_id uuid := uuid_generate_v4();
+    user_bruno_id uuid := uuid_generate_v4();
+    user_charles_id uuid := uuid_generate_v4();
+    fixed_bcrypt_hash text := '$2a$10$OBG3kS3cXiGcoHnl9ey.uOEZ4S4049CCFuqgLkPGXjch2S48BKMHy'; -- Hash bcrypt para 'password123'
+    current_ts_utc timestamptz := timezone('utc', now());
+BEGIN
+
+    -- COMANDOS PARA ADICIONAR COLUNAS DE METAS À TABELA 'profiles' SE ESTIVEREM FALTANDO
+    -- Execute estes ANTES de rodar este script de povoamento se sua tabela 'profiles' não tiver estas colunas.
+    -- É recomendável fazer backup dos seus dados antes de alterar o esquema.
+    -- Estes comandos já estão sugeridos no arquivo supabase_schema_management.sql antes da criação das tabelas.
+    -- Se você usou o script de criação mais recente, estas colunas já devem existir.
+    /*
+    ALTER TABLE public.profiles
+    ADD COLUMN IF NOT EXISTS language_preference text DEFAULT 'pt-BR',
+    ADD COLUMN IF NOT EXISTS target_glucose_low integer,
+    ADD COLUMN IF NOT EXISTS target_glucose_high integer,
+    ADD COLUMN IF NOT EXISTS hypo_glucose_threshold integer,
+    ADD COLUMN IF NOT EXISTS hyper_glucose_threshold integer,
+    ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
+    */
+
+    -- Inserir Usuários no auth.users
+    -- (O trigger handle_new_user criará entradas básicas em public.profiles)
+    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, recovery_token, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_sent_at)
+    VALUES
+        ('00000000-0000-0000-0000-000000000000', user_ana_id, 'authenticated', 'authenticated', 'ana.silva@example.com', fixed_bcrypt_hash, current_ts_utc, NULL, NULL, current_ts_utc,
+        '{"provider":"email","providers":["email"]}',
+        jsonb_build_object('full_name', 'Ana Silva', 'language_preference', 'pt-BR', 'avatar_url', 'https://placehold.co/150x150.png?text=AS'),
+        current_ts_utc, current_ts_utc, NULL, '', NULL
+        ),
+        ('00000000-0000-0000-0000-000000000000', user_bruno_id, 'authenticated', 'authenticated', 'bruno.costa@example.com', fixed_bcrypt_hash, current_ts_utc, NULL, NULL, current_ts_utc,
+        '{"provider":"email","providers":["email"]}',
+        jsonb_build_object('full_name', 'Bruno Costa', 'language_preference', 'pt-BR', 'avatar_url', 'https://placehold.co/150x150.png?text=BC'),
+        current_ts_utc, current_ts_utc, NULL, '', NULL
+        ),
+        ('00000000-0000-0000-0000-000000000000', user_charles_id, 'authenticated', 'authenticated', 'charles.smith@example.com', fixed_bcrypt_hash, current_ts_utc, NULL, NULL, current_ts_utc,
+        '{"provider":"email","providers":["email"]}',
+        jsonb_build_object('full_name', 'Charles Smith', 'language_preference', 'en-US', 'avatar_url', 'https://placehold.co/150x150.png?text=CS'),
+        current_ts_utc, current_ts_utc, NULL, '', NULL
+        );
+
+    RAISE NOTICE 'Usuários de exemplo inseridos em auth.users.';
+    RAISE NOTICE 'Ana Silva: ana.silva@example.com / password123 (ID: %)', user_ana_id;
+    RAISE NOTICE 'Bruno Costa: bruno.costa@example.com / password123 (ID: %)', user_bruno_id;
+    RAISE NOTICE 'Charles Smith: charles.smith@example.com / password123 (ID: %)', user_charles_id;
+
+    -- Atualizar Perfis em public.profiles (o trigger já criou a linha, aqui adicionamos detalhes)
+    UPDATE public.profiles SET
+        name = 'Ana Silva',
+        email = 'ana.silva@example.com', -- Redundante se o trigger pegar do auth.users, mas garante
+        avatar_url = 'https://placehold.co/150x150.png?text=AS',
+        date_of_birth = '1985-05-15',
+        diabetes_type = 'tipo1',
+        language_preference = 'pt-BR',
+        target_glucose_low = 80,
+        target_glucose_high = 160,
+        hypo_glucose_threshold = 70,
+        hyper_glucose_threshold = 200,
+        updated_at = current_ts_utc
+    WHERE id = user_ana_id;
+
+    UPDATE public.profiles SET
+        name = 'Bruno Costa',
+        email = 'bruno.costa@example.com',
+        avatar_url = 'https://placehold.co/150x150.png?text=BC',
+        date_of_birth = '1992-11-30',
+        diabetes_type = 'tipo2',
+        language_preference = 'pt-BR',
+        target_glucose_low = 90,
+        target_glucose_high = 180,
+        hypo_glucose_threshold = 75,
+        hyper_glucose_threshold = 220,
+        updated_at = current_ts_utc
+    WHERE id = user_bruno_id;
+    
+    UPDATE public.profiles SET
+        name = 'Charles Smith',
+        email = 'charles.smith@example.com',
+        avatar_url = 'https://placehold.co/150x150.png?text=CS',
+        date_of_birth = '1978-07-20',
+        diabetes_type = 'outro',
+        language_preference = 'en-US',
+        target_glucose_low = 70,
+        target_glucose_high = 150,
+        hypo_glucose_threshold = 65,
+        hyper_glucose_threshold = 180,
+        updated_at = current_ts_utc
+    WHERE id = user_charles_id;
+
+    RAISE NOTICE 'Perfis de exemplo atualizados em public.profiles.';
+
+    -- Leituras de Glicemia para Ana Silva
+    INSERT INTO public.glucose_readings (user_id, value, timestamp, meal_context, notes, level) VALUES
+    (user_ana_id, 95, current_ts_utc - interval '3 days 2 hours', 'jejum', 'Acordei bem', 'normal'),
+    (user_ana_id, 150, current_ts_utc - interval '3 days', 'depois_refeicao', 'Almoço com macarrão', 'alta'),
+    (user_ana_id, 110, current_ts_utc - interval '2 days 10 hours', 'antes_refeicao', 'Antes do jantar', 'normal'),
+    (user_ana_id, 65, current_ts_utc - interval '2 days 5 hours', 'outro', 'Senti tremedeira', 'baixa'),
+    (user_ana_id, 185, current_ts_utc - interval '1 day 3 hours', 'depois_refeicao', 'Pizza ontem à noite', 'alta');
+
+    -- Leituras de Glicemia para Bruno Costa
+    INSERT INTO public.glucose_readings (user_id, value, timestamp, meal_context, notes, level) VALUES
+    (user_bruno_id, 120, current_ts_utc - interval '2 days 1 hours', 'jejum', 'Manhã normal', 'normal'),
+    (user_bruno_id, 210, current_ts_utc - interval '1 day 20 hours', 'depois_refeicao', 'Sobremesa extra', 'muito_alta');
+
+    RAISE NOTICE 'Leituras de glicemia de exemplo inseridas.';
+
+    -- Registros de Insulina para Ana Silva
+    INSERT INTO public.insulin_logs (user_id, type, dose, timestamp) VALUES
+    (user_ana_id, 'Rápida (Lispro)', 8, current_ts_utc - interval '3 days'),
+    (user_ana_id, 'Lenta (Glargina)', 22, current_ts_utc - interval '3 days 20 minutes'),
+    (user_ana_id, 'Rápida (Lispro)', 6, current_ts_utc - interval '1 day 3 hours');
+
+    RAISE NOTICE 'Registros de insulina de exemplo inseridos.';
+
+    -- Análises de Refeição para Ana Silva
+    INSERT INTO public.meal_analyses (user_id, timestamp, image_url, original_image_file_name, food_identification, macronutrient_estimates, estimated_glucose_impact, suggested_insulin_dose, improvement_tips) VALUES
+    (user_ana_id, current_ts_utc - interval '2 days', 'https://placehold.co/600x400.png?text=Prato+Saudavel', 'prato_saudavel.jpg', 'Salada colorida com frango grelhado e quinoa.', '{"carbohydrates": 30, "protein": 40, "fat": 15}', 'Impacto glicêmico moderado, elevação gradual.', '4-6 unidades de insulina rápida, ajustar conforme sensibilidade.', 'Adicionar mais fibras de vegetais folhosos escuros.');
+
+    RAISE NOTICE 'Análises de refeição de exemplo inseridas.';
+
+    -- Lembretes para Ana Silva
+    INSERT INTO public.reminders (user_id, type, name, time, days, enabled, insulin_type, insulin_dose) VALUES
+    (user_ana_id, 'glicemia', 'Glicemia Jejum', '07:00:00', 'todos_os_dias', true, NULL, NULL),
+    (user_ana_id, 'insulina', 'Insulina Basal Noite', '22:00:00', 'todos_os_dias', true, 'Lenta (Glargina)', 22);
+
+    RAISE NOTICE 'Lembretes de exemplo inseridos.';
+
+    -- Atividades Físicas para Bruno Costa
+    INSERT INTO public.activity_logs (user_id, timestamp, activity_type, duration_minutes, intensity, notes) VALUES
+    (user_bruno_id, current_ts_utc - interval '1 day 10 hours', 'caminhada', 45, 'moderada', 'Caminhada no parque, ritmo bom.'),
+    (user_bruno_id, current_ts_utc - interval '3 days 8 hours', 'musculacao', 60, 'moderada', 'Treino de superiores.');
+
+    RAISE NOTICE 'Atividades físicas de exemplo inseridas.';
+    RAISE NOTICE 'Povoamento de dados concluído com sucesso!';
+
+END $$;
+```
+
+## Passo 7: Configurações de Autenticação no Supabase
+
+1.  No painel do seu projeto Supabase, vá para **Authentication** (ícone de escudo).
+2.  Em **Configuration** -> **General**:
+    *   **Disable email confirmations**: Para desenvolvimento, você pode querer desabilitar a confirmação de email para facilitar o cadastro de usuários de teste. **Lembre-se de habilitar em produção.**
+    *   **Enable Signups**: Certifique-se de que está habilitado.
+3.  Em **Configuration** -> **Providers**:
+    *   **Email**: Certifique-se de que está habilitado.
+    *   Você pode adicionar outros provedores (Google, GitHub, etc.) aqui se desejar.
+
+## Passo 8: Reiniciar a Aplicação Next.js
+
+Sempre que você alterar arquivos `.env.local` ou `next.config.ts`, é crucial parar e reiniciar seu servidor de desenvolvimento Next.js para que as novas configurações sejam carregadas:
+
+```bash
+# Pare o servidor (Ctrl+C no terminal onde está rodando)
+npm run dev
+```
+
+## Passo 9: Testar a Integração
+
+1.  Tente se cadastrar com um novo usuário na sua aplicação.
+2.  Verifique se o usuário aparece em "Authentication" -> "Users" no seu painel Supabase.
+3.  Verifique se um perfil correspondente é criado na tabela `profiles` (se você implementou o trigger `handle_new_user`).
+4.  Teste as funcionalidades de registro de glicemia, insulina, análise de refeição, etc.
+5.  Verifique se os dados são salvos corretamente nas respectivas tabelas no Supabase.
+6.  Teste o upload de imagens (perfil e refeição) e verifique se aparecem nos buckets do Supabase Storage e se as URLs públicas funcionam na aplicação.
 
 ## Solução de Problemas Comuns
 
@@ -329,7 +334,9 @@ CREATE POLICY "Users can delete their own meal photos" ON storage.objects FOR DE
         *   **Ação Primária:** No painel do Supabase, vá para Storage, selecione o bucket, clique nos três pontinhos (...), escolha "Edit bucket" e MARQUE a opção "This bucket is public". Salve e teste a URL pública novamente.
         *   **Ação Secundária:** Verifique as políticas RLS de `SELECT` nos objetos do bucket. Elas devem permitir `SELECT` para `anon` e `authenticated`.
     *   Verifique se o `hostname` no `next.config.ts` está correto e se o servidor Next.js foi reiniciado.
+*   **ERROS DE RLS ou "new row violates row-level security policy"**:
+    *   Verifique se as políticas de RLS nas suas tabelas estão corretas e permitem as operações necessárias (INSERT, SELECT, UPDATE, DELETE) para os usuários autenticados e para `auth.uid() = user_id`.
+*   **ERRO `column "target_glucose_low" of relation "profiles" does not exist` (ou similar para outras colunas de metas)**:
+    *   Isso indica que sua tabela `profiles` não possui essas colunas. Execute o "SCRIPT 2" do arquivo `supabase_schema_management.sql` para recriar as tabelas com o esquema mais recente (isso apagará os dados existentes nas tabelas) ou, se preferir manter os dados, adicione as colunas manualmente via `ALTER TABLE` (veja a seção de "Opção para Atualizar a Tabela profiles Existente" que estava no guia anterior ou adapte os comandos do script de criação).
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente!
-
-    
