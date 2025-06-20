@@ -25,3 +25,10 @@ Para utilizar a funcionalidade de análise de refeição por Inteligência Artif
 
 Sem a `GEMINI_API_KEY`, as chamadas para a IA de análise de refeição resultarão em erro de `FAILED_PRECONDITION` ou similar, indicando a ausência da chave de API.
 Sem as chaves `NEXT_PUBLIC_SUPABASE_URL` ou `NEXT_PUBLIC_SUPABASE_ANON_KEY`, a aplicação não conseguirá se conectar ao Supabase e exibirá erros relacionados.
+
+## Configuração do Banco de Dados Supabase
+
+Para configurar as tabelas e as Row Level Security (RLS) policies
+no seu projeto Supabase, por favor, consulte o arquivo:
+[SUPABASE_SETUP_GUIDE.md](docs/supabase/SUPABASE_SETUP_GUIDE.md)
+localizado na pasta `docs/supabase/` do seu projeto.
