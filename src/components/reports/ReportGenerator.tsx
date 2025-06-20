@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -10,8 +11,8 @@ import type { DateRange } from 'react-day-picker';
 import { format, subDays, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Loader2, FileSearch, Download } from 'lucide-react';
-import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
-import { getGlucoseReadings, getInsulinLogs, getUserProfile } from '@/lib/storage';
+import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis } from '@/types';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses } from '@/lib/storage';
 import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
@@ -84,9 +85,11 @@ export default function ReportGenerator() {
     setReportData(null);
 
     try {
-      const [allGlucoseReadings, allInsulinLogs] = await Promise.all([
+      const [allGlucoseReadings, allInsulinLogs, allActivityLogs, allMealAnalyses] = await Promise.all([
         getGlucoseReadings(userProfile),
         getInsulinLogs(),
+        getActivityLogs(),
+        getMealAnalyses(),
       ]);
 
       const filteredGlucose = allGlucoseReadings.filter(r => {
@@ -97,6 +100,15 @@ export default function ReportGenerator() {
         const lDate = parseISO(l.timestamp);
         return lDate >= range.from! && lDate <= range.to!;
       });
+      const filteredActivityLogs = allActivityLogs.filter(log => {
+        const logDate = parseISO(log.timestamp);
+        return logDate >= range.from! && logDate <= range.to!;
+      });
+      const filteredMealAnalyses = allMealAnalyses.filter(meal => {
+        const mealDate = parseISO(meal.timestamp);
+        return mealDate >= range.from! && mealDate <= range.to!;
+      });
+
 
       let averageGlucose: number | null = null;
       let minGlucose: { value: number; timestamp: string } | null = null;
@@ -150,11 +162,22 @@ export default function ReportGenerator() {
         const numberOfDays = differenceInDays(range.to!, range.from!) + 1;
         averageDailyInsulin = totalInsulin / numberOfDays;
       }
-      
+
+      const totalActivities = filteredActivityLogs.length;
+      const totalActivityDuration = totalActivities > 0 ? filteredActivityLogs.reduce((sum, log) => sum + log.duration_minutes, 0) : null;
+      const averageActivityDuration = totalActivities > 0 && totalActivityDuration !== null ? totalActivityDuration / totalActivities : null;
+
+      const totalMealAnalyses = filteredMealAnalyses.length;
+      const averageMealCarbs = totalMealAnalyses > 0 ? filteredMealAnalyses.reduce((sum, meal) => sum + meal.macronutrientEstimates.carbohydrates, 0) / totalMealAnalyses : null;
+      const averageMealProtein = totalMealAnalyses > 0 ? filteredMealAnalyses.reduce((sum, meal) => sum + meal.macronutrientEstimates.protein, 0) / totalMealAnalyses : null;
+      const averageMealFat = totalMealAnalyses > 0 ? filteredMealAnalyses.reduce((sum, meal) => sum + meal.macronutrientEstimates.fat, 0) / totalMealAnalyses : null;
+
       setReportData({
         period: { start: range.from, end: range.to },
         glucoseReadings: filteredGlucose,
         insulinLogs: filteredInsulin,
+        activityLogs: filteredActivityLogs,
+        mealAnalyses: filteredMealAnalyses,
         userProfile,
         summary: {
           averageGlucose,
@@ -171,6 +194,13 @@ export default function ReportGenerator() {
           totalInsulin,
           averageDailyInsulin,
           insulinApplications: filteredInsulin.length,
+          totalActivities,
+          totalActivityDuration,
+          averageActivityDuration,
+          totalMealAnalyses,
+          averageMealCarbs,
+          averageMealProtein,
+          averageMealFat,
         },
       });
 

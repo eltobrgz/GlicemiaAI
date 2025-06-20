@@ -1,14 +1,14 @@
 
 'use client';
 
-import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
+import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info } from 'lucide-react';
+import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info, Bike, Utensils } from 'lucide-react';
 import { getGlucoseLevelColor } from '@/lib/utils';
 import { useMemo } from 'react';
 
@@ -16,6 +16,8 @@ export interface ReportData {
   period: { start: Date; end: Date };
   glucoseReadings: GlucoseReading[];
   insulinLogs: InsulinLog[];
+  activityLogs: ActivityLog[];
+  mealAnalyses: MealAnalysis[];
   userProfile: UserProfile;
   summary: {
     averageGlucose: number | null;
@@ -32,6 +34,13 @@ export interface ReportData {
     totalInsulin: number | null;
     averageDailyInsulin: number | null;
     insulinApplications: number;
+    totalActivities: number;
+    totalActivityDuration: number | null;
+    averageActivityDuration: number | null;
+    totalMealAnalyses: number;
+    averageMealCarbs: number | null;
+    averageMealProtein: number | null;
+    averageMealFat: number | null;
   };
 }
 
@@ -39,7 +48,7 @@ interface ReportViewProps {
   data: ReportData;
 }
 
-const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+const COLORS_PIE = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042']; // Blue, Green, Yellow, Orange
 
 const SummaryCard: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; icon?: React.ElementType; iconColor?: string }> = ({ title, value, unit, description, icon: Icon, iconColor }) => (
   <Card className="shadow-md hover:shadow-lg transition-shadow">
@@ -58,7 +67,7 @@ const SummaryCard: React.FC<{ title: string; value: string | number | null; unit
 );
 
 export default function ReportView({ data }: ReportViewProps) {
-  const { period, glucoseReadings, insulinLogs, userProfile, summary } = data;
+  const { period, glucoseReadings, insulinLogs, activityLogs, mealAnalyses, userProfile, summary } = data;
 
   const glucoseTrendData = useMemo(() => {
     if (!glucoseReadings || glucoseReadings.length === 0) return [];
@@ -79,10 +88,10 @@ export default function ReportView({ data }: ReportViewProps) {
     return [
       { name: 'Abaixo do Alvo', value: summary.timeBelowTargetPercent ?? 0, fill: COLORS_PIE[0] },
       { name: 'No Alvo', value: summary.timeInTargetPercent ?? 0, fill: COLORS_PIE[1] },
-      { name: 'Acima do Alvo', value: summary.timeAboveTargetPercent ?? 0, fill: COLORS_PIE[2] },
+      { name: `Acima do Alvo (${summary.countHigh} Altas, ${summary.countVeryHigh} Mto. Altas)`, value: summary.timeAboveTargetPercent ?? 0, fill: COLORS_PIE[2] },
     ].filter(item => item.value > 0);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [summary.timeBelowTargetPercent, summary.timeInTargetPercent, summary.timeAboveTargetPercent]);
+  }, [summary.timeBelowTargetPercent, summary.timeInTargetPercent, summary.timeAboveTargetPercent, summary.countHigh, summary.countVeryHigh]);
 
 
   const glucoseChartConfig = {
@@ -90,6 +99,9 @@ export default function ReportView({ data }: ReportViewProps) {
   };
   const insulinChartConfig = {
     dose: { label: 'Dose Insulina (U)', color: 'hsl(var(--accent))' },
+  };
+   const activityChartConfig = {
+    duration: { label: 'Duração Atividade (min)', color: 'hsl(var(--chart-4))' }, // orange
   };
 
   const insulinTrendData = useMemo(() => {
@@ -106,13 +118,27 @@ export default function ReportView({ data }: ReportViewProps) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insulinLogs, period.start, period.end]);
 
+  const activityTrendData = useMemo(() => {
+    if (!activityLogs || activityLogs.length === 0) return [];
+    const daysInPeriod = eachDayOfInterval({ start: period.start, end: period.end });
+    return daysInPeriod.map(day => {
+      const logsForDay = activityLogs.filter(log => isSameDay(parseISO(log.timestamp), day));
+      const totalDuration = logsForDay.reduce((sum, log) => sum + log.duration_minutes, 0);
+      return {
+        date: format(day, 'dd/MM', { locale: ptBR }),
+        duration: totalDuration > 0 ? totalDuration : null,
+      };
+    }).filter(d => d.duration !== null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activityLogs, period.start, period.end]);
+
 
   return (
     <div className="space-y-6 p-4 sm:p-6 bg-background text-foreground">
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary">
-            Relatório Glicêmico e de Insulina
+            Relatório de Acompanhamento
           </CardTitle>
           <CardDescription>
             Período: {format(period.start, 'dd/MM/yyyy', { locale: ptBR })} - {format(period.end, 'dd/MM/yyyy', { locale: ptBR })}
@@ -120,20 +146,32 @@ export default function ReportView({ data }: ReportViewProps) {
         </CardHeader>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        {/* Glucose Summary */}
         <SummaryCard title="Glicemia Média" value={summary.averageGlucose?.toFixed(1) ?? 'N/A'} unit="mg/dL" icon={Activity} />
         {summary.minGlucose && <SummaryCard title="Glicemia Mínima" value={summary.minGlucose.value} unit="mg/dL" description={`Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm', { locale: ptBR })}`} icon={ArrowDownToDot} iconColor="text-blue-500" />}
         {summary.maxGlucose && <SummaryCard title="Glicemia Máxima" value={summary.maxGlucose.value} unit="mg/dL" description={`Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm', { locale: ptBR })}`} icon={ArrowUpFromDot} iconColor="text-red-500" />}
-        <SummaryCard title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1) ?? 'N/A'} unit="mg/dL" description="Medida de variabilidade" icon={TrendingUp} />
+        <SummaryCard title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1) ?? 'N/A'} unit="mg/dL" description="Variabilidade" icon={TrendingUp} />
         <SummaryCard title="Tempo no Alvo" value={summary.timeInTargetPercent?.toFixed(1) ?? 'N/A'} unit="%" description={`${userProfile.target_glucose_low || 'Padrão'}-${userProfile.target_glucose_high || 'Padrão'} mg/dL`} icon={Percent} iconColor="text-green-500" />
         <SummaryCard title="Tempo Abaixo do Alvo" value={summary.timeBelowTargetPercent?.toFixed(1) ?? 'N/A'} unit="%" description={`< ${userProfile.target_glucose_low || userProfile.hypo_glucose_threshold || 'Padrão'} mg/dL`} icon={Percent} iconColor="text-blue-500" />
         <SummaryCard title="Tempo Acima do Alvo" value={summary.timeAboveTargetPercent?.toFixed(1) ?? 'N/A'} unit="%" description={`> ${userProfile.target_glucose_high || 'Padrão'} mg/dL`} icon={Percent} iconColor="text-yellow-500" />
         <SummaryCard title="Cont. Hipoglicemias" value={summary.countHypo} description={`< ${userProfile.hypo_glucose_threshold || GLUCOSE_THRESHOLDS.low} mg/dL`} iconColor="text-blue-500" />
-        <SummaryCard title="Cont. Hiperglicemias" value={summary.countHigh + summary.countVeryHigh} description={`> ${userProfile.target_glucose_high || GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL`} iconColor="text-red-500" />
-
+        
+        {/* Insulin Summary */}
         <SummaryCard title="Total Insulina" value={summary.totalInsulin?.toFixed(1) ?? 'N/A'} unit="U" icon={Syringe} iconColor="text-accent" />
         <SummaryCard title="Média Diária Insulina" value={summary.averageDailyInsulin?.toFixed(1) ?? 'N/A'} unit="U/dia" icon={Syringe} iconColor="text-accent" />
         <SummaryCard title="Aplicações de Insulina" value={summary.insulinApplications} icon={Syringe} iconColor="text-accent" />
+
+        {/* Activity Summary */}
+        <SummaryCard title="Total de Atividades" value={summary.totalActivities} icon={Bike} iconColor="text-orange-500" />
+        <SummaryCard title="Duração Total Ativ." value={summary.totalActivityDuration} unit="min" icon={Bike} iconColor="text-orange-500" />
+        <SummaryCard title="Média Duração Ativ." value={summary.averageActivityDuration?.toFixed(0)} unit="min/ativ." icon={Bike} iconColor="text-orange-500" />
+        
+        {/* Meal Analysis Summary */}
+        <SummaryCard title="Análises de Refeição" value={summary.totalMealAnalyses} icon={Utensils} iconColor="text-lime-600" />
+        <SummaryCard title="Média Carbs/Refeição" value={summary.averageMealCarbs?.toFixed(1)} unit="g" icon={Utensils} iconColor="text-lime-600" />
+        <SummaryCard title="Média Prot./Refeição" value={summary.averageMealProtein?.toFixed(1)} unit="g" icon={Utensils} iconColor="text-lime-600" />
+        <SummaryCard title="Média Gord./Refeição" value={summary.averageMealFat?.toFixed(1)} unit="g" icon={Utensils} iconColor="text-lime-600" />
       </div>
 
       {glucoseReadings.length > 0 && (
@@ -179,7 +217,7 @@ export default function ReportView({ data }: ReportViewProps) {
                         const y = cy + radius * Math.sin(-midAngle * RADIAN);
                         return (
                           <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="text-xs font-medium">
-                            {`${name} ${(percent * 100).toFixed(0)}%`}
+                            {`${(percent * 100).toFixed(0)}%`}
                           </text>
                         );
                       }}
@@ -188,7 +226,7 @@ export default function ReportView({ data }: ReportViewProps) {
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <ChartLegend content={<ChartLegendContent />} />
+                  <ChartLegend content={<ChartLegendContent nameKey="name" />} />
                 </PieChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -214,12 +252,31 @@ export default function ReportView({ data }: ReportViewProps) {
           </CardContent>
         </Card>
       )}
+      
+      {activityLogs.length > 0 && (
+         <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center"><Bike className="mr-2 h-5 w-5 text-orange-500" />Duração Total de Atividade Física Diária</CardTitle>
+          </CardHeader>
+          <CardContent className="h-[350px] pr-6 recharts-responsive-container">
+             <ChartContainer config={activityChartConfig} className="w-full h-full">
+              <BarChart data={activityTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} interval="preserveStartEnd" />
+                <YAxis tickLine={false} axisLine={false} tickMargin={8} domain={[0, 'dataMax + 20']} unit=" min" allowDataOverflow />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar dataKey="duration" fill="var(--color-duration)" radius={[4, 4, 0, 0]} name="Duração" unit=" min" />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      )}
 
-      {!glucoseReadings.length && !insulinLogs.length && (
+      {glucoseReadings.length === 0 && insulinLogs.length === 0 && activityLogs.length === 0 && mealAnalyses.length === 0 && (
         <Card>
           <CardContent className="p-6 text-center text-muted-foreground">
             <Info className="mx-auto h-12 w-12 mb-4" />
-            Nenhum dado de glicemia ou insulina encontrado para o período selecionado.
+            Nenhum dado encontrado para o período selecionado.
             <br/>
             Por favor, registre seus dados ou selecione um período diferente.
           </CardContent>
@@ -228,3 +285,4 @@ export default function ReportView({ data }: ReportViewProps) {
     </div>
   );
 }
+

@@ -4,9 +4,9 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
-import { getGlucoseReadings, getInsulinLogs, getUserProfile } from '@/lib/storage';
-import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity, CheckCircle, Loader2, Pill } from 'lucide-react';
+import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis } from '@/types';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses } from '@/lib/storage';
+import { BarChart3, Lightbulb, TrendingUp, TrendingDown, Activity, CheckCircle, Loader2, Pill, Bike, Utensils } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { format, subDays, eachDayOfInterval, parseISO, isSameDay } from 'date-fns';
@@ -18,10 +18,15 @@ import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 export default function InsightsDisplay() {
   const [glucoseReadings, setGlucoseReadings] = useState<GlucoseReading[]>([]);
   const [insulinLogs, setInsulinLogs] = useState<InsulinLog[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [mealAnalyses, setMealAnalyses] = useState<MealAnalysis[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+
   const [isLoadingGlucose, setIsLoadingGlucose] = useState(true);
   const [isLoadingInsulin, setIsLoadingInsulin] = useState(true);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [isLoadingActivity, setIsLoadingActivity] = useState(true);
+  const [isLoadingMeals, setIsLoadingMeals] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -29,33 +34,47 @@ export default function InsightsDisplay() {
       setIsLoadingGlucose(true);
       setIsLoadingInsulin(true);
       setIsLoadingProfile(true);
+      setIsLoadingActivity(true);
+      setIsLoadingMeals(true);
       try {
         const profile = await getUserProfile();
         setUserProfile(profile);
         setIsLoadingProfile(false);
 
-        const [fetchedGlucoseReadings, fetchedInsulinLogs] = await Promise.all([
-          getGlucoseReadings(profile), // Pass profile
-          getInsulinLogs()
+        const [
+          fetchedGlucoseReadings, 
+          fetchedInsulinLogs, 
+          fetchedActivityLogs,
+          fetchedMealAnalyses
+        ] = await Promise.all([
+          getGlucoseReadings(profile),
+          getInsulinLogs(),
+          getActivityLogs(),
+          getMealAnalyses()
         ]);
         setGlucoseReadings(fetchedGlucoseReadings);
         setInsulinLogs(fetchedInsulinLogs);
+        setActivityLogs(fetchedActivityLogs);
+        setMealAnalyses(fetchedMealAnalyses);
+
       } catch (error: any) {
         toast({ title: "Erro ao buscar dados para insights", description: error.message, variant: "destructive" });
       } finally {
         setIsLoadingGlucose(false);
         setIsLoadingInsulin(false);
+        setIsLoadingActivity(false);
+        setIsLoadingMeals(false);
       }
     };
     fetchData();
   }, [toast]);
 
-  const isLoading = isLoadingGlucose || isLoadingInsulin || isLoadingProfile;
+  const isLoading = isLoadingGlucose || isLoadingInsulin || isLoadingProfile || isLoadingActivity || isLoadingMeals;
 
   const currentGlucoseTargets = useMemo(() => {
     return {
       low: userProfile?.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low,
-      normalIdealMin: userProfile?.target_glucose_low ?? GLUCOSE_THRESHOLDS.low, // Assuming target_glucose_low as ideal min
+      normalIdealMin: userProfile?.target_glucose_low ?? GLUCOSE_THRESHOLDS.low,
       normalIdealMax: userProfile?.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax,
       high: userProfile?.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high,
     };
@@ -128,6 +147,33 @@ export default function InsightsDisplay() {
     };
   }, [insulinLogs]);
 
+  const activityStatsLast7Days = useMemo(() => {
+    const today = new Date();
+    const sevenDaysAgo = subDays(today, 7);
+    const recentLogs = activityLogs.filter(log => parseISO(log.timestamp) >= sevenDaysAgo);
+    const count = recentLogs.length;
+    const totalDurationMinutes = recentLogs.reduce((sum, log) => sum + log.duration_minutes, 0);
+    return { count, totalDurationMinutes };
+  }, [activityLogs]);
+
+  const mealStatsLast7Days = useMemo(() => {
+    const today = new Date();
+    const sevenDaysAgo = subDays(today, 7);
+    const recentAnalyses = mealAnalyses.filter(analysis => parseISO(analysis.timestamp) >= sevenDaysAgo);
+    const count = recentAnalyses.length;
+    if (count === 0) return { count, avgCarbs: 0, avgProtein: 0, avgFat: 0 };
+
+    const totalCarbs = recentAnalyses.reduce((sum, meal) => sum + meal.macronutrientEstimates.carbohydrates, 0);
+    const totalProtein = recentAnalyses.reduce((sum, meal) => sum + meal.macronutrientEstimates.protein, 0);
+    const totalFat = recentAnalyses.reduce((sum, meal) => sum + meal.macronutrientEstimates.fat, 0);
+    return {
+      count,
+      avgCarbs: totalCarbs / count,
+      avgProtein: totalProtein / count,
+      avgFat: totalFat / count,
+    };
+  }, [mealAnalyses]);
+
 
   const chartConfig = {
     averageGlucose: {
@@ -147,6 +193,8 @@ export default function InsightsDisplay() {
 
   const hasEnoughGlucoseData = glucoseReadings.length >= 5;
   const hasEnoughInsulinData = insulinLogs.length >=1; 
+  const hasEnoughActivityData = activityLogs.length >=1;
+  const hasEnoughMealData = mealAnalyses.length >=1;
 
   return (
     <div className="space-y-6">
@@ -158,7 +206,7 @@ export default function InsightsDisplay() {
         </AlertDescription>
       </Alert>
 
-      {(!hasEnoughGlucoseData || !hasEnoughInsulinData) && (
+      {(!hasEnoughGlucoseData || !hasEnoughInsulinData || !hasEnoughActivityData || !hasEnoughMealData) && (
          <Card className="shadow-md">
           <CardHeader>
             <CardTitle>Mais Dados Necessários</CardTitle>
@@ -167,15 +215,19 @@ export default function InsightsDisplay() {
             <p className="text-muted-foreground">
               Continue registrando seus dados 
               {!hasEnoughGlucoseData && " de glicemia (pelo menos 5 registros)"}
-              {!hasEnoughGlucoseData && !hasEnoughInsulinData && " e "}
+              {(!hasEnoughGlucoseData && (!hasEnoughInsulinData || !hasEnoughActivityData || !hasEnoughMealData)) && ", "}
               {!hasEnoughInsulinData && " de insulina (pelo menos 1 registro)"}
+              {(!hasEnoughInsulinData && (!hasEnoughActivityData || !hasEnoughMealData) && (hasEnoughGlucoseData)) && ", "}
+              {!hasEnoughActivityData && " de atividade (pelo menos 1 registro)"}
+              {(!hasEnoughActivityData && !hasEnoughMealData && (hasEnoughInsulinData || hasEnoughGlucoseData)) && ", "}
+              {!hasEnoughMealData && " de análise de refeição (pelo menos 1 registro)"}
               {' '}para obter insights mais detalhados.
             </p>
           </CardContent>
         </Card>
       )}
 
-      {(hasEnoughGlucoseData || hasEnoughInsulinData) && (
+      {(hasEnoughGlucoseData || hasEnoughInsulinData || hasEnoughActivityData || hasEnoughMealData) && (
         <>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {hasEnoughGlucoseData && (
@@ -255,6 +307,62 @@ export default function InsightsDisplay() {
                 </Card>
               </>
             )}
+             {hasEnoughActivityData && (
+              <>
+                <Card className="shadow-lg">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Atividades Físicas</CardTitle>
+                    <Bike className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-500">
+                      {activityStatsLast7Days.count}
+                    </div>
+                    <p className="text-xs text-muted-foreground">Sessões nos últimos 7 dias</p>
+                  </CardContent>
+                </Card>
+                <Card className="shadow-lg">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-sm font-medium">Duração Total de Atividades</CardTitle>
+                    <Bike className="h-4 w-4 text-muted-foreground" />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold text-orange-500">
+                      {activityStatsLast7Days.totalDurationMinutes} <span className="text-lg text-muted-foreground">min</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Nos últimos 7 dias</p>
+                  </CardContent>
+                </Card>
+              </>
+            )}
+            {hasEnoughMealData && (
+                <>
+                    <Card className="shadow-lg">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Refeições Analisadas</CardTitle>
+                            <Utensils className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-lime-600">
+                                {mealStatsLast7Days.count}
+                            </div>
+                            <p className="text-xs text-muted-foreground">Nos últimos 7 dias</p>
+                        </CardContent>
+                    </Card>
+                    <Card className="shadow-lg">
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">Média de Carboidratos</CardTitle>
+                            <Utensils className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold text-lime-600">
+                                {mealStatsLast7Days.avgCarbs.toFixed(1)} <span className="text-lg text-muted-foreground">g/refeição</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">Média das refeições analisadas (últ. 7 dias)</p>
+                        </CardContent>
+                    </Card>
+                </>
+            )}
           </div>
           
           {hasEnoughGlucoseData && (
@@ -285,12 +393,16 @@ export default function InsightsDisplay() {
                 let tip = "Continue monitorando seus níveis de glicemia e insulina para que possamos identificar padrões e tendências.";
                 if (hasEnoughGlucoseData && recentTrend === 'increasing') {
                   tip = "Percebemos que sua glicemia média aumentou recentemente. ";
+                  if (hasEnoughActivityData && activityStatsLast7Days.count < 2) {
+                    tip += "Considerar aumentar a frequência ou intensidade das atividades físicas pode ajudar. ";
+                  }
+                  if (hasEnoughMealData && mealStatsLast7Days.avgCarbs > 60) {
+                    tip += "A média de carboidratos nas suas refeições analisadas está um pouco alta, avalie se é possível ajustá-la. "
+                  }
                   if (hasEnoughInsulinData && insulinStatsLast7Days.administrations < 3 && insulinStatsLast7Days.totalDose < 20) { 
                      tip += "Seus registros de insulina parecem baixos. Considere revisar sua rotina de aplicação ou alimentação. ";
                   } else if (hasEnoughInsulinData) {
                      tip += "Verifique se sua dosagem de insulina está adequada ou se houve mudanças na dieta/atividade. ";
-                  } else {
-                     tip += "Considere revisar sua alimentação ou nível de atividade física. ";
                   }
                   tip += "Se persistir, consulte seu médico.";
                 } else if (hasEnoughGlucoseData && recentTrend === 'decreasing') {
@@ -303,6 +415,9 @@ export default function InsightsDisplay() {
                    tip = "Seus níveis de glicose parecem estáveis. ";
                    if (hasEnoughInsulinData) {
                      tip += `Você registrou ${insulinStatsLast7Days.administrations} aplicações de insulina nos últimos 7 dias. `
+                   }
+                   if(hasEnoughActivityData && activityStatsLast7Days.count > 2){
+                     tip += `Suas ${activityStatsLast7Days.count} atividades físicas na semana parecem estar contribuindo! `
                    }
                    tip += "Continue com sua rotina atual de monitoramento, alimentação e exercícios!"
                 }
@@ -324,3 +439,4 @@ export default function InsightsDisplay() {
     </div>
   );
 }
+
