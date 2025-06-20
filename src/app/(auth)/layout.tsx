@@ -25,17 +25,7 @@ export default function AuthLayout({
           <p className="text-lg lg:text-xl text-foreground/80 mb-8">
             Seu assistente inteligente para um controle glicêmico mais fácil e eficaz. Registre, analise e transforme sua jornada com o diabetes.
           </p>
-          <div className="rounded-lg overflow-hidden shadow-xl w-full aspect-[16/10] max-w-md border border-primary/20">
-            <Image
-              src="https://placehold.co/600x375.png"
-              alt="Interface do GlicemiaAI em um dispositivo"
-              width={600}
-              height={375}
-              className="object-cover w-full h-full"
-              priority
-              data-ai-hint="health app dashboard"
-            />
-          </div>
+          {/* Imagem removida daqui */}
           <p className="mt-12 text-sm text-muted-foreground">
             &copy; {new Date().getFullYear()} GlicemiaAI. Todos os direitos reservados.
           </p>
