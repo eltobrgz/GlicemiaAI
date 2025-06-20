@@ -226,32 +226,32 @@ export default function ReportGenerator() {
         return;
       }
 
-      // Temporarily make charts non-responsive for better canvas capture
       const charts = reportElement.querySelectorAll('.recharts-responsive-container');
       charts.forEach(chart => chart.classList.add('fixed-chart-size-for-pdf'));
 
-
       const canvas = await html2canvas(reportElement, {
-        scale: 2, // Increase scale for better quality
-        useCORS: true, // If images are from external sources (though not the case here)
-        logging: false, // Disable html2canvas logging to console
-        onclone: (document) => {
-          // Apply specific styles for PDF rendering if needed
-          // Example: Ensure dark mode text is visible on white PDF background
-          if (document.documentElement.classList.contains('dark')) {
-            const elements = document.querySelectorAll('#report-content-to-export *');
-            elements.forEach((el: any) => {
-              const style = window.getComputedStyle(el);
-              if (style.color === 'rgb(250, 250, 250)' || style.color === 'rgb(229, 231, 235)') { // Example dark mode text colors
-                // el.style.color = '#000000'; // Force black for PDF
-              }
-            });
+        scale: 2, 
+        useCORS: true,
+        logging: false,
+        onclone: (documentClone) => {
+          const reportElementClone = documentClone.getElementById('report-content-to-export');
+          if (reportElementClone) {
+            // Apply a class to force light theme styles specifically for PDF context
+            reportElementClone.classList.add('pdf-export-force-light');
+            // Ensure the main report element in the clone has a white background for PDF
+            reportElementClone.style.backgroundColor = '#FFFFFF';
+            reportElementClone.style.padding = '20px'; // Add some padding if desired
+
+            // Specifically make card backgrounds white in the clone for PDF
+            const cardElements = reportElementClone.querySelectorAll('.shadow-md, .shadow-lg'); // Assuming cards have shadow classes
+             cardElements.forEach((card: any) => {
+                card.classList.add('card-pdf-bg'); // Uses the .pdf-export-force-light .card-pdf-bg style
+             });
           }
         }
       });
       
       charts.forEach(chart => chart.classList.remove('fixed-chart-size-for-pdf'));
-
 
       const imgData = canvas.toDataURL('image/png');
       
@@ -270,58 +270,46 @@ export default function ReportGenerator() {
       const imgHeight = imgProps.height;
       
       const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const effectiveImgWidth = imgWidth * ratio;
-      const effectiveImgHeight = imgHeight * ratio;
+      let effectiveImgWidth = imgWidth * ratio;
+      let effectiveImgHeight = imgHeight * ratio;
 
-      // Centering the image if it's smaller than the page
-      const xOffset = (pdfWidth - effectiveImgWidth) / 2;
-      const yOffset = (pdfHeight - effectiveImgHeight) / 2;
-
-      // Handle multi-page PDF if content is too long
+      let xOffset = (pdfWidth - effectiveImgWidth) / 2;
       const pageHeightMm = pdf.internal.pageSize.getHeight();
-      let currentPosition = 0;
-      const totalImageHeightInPdfUnits = imgHeight * (pdfWidth / imgWidth); // Scale image height to fit PDF width
+      let currentPosition = 0; // Tracks the y-position on the current PDF page
+      let sourceY = 0; // Tracks the y-position on the source canvas
 
-      if (totalImageHeightInPdfUnits <= pageHeightMm) {
-        pdf.addImage(imgData, 'PNG', xOffset > 0 ? xOffset : 0, yOffset > 0 ? yOffset : 0, effectiveImgWidth, effectiveImgHeight);
-      } else {
-        let tempCanvas = document.createElement('canvas');
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height * (pageHeightMm / totalImageHeightInPdfUnits) * (imgWidth/pdfWidth) ; // portion of original canvas height for one PDF page
-        let tempCtx = tempCanvas.getContext('2d');
+      // If image is smaller than one page, center it
+      if (effectiveImgHeight < pageHeightMm) {
+          const yOffset = (pdfHeight - effectiveImgHeight) / 2;
+          pdf.addImage(imgData, 'PNG', xOffset, yOffset, effectiveImgWidth, effectiveImgHeight);
+      } else { // Multi-page logic
+          effectiveImgWidth = pdfWidth; // Fit to width
+          effectiveImgHeight = imgHeight * (pdfWidth / imgWidth); // Scale height proportionally
 
-        let sourceY = 0;
-        const pageCanvasHeight = canvas.height * (pageHeightMm / totalImageHeightInPdfUnits);
+          const canvasPageHeight = canvas.height * (pageHeightMm / effectiveImgHeight);
 
+          while(sourceY < canvas.height) {
+              const remainingCanvasHeight = canvas.height - sourceY;
+              const sliceCanvasHeight = Math.min(canvasPageHeight, remainingCanvasHeight);
 
-        while(sourceY < canvas.height) {
-          const remainingHeight = canvas.height - sourceY;
-          const currentSliceHeight = Math.min(pageCanvasHeight, remainingHeight);
-          
-          tempCanvas.height = currentSliceHeight;
-
-          tempCtx?.clearRect(0,0, tempCanvas.width, tempCanvas.height); // Clear for new slice
-          tempCtx?.drawImage(canvas, 0, sourceY, canvas.width, currentSliceHeight, 0, 0, canvas.width, currentSliceHeight);
-          
-          const pageImgData = tempCanvas.toDataURL('image/png');
-          const pageImgProps = pdf.getImageProperties(pageImgData);
-          const pageImgWidth = pageImgProps.width;
-          const pageImgHeight = pageImgProps.height;
-
-          const pageRatio = Math.min(pdfWidth / pageImgWidth, pdfHeight / pageImgHeight);
-          const pageEffectiveImgWidth = pageImgWidth * pageRatio;
-          const pageEffectiveImgHeight = pageImgHeight * pageRatio;
-          const pageXOffset = (pdfWidth - pageEffectiveImgWidth) / 2;
-
-
-          if (sourceY > 0) {
-            pdf.addPage();
+              const tempCanvas = document.createElement('canvas');
+              tempCanvas.width = canvas.width;
+              tempCanvas.height = sliceCanvasHeight;
+              const tempCtx = tempCanvas.getContext('2d');
+              
+              if(tempCtx) {
+                tempCtx.drawImage(canvas, 0, sourceY, canvas.width, sliceCanvasHeight, 0, 0, canvas.width, sliceCanvasHeight);
+                const pageImgData = tempCanvas.toDataURL('image/png');
+                
+                if (sourceY > 0) { // Add new page for subsequent slices
+                  pdf.addPage();
+                }
+                // Add image slice to PDF, fitting width
+                pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageHeightMm * (sliceCanvasHeight / canvasPageHeight) );
+              }
+              sourceY += sliceCanvasHeight;
           }
-          pdf.addImage(pageImgData, 'PNG', pageXOffset > 0 ? pageXOffset : 0, 0, pageEffectiveImgWidth, pageEffectiveImgHeight);
-          sourceY += currentSliceHeight;
-        }
       }
-
 
       pdf.save(`GlicemiaAI_Relatorio_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
       toast({ title: 'PDF Exportado', description: 'Seu relatório foi exportado com sucesso.' });

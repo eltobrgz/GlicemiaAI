@@ -98,4 +98,31 @@ body {
     width: 800px !important;
     height: 350px !important;
   }
+
+  /* Styles for forcing light theme during PDF export */
+  .pdf-export-force-light {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+  }
+  .pdf-export-force-light * {
+    color: #000000 !important;
+    background-color: transparent !important; /* Make most backgrounds transparent to inherit from parent */
+    border-color: #dddddd !important; /* Lighter borders for PDF */
+    box-shadow: none !important; /* Remove shadows */
+  }
+  .pdf-export-force-light .recharts-surface { /* Ensure chart surface itself is white */
+     background: #ffffff !important;
+  }
+  .pdf-export-force-light text, 
+  .pdf-export-force-light tspan,
+  .pdf-export-force-light .recharts-text,
+  .pdf-export-force-light .recharts-label,
+  .pdf-export-force-light .recharts-cartesian-axis-tick-value,
+  .pdf-export-force-light .recharts-legend-item-text {
+    fill: #000000 !important;
+  }
+  /* Keep card backgrounds white in PDF if they were cards */
+  .pdf-export-force-light .card-pdf-bg {
+      background-color: #ffffff !important;
+  }
 }
