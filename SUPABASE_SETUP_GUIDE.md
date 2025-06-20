@@ -42,24 +42,31 @@ Copie esses dois valores. Certifique-se de que o Project URL é o correto (ex: `
 
 ## Passo 4: Configurar o Banco de Dados (Tabelas e RLS)
 
-Para configurar as tabelas e as políticas de segurança (RLS) no seu banco de dados Supabase:
+Para configurar as tabelas e as políticas de segurança (RLS) no seu banco de dados Supabase, você usará os scripts SQL fornecidos no seu projeto.
 
-1.  **Use o Arquivo de Gerenciamento de Esquema:**
-    *   No seu projeto, você encontrará um arquivo chamado `supabase_schema_management.sql`.
-    *   Este arquivo contém dois scripts principais:
-        *   **SCRIPT 1: APAGAR COMPLETAMENTE TODAS AS TABELAS DA APLICAÇÃO**
-        *   **SCRIPT 2: CRIAR (OU RECRIAR) TODAS AS TABELAS DA APLICAÇÃO COM A VERSÃO MAIS RECENTE**
+1.  **Localize os Scripts SQL:**
+    *   No seu projeto, você encontrará dois arquivos SQL principais para gerenciamento de esquema:
+        *   `supabase_schema_drop.sql`: Contém o script para **APAGAR** todas as tabelas da aplicação.
+        *   `supabase_schema_create.sql`: Contém o script para **CRIAR (OU RECRIAR)** todas as tabelas da aplicação com a versão mais recente.
 
 2.  **Executando os Scripts no SQL Editor do Supabase:**
     *   No painel do seu projeto Supabase, vá para o **SQL Editor** (ícone de banco de dados com "SQL").
     *   Clique em "**New query**".
-    *   **Para Criar ou Recriar o Esquema:**
-        *   Abra o arquivo `supabase_schema_management.sql` no seu editor de código.
-        *   Se você deseja começar do zero ou garantir que está com o esquema mais recente (e **APAGARÁ TODOS OS DADOS EXISTENTES NAS TABELAS DA APLICAÇÃO**), primeiro copie e execute a seção "SCRIPT 1: APAGAR..." (lembre-se de descomentar as linhas `DROP TABLE`).
-        *   Em seguida (ou se estiver configurando pela primeira vez), copie e execute a seção "SCRIPT 2: CRIAR..." no SQL Editor.
-    *   Clique em "**RUN**" para cada script.
 
-    **Atenção:** O "SCRIPT 1" apagará todas as tabelas da aplicação e seus dados. Use com cautela e faça backups se necessário. O "SCRIPT 2" criará as tabelas com as colunas, RLS e triggers mais recentes, incluindo `target_glucose_low`, `target_glucose_high`, etc., na tabela `profiles`.
+    *   **Para Apagar Todas as Tabelas (Opcional, Use com Cautela):**
+        *   Abra o arquivo `supabase_schema_drop.sql` no seu editor de código.
+        *   Copie o conteúdo do script.
+        *   **Leia os avisos no script!** Se você tem certeza que quer apagar todas as tabelas e dados da aplicação, cole o script no SQL Editor do Supabase.
+        *   **Descomente** as linhas `DROP TABLE IF EXISTS ...` e/ou `DELETE FROM auth.users;` conforme sua necessidade.
+        *   Clique em "**RUN**".
+        *   **Atenção:** Esta ação é destrutiva e apagará os dados das tabelas da aplicação.
+
+    *   **Para Criar ou Recriar o Esquema (Tabelas e RLS):**
+        *   Abra o arquivo `supabase_schema_create.sql` no seu editor de código.
+        *   Copie todo o conteúdo do script.
+        *   Cole o script no SQL Editor do Supabase (pode ser em uma nova query ou após limpar a anterior).
+        *   Clique em "**RUN**".
+        *   Este script criará todas as tabelas (`profiles`, `glucose_readings`, `insulin_logs`, `meal_analyses`, `reminders`, `activity_logs`), suas colunas, RLS e a trigger `handle_new_user`.
 
 ## Passo 5: Configurar o Supabase Storage (Buckets e Políticas)
 
@@ -102,34 +109,45 @@ Precisamos criar buckets para armazenar as fotos de perfil e as fotos das refei�
             *   **Target roles**: Marque `authenticated`.
             *   **Policy definition (USING expression para UPDATE/DELETE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[1])`
             *   **Policy definition (WITH CHECK expression para INSERT/UPDATE)**: `(bucket_id = 'profile-pictures') AND (auth.uid()::text = (storage.foldername(name))[1])`
-            *   **Nota:** O caminho da imagem no storage deve ser `bucket_id/user_id/nome_arquivo.ext`. O `(storage.foldername(name))[1]` refere-se ao `user_id`. Ajuste se sua estrutura de pastas for diferente (ex: `users/user_id/...` seria `(storage.foldername(name))[2]`). Para o guia atual, estamos usando `users/user_id/...`, então `(storage.foldername(name))[2]` está correto.
+            *   **Nota:** A estrutura de pastas para fotos de perfil é `profile-pictures/USER_ID/nome_do_arquivo.ext`. Portanto, `(storage.foldername(name))[1]` corresponde ao `USER_ID`. Se você estiver usando uma estrutura como `profile-pictures/users/USER_ID/...`, então seria `(storage.foldername(name))[2]`. Para este guia, assumimos `profile-pictures/USER_ID/...`.
 
             *   Clique em "**Review**" e "**Save policy**".
 
 4.  Repita o processo para o bucket `meal-photos`:
     *   **Tornar o Bucket Público (se necessário):** Siga o passo 2 acima para o bucket `meal-photos`. Teste a URL pública no navegador.
     *   **Configurar Políticas de Objeto:**
-        *   **Política 1: Leitura Pública para Fotos de Refeição** (Mesma configuração da Política 1 de `profile-pictures`, mas com `bucket_id = 'meal-photos'`)
-        *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)** (Mesma configuração da Política 2 de `profile-pictures` para INSERT, mas com `bucket_id = 'meal-photos'` e `(storage.foldername(name))[2]` se o caminho for `users/user_id/meals/...`)
-        *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição (DELETE)** (Mesma configuração da Política 2 de `profile-pictures` para DELETE, mas com `bucket_id = 'meal-photos'` e `(storage.foldername(name))[2]` se o caminho for `users/user_id/meals/...`)
+        *   **Política 1: Leitura Pública para Fotos de Refeição**
+            *   **Policy name**: `Public Read Access for Meal Photos`
+            *   **Allowed operations**: `SELECT`
+            *   **Target roles**: `anon`, `authenticated`
+            *   **Policy definition (USING expression)**: `(bucket_id = 'meal-photos')`
+        *   **Política 2: Usuários Fazem Upload de Suas Próprias Fotos de Refeição (INSERT)**
+            *   **Policy name**: `Users can upload their own meal photos`
+            *   **Allowed operations**: `INSERT`
+            *   **Target roles**: `authenticated`
+            *   **Policy definition (WITH CHECK expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])` (Assumindo caminho `meal-photos/users/USER_ID/meals/nome_arquivo.ext`, onde `(storage.foldername(name))[2]` é o `USER_ID`).
+        *   **Política 3: Usuários Deletam Suas Próprias Fotos de Refeição (DELETE)**
+            *   **Policy name**: `Users can delete their own meal photos`
+            *   **Allowed operations**: `DELETE`
+            *   **Target roles**: `authenticated`
+            *   **Policy definition (USING expression)**: `(bucket_id = 'meal-photos') AND (auth.uid()::text = (storage.foldername(name))[2])` (Assumindo caminho `meal-photos/users/USER_ID/meals/nome_arquivo.ext`)
 
 #### Opção B: Configurar Políticas de Storage via SQL Editor (Apenas para RLS dos Objetos)
 
 Se preferir, você pode criar as políticas RLS dos objetos usando o SQL Editor. **Isso NÃO tornará o bucket público em si; isso ainda precisa ser feito pela UI se você estiver recebendo "Bucket not found" para URLs `/object/public/`.**
-Assumindo que o caminho no storage seja `users/USER_ID/profile.ext` ou `users/USER_ID/meals/MEAL_ID.ext`.
+Assumindo que o caminho no storage para fotos de perfil é `profile-pictures/USER_ID/profile.ext` e para fotos de refeição é `meal-photos/users/USER_ID/meals/MEAL_ID.ext`.
 
 ```sql
 -- Políticas para o bucket 'profile-pictures'
--- Caminho esperado no storage: users/USER_ID/nome_da_foto.ext
--- (storage.foldername(name))[1] será 'users'
--- (storage.foldername(name))[2] será USER_ID
+-- Caminho esperado no storage: profile-pictures/USER_ID/nome_da_foto.ext
+-- (storage.foldername(name))[1] será USER_ID
 CREATE POLICY "Public Read Access for Profile Pictures" ON storage.objects FOR SELECT TO anon, authenticated USING (bucket_id = 'profile-pictures');
-CREATE POLICY "Users can insert their own profile pictures" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]);
-CREATE POLICY "Users can update their own profile pictures" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]) WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]);
-CREATE POLICY "Users can delete their own profile pictures" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[2]);
+CREATE POLICY "Users can insert their own profile pictures" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[1]);
+CREATE POLICY "Users can update their own profile pictures" ON storage.objects FOR UPDATE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[1]) WITH CHECK (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[1]);
+CREATE POLICY "Users can delete their own profile pictures" ON storage.objects FOR DELETE TO authenticated USING (bucket_id = 'profile-pictures' AND auth.uid()::text = (storage.foldername(name))[1]);
 
 -- Políticas para o bucket 'meal-photos'
--- Caminho esperado no storage: users/USER_ID/meals/nome_da_foto_refeicao.ext
+-- Caminho esperado no storage: meal-photos/users/USER_ID/meals/nome_da_foto_refeicao.ext
 -- (storage.foldername(name))[1] será 'users'
 -- (storage.foldername(name))[2] será USER_ID
 -- (storage.foldername(name))[3] será 'meals'
@@ -142,7 +160,7 @@ CREATE POLICY "Users can delete their own meal photos" ON storage.objects FOR DE
 
 ## Passo 6: Script SQL para Povoamento de Dados (Opcional)
 
-Se desejar povoar seu banco de dados com dados de exemplo para testar a aplicação, você pode usar o script abaixo. Execute-o no **SQL Editor** do Supabase.
+Se desejar povoar seu banco de dados com dados de exemplo para testar a aplicação, você pode usar o script SQL abaixo. Execute-o no **SQL Editor** do Supabase após ter criado as tabelas com `supabase_schema_create.sql`.
 **Atenção:** Este script criará usuários com senhas fixas (`password123`). Use apenas para desenvolvimento/teste.
 
 ```sql
@@ -151,10 +169,10 @@ Se desejar povoar seu banco de dados com dados de exemplo para testar a aplicaç
 -- #####################################################################
 -- Este script insere usuários de exemplo e dados associados.
 -- Assegure-se de que as tabelas (profiles, glucose_readings, etc.)
--- já foram criadas com o SCRIPT 2 do arquivo supabase_schema_management.sql.
+-- já foram criadas com o script do arquivo supabase_schema_create.sql.
 --
 -- ATENÇÃO: Este script assume que a extensão pgcrypto está habilitada.
--- CREATE EXTENSION IF NOT EXISTS "pgcrypto"; (Já incluído no script de criação de tabelas)
+-- (Já incluído no script supabase_schema_create.sql)
 --
 -- As senhas dos usuários de exemplo são 'password123'.
 
@@ -166,21 +184,6 @@ DECLARE
     fixed_bcrypt_hash text := '$2a$10$OBG3kS3cXiGcoHnl9ey.uOEZ4S4049CCFuqgLkPGXjch2S48BKMHy'; -- Hash bcrypt para 'password123'
     current_ts_utc timestamptz := timezone('utc', now());
 BEGIN
-
-    -- COMANDOS PARA ADICIONAR COLUNAS DE METAS À TABELA 'profiles' SE ESTIVEREM FALTANDO
-    -- Execute estes ANTES de rodar este script de povoamento se sua tabela 'profiles' não tiver estas colunas.
-    -- É recomendável fazer backup dos seus dados antes de alterar o esquema.
-    -- Estes comandos já estão sugeridos no arquivo supabase_schema_management.sql antes da criação das tabelas.
-    -- Se você usou o script de criação mais recente, estas colunas já devem existir.
-    /*
-    ALTER TABLE public.profiles
-    ADD COLUMN IF NOT EXISTS language_preference text DEFAULT 'pt-BR',
-    ADD COLUMN IF NOT EXISTS target_glucose_low integer,
-    ADD COLUMN IF NOT EXISTS target_glucose_high integer,
-    ADD COLUMN IF NOT EXISTS hypo_glucose_threshold integer,
-    ADD COLUMN IF NOT EXISTS hyper_glucose_threshold integer,
-    ADD COLUMN IF NOT EXISTS updated_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL;
-    */
 
     -- Inserir Usuários no auth.users
     -- (O trigger handle_new_user criará entradas básicas em public.profiles)
@@ -282,9 +285,9 @@ BEGIN
     RAISE NOTICE 'Análises de refeição de exemplo inseridas.';
 
     -- Lembretes para Ana Silva
-    INSERT INTO public.reminders (user_id, type, name, time, days, enabled, insulin_type, insulin_dose) VALUES
-    (user_ana_id, 'glicemia', 'Glicemia Jejum', '07:00:00', 'todos_os_dias', true, NULL, NULL),
-    (user_ana_id, 'insulina', 'Insulina Basal Noite', '22:00:00', 'todos_os_dias', true, 'Lenta (Glargina)', 22);
+    INSERT INTO public.reminders (user_id, type, name, "time", days, enabled, insulin_type, insulin_dose) VALUES
+    (user_ana_id, 'glicemia', 'Glicemia Jejum', '07:00:00', '["Seg", "Qua", "Sex"]'::jsonb, true, NULL, NULL),
+    (user_ana_id, 'insulina', 'Insulina Basal Noite', '22:00:00', '"todos_os_dias"'::jsonb, true, 'Lenta (Glargina)', 22);
 
     RAISE NOTICE 'Lembretes de exemplo inseridos.';
 
@@ -322,10 +325,11 @@ npm run dev
 
 1.  Tente se cadastrar com um novo usuário na sua aplicação.
 2.  Verifique se o usuário aparece em "Authentication" -> "Users" no seu painel Supabase.
-3.  Verifique se um perfil correspondente é criado na tabela `profiles` (se você implementou o trigger `handle_new_user`).
-4.  Teste as funcionalidades de registro de glicemia, insulina, análise de refeição, etc.
-5.  Verifique se os dados são salvos corretamente nas respectivas tabelas no Supabase.
-6.  Teste o upload de imagens (perfil e refeição) e verifique se aparecem nos buckets do Supabase Storage e se as URLs públicas funcionam na aplicação.
+3.  Verifique se um perfil correspondente é criado na tabela `profiles` (pelo trigger `handle_new_user`).
+4.  Se você executou o script de povoamento, tente fazer login com as credenciais de exemplo.
+5.  Teste as funcionalidades de registro de glicemia, insulina, análise de refeição, etc.
+6.  Verifique se os dados são salvos corretamente nas respectivas tabelas no Supabase.
+7.  Teste o upload de imagens (perfil e refeição) e verifique se aparecem nos buckets do Supabase Storage e se as URLs públicas funcionam na aplicação.
 
 ## Solução de Problemas Comuns
 
@@ -335,8 +339,8 @@ npm run dev
         *   **Ação Secundária:** Verifique as políticas RLS de `SELECT` nos objetos do bucket. Elas devem permitir `SELECT` para `anon` e `authenticated`.
     *   Verifique se o `hostname` no `next.config.ts` está correto e se o servidor Next.js foi reiniciado.
 *   **ERROS DE RLS ou "new row violates row-level security policy"**:
-    *   Verifique se as políticas de RLS nas suas tabelas estão corretas e permitem as operações necessárias (INSERT, SELECT, UPDATE, DELETE) para os usuários autenticados e para `auth.uid() = user_id`.
+    *   Verifique se as políticas de RLS nas suas tabelas (`supabase_schema_create.sql`) estão corretas e permitem as operações necessárias (INSERT, SELECT, UPDATE, DELETE) para os usuários autenticados e para `auth.uid() = user_id`.
 *   **ERRO `column "target_glucose_low" of relation "profiles" does not exist` (ou similar para outras colunas de metas)**:
-    *   Isso indica que sua tabela `profiles` não possui essas colunas. Execute o "SCRIPT 2" do arquivo `supabase_schema_management.sql` para recriar as tabelas com o esquema mais recente (isso apagará os dados existentes nas tabelas) ou, se preferir manter os dados, adicione as colunas manualmente via `ALTER TABLE` (veja a seção de "Opção para Atualizar a Tabela profiles Existente" que estava no guia anterior ou adapte os comandos do script de criação).
+    *   Isso indica que sua tabela `profiles` não possui essas colunas. Execute o script `supabase_schema_create.sql` (após possivelmente rodar `supabase_schema_drop.sql` se quiser limpar tudo) para criar as tabelas com o esquema mais recente.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente!
