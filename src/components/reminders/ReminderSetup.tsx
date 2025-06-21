@@ -174,7 +174,7 @@ export default function ReminderSetup() {
         <CardContent>
           {notificationPermission === 'default' && (
             <Alert variant="info">
-              {/* Icone será adicionado automaticamente pelo componente Alert */}
+              <Info className="h-4 w-4"/>
               <AlertTitle>Permitir Notificações</AlertTitle>
               <AlertDescription>
                 Para receber alertas de lembretes, precisamos da sua permissão para enviar notificações.
@@ -184,16 +184,16 @@ export default function ReminderSetup() {
           )}
           {notificationPermission === 'granted' && (
             <Alert variant="success">
-               {/* Icone será adicionado automaticamente */}
+               <CheckCircle className="h-4 w-4"/>
               <AlertTitle>Permissão Concedida</AlertTitle>
               <AlertDescription>
-                Você está configurado para receber notificações de lembretes.
+                Você está configurado para receber notificações de lembretes. Lembre-se de manter a aba do app aberta.
               </AlertDescription>
             </Alert>
           )}
           {notificationPermission === 'denied' && (
             <Alert variant="destructive">
-               {/* Icone será adicionado automaticamente */}
+               <BellOff className="h-4 w-4"/>
               <AlertTitle>Permissão Negada</AlertTitle>
               <AlertDescription>
                 As notificações foram bloqueadas. Para habilitá-las, você precisará alterar as configurações de notificação do seu navegador para este site e então clicar em "Permitir Notificações" aqui novamente.
@@ -306,8 +306,8 @@ export default function ReminderSetup() {
                 <FormField control={form.control} name="isSimulatedCall" render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
                     <div className="space-y-0.5">
-                      <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4" /> Chamada Simulada (apenas visual)</FormLabel>
-                      <FormDescription>Exibir notificação como uma chamada (apenas visual, texto adaptado).</FormDescription>
+                      <FormLabel className="flex items-center"><Phone className="mr-2 h-4 w-4" /> Chamada Simulada</FormLabel>
+                      <FormDescription>Exibir a notificação com um estilo visual de "chamada telefônica" (não realiza uma chamada real).</FormDescription>
                     </div>
                     <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                   </FormItem>
