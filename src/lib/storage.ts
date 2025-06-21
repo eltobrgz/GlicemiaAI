@@ -1,4 +1,3 @@
-
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog } from '@/types';
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
@@ -7,10 +6,19 @@ import { toast } from '@/hooks/use-toast'; // Import toast
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string> {
   const { data: { session }, error } = await supabase.auth.getSession();
-  if (error || !session?.user?.id) {
-    console.error('Error getting user session or user ID:', error);
+
+  if (error) {
+    // This is a genuine error from the Supabase API
+    console.error('Error fetching user session:', error);
+    throw error;
+  }
+
+  if (!session?.user?.id) {
+    // This is an expected state for a logged-out user.
+    // We shouldn't log this as an error, just throw for upstream handling.
     throw new Error('Usuário não autenticado.');
   }
+
   return session.user.id;
 }
 
