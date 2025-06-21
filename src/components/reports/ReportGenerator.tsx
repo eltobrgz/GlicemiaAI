@@ -15,7 +15,6 @@ import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis
 import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses } from '@/lib/storage';
 import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
-import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
@@ -114,6 +113,7 @@ export default function ReportGenerator() {
       let minGlucose: { value: number; timestamp: string } | null = null;
       let maxGlucose: { value: number; timestamp: string } | null = null;
       let stdDevGlucose: number | null = null;
+      let glucoseCV: number | null = null;
       let timeInTargetPercent: number | null = null;
       let timeBelowTargetPercent: number | null = null;
       let timeAboveTargetPercent: number | null = null;
@@ -133,18 +133,21 @@ export default function ReportGenerator() {
           const mean = averageGlucose;
           const variance = filteredGlucose.reduce((acc, r) => acc + Math.pow(r.value - mean, 2), 0) / (filteredGlucose.length -1);
           stdDevGlucose = Math.sqrt(variance);
+           if (averageGlucose && averageGlucose > 0) {
+            glucoseCV = (stdDevGlucose / averageGlucose) * 100;
+          }
         }
 
-        const tLow = userProfile.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low;
-        const tNormalMin = userProfile.target_glucose_low ?? GLUCOSE_THRESHOLDS.low;
-        const tNormalMax = userProfile.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax;
-        const tHigh = userProfile.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high;
+        const tLow = userProfile.hypo_glucose_threshold ?? 70;
+        const tNormalMin = userProfile.target_glucose_low ?? 70;
+        const tNormalMax = userProfile.target_glucose_high ?? 180;
+        const tHigh = userProfile.hyper_glucose_threshold ?? 250;
 
         filteredGlucose.forEach(r => {
-          if (r.value < tLow) countHypo++;
-          else if (r.value >= tNormalMin && r.value <= tNormalMax) countNormal++;
-          else if (r.value > tNormalMax && r.value <= tHigh) countHigh++;
-          else if (r.value > tHigh) countVeryHigh++;
+            if (r.level === 'baixa') countHypo++;
+            else if (r.level === 'normal') countNormal++;
+            else if (r.level === 'alta') countHigh++;
+            else if (r.level === 'muito_alta') countVeryHigh++;
         });
         
         const totalInRange = countHypo + countNormal + countHigh + countVeryHigh;
@@ -184,6 +187,7 @@ export default function ReportGenerator() {
           minGlucose,
           maxGlucose,
           stdDevGlucose,
+          glucoseCV,
           timeInTargetPercent,
           timeBelowTargetPercent,
           timeAboveTargetPercent,
@@ -269,46 +273,33 @@ export default function ReportGenerator() {
       const imgWidth = imgProps.width;
       const imgHeight = imgProps.height;
       
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      let effectiveImgWidth = imgWidth * ratio;
-      let effectiveImgHeight = imgHeight * ratio;
+      let effectiveImgWidth = imgWidth;
+      let effectiveImgHeight = imgHeight;
 
-      let xOffset = (pdfWidth - effectiveImgWidth) / 2;
-      const pageHeightMm = pdf.internal.pageSize.getHeight();
-      let currentPosition = 0; // Tracks the y-position on the current PDF page
-      let sourceY = 0; // Tracks the y-position on the source canvas
+      if (imgWidth > pdfWidth) {
+        effectiveImgWidth = pdfWidth;
+        effectiveImgHeight = (imgHeight * pdfWidth) / imgWidth;
+      }
 
-      // If image is smaller than one page, center it
-      if (effectiveImgHeight < pageHeightMm) {
-          const yOffset = (pdfHeight - effectiveImgHeight) / 2;
-          pdf.addImage(imgData, 'PNG', xOffset, yOffset, effectiveImgWidth, effectiveImgHeight);
-      } else { // Multi-page logic
-          effectiveImgWidth = pdfWidth; // Fit to width
-          effectiveImgHeight = imgHeight * (pdfWidth / imgWidth); // Scale height proportionally
+      let currentPosition = 0;
+      const pageHeightInPixels = (canvas.width / pdfWidth) * pdfHeight;
 
-          const canvasPageHeight = canvas.height * (pageHeightMm / effectiveImgHeight);
-
-          while(sourceY < canvas.height) {
-              const remainingCanvasHeight = canvas.height - sourceY;
-              const sliceCanvasHeight = Math.min(canvasPageHeight, remainingCanvasHeight);
-
-              const tempCanvas = document.createElement('canvas');
-              tempCanvas.width = canvas.width;
-              tempCanvas.height = sliceCanvasHeight;
-              const tempCtx = tempCanvas.getContext('2d');
-              
-              if(tempCtx) {
-                tempCtx.drawImage(canvas, 0, sourceY, canvas.width, sliceCanvasHeight, 0, 0, canvas.width, sliceCanvasHeight);
-                const pageImgData = tempCanvas.toDataURL('image/png');
-                
-                if (sourceY > 0) { // Add new page for subsequent slices
-                  pdf.addPage();
-                }
-                // Add image slice to PDF, fitting width
-                pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, pageHeightMm * (sliceCanvasHeight / canvasPageHeight) );
-              }
-              sourceY += sliceCanvasHeight;
+      while (currentPosition < canvas.height) {
+        const sliceCanvas = document.createElement('canvas');
+        sliceCanvas.width = canvas.width;
+        sliceCanvas.height = Math.min(pageHeightInPixels, canvas.height - currentPosition);
+        const sliceCtx = sliceCanvas.getContext('2d');
+        
+        if (sliceCtx) {
+          sliceCtx.drawImage(canvas, 0, currentPosition, canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
+          const pageImgData = sliceCanvas.toDataURL('image/png', 1.0);
+          
+          if (currentPosition > 0) {
+            pdf.addPage();
           }
+          pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, (sliceCanvas.height * pdfWidth) / sliceCanvas.width);
+        }
+        currentPosition += pageHeightInPixels;
       }
 
       pdf.save(`GlicemiaAI_Relatorio_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
@@ -401,3 +392,4 @@ export default function ReportGenerator() {
     </Card>
   );
 }
+
