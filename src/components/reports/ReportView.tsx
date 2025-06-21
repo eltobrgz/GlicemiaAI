@@ -4,7 +4,7 @@
 import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent } from '@/components/ui/chart';
+import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
@@ -71,6 +71,24 @@ const COLORS_PIE = {
   above: 'hsl(var(--chart-4))', // orange/yellow
 };
 
+const pieChartConfig = {
+  value: {
+    label: 'Percentual',
+  },
+  'Abaixo do Alvo': {
+    label: 'Abaixo do Alvo',
+    color: COLORS_PIE.below,
+  },
+  'No Alvo': {
+    label: 'No Alvo',
+    color: COLORS_PIE.inRange,
+  },
+  'Acima do Alvo': {
+    label: 'Acima do Alvo',
+    color: COLORS_PIE.above,
+  },
+} satisfies ChartConfig
+
 const SummaryMetric: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; }> = ({ title, value, unit, description }) => (
   <div className="space-y-1">
     <p className="text-sm text-muted-foreground">{title}</p>
@@ -102,9 +120,9 @@ export default function ReportView({ data }: ReportViewProps) {
   const timeInRangeData = useMemo(() => {
     if (summary.timeBelowTargetPercent === null && summary.timeInTargetPercent === null && summary.timeAboveTargetPercent === null) return [];
     return [
-      { name: 'Abaixo do Alvo', value: summary.timeBelowTargetPercent ?? 0, fill: COLORS_PIE.below },
-      { name: 'No Alvo', value: summary.timeInTargetPercent ?? 0, fill: COLORS_PIE.inRange },
-      { name: 'Acima do Alvo', value: summary.timeAboveTargetPercent ?? 0, fill: COLORS_PIE.above },
+      { name: 'Abaixo do Alvo', value: summary.timeBelowTargetPercent ?? 0, color: COLORS_PIE.below },
+      { name: 'No Alvo', value: summary.timeInTargetPercent ?? 0, color: COLORS_PIE.inRange },
+      { name: 'Acima do Alvo', value: summary.timeAboveTargetPercent ?? 0, color: COLORS_PIE.above },
     ].filter(item => item.value > 0);
   }, [summary.timeBelowTargetPercent, summary.timeInTargetPercent, summary.timeAboveTargetPercent]);
 
@@ -201,7 +219,7 @@ export default function ReportView({ data }: ReportViewProps) {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
               <div className="h-[300px] flex justify-center items-center recharts-responsive-container">
-                <ChartContainer config={{}} className="w-full max-w-xs h-full">
+                <ChartContainer config={pieChartConfig} className="w-full h-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <ChartTooltip content={<ChartTooltipContent hideLabel />} />
@@ -218,16 +236,16 @@ export default function ReportView({ data }: ReportViewProps) {
                             );
                           }}
                       >
-                        {timeInRangeData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.fill} /> ))}
+                        {timeInRangeData.map((entry, index) => ( <Cell key={`cell-${index}`} fill={entry.color} /> ))}
                       </Pie>
+                      <ChartLegend content={<ChartLegendContent nameKey="name" />} />
                     </PieChart>
                   </ResponsiveContainer>
                 </ChartContainer>
               </div>
               <div className="space-y-4">
-                  <ChartLegend content={<ChartLegendContent nameKey="name" />} payload={timeInRangeData}/>
-                  <div className="border-t pt-4 mt-4">
-                     <p className="font-semibold">Contagem de Eventos:</p>
+                  <div className="border-t pt-4 mt-4 md:border-none md:pt-0">
+                     <p className="font-semibold text-lg">Contagem de Eventos:</p>
                      <p>Abaixo do Alvo: <span className="font-bold">{summary.countHypo}</span></p>
                      <p>No Alvo: <span className="font-bold">{summary.countNormal}</span></p>
                      <p>Acima do Alvo: <span className="font-bold">{summary.countHigh}</span></p>
@@ -408,4 +426,3 @@ export default function ReportView({ data }: ReportViewProps) {
     </div>
   );
 }
-

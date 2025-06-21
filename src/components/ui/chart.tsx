@@ -3,6 +3,8 @@
 
 import * as React from "react"
 import * as RechartsPrimitive from "recharts"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 import { cn } from "@/lib/utils"
 
@@ -89,7 +91,7 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color
-    return color ? `  --color-${key}: ${color};` : null
+    return color ? `  --color-${key}: ${color.replace(/ /g, '-')};` : null
   })
   .join("\n")}
 }
