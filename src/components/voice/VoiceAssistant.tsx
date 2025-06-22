@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { Mic, MicOff, Loader2 } from 'lucide-react';
@@ -30,6 +31,32 @@ export default function VoiceAssistant() {
   } = useSpeechRecognition();
   const { toast } = useToast();
 
+  // States for making the button draggable
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [wasDragged, setWasDragged] = useState(false);
+
+  useEffect(() => {
+    // This effect runs only on the client to set the initial button position
+    const setInitialPosition = () => {
+      const buttonWidth = 64; // w-16
+      const buttonHeight = 64; // h-16
+      const marginX = window.innerWidth > 768 ? 40 : 24; // md:right-10, right-6
+      const marginY = window.innerHeight > 768 ? 40 : 24; // md:bottom-10, bottom-6
+
+      setPosition({
+        x: window.innerWidth - buttonWidth - marginX,
+        y: window.innerHeight - buttonHeight - marginY,
+      });
+    };
+
+    setInitialPosition();
+    window.addEventListener('resize', setInitialPosition);
+    return () => window.removeEventListener('resize', setInitialPosition);
+  }, []);
+
   useEffect(() => {
     if (isListening) {
       setAssistantState('listening');
@@ -49,7 +76,49 @@ export default function VoiceAssistant() {
     }
   }, [recognitionError]);
 
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (buttonRef.current) {
+      setWasDragged(false);
+      setIsDragging(true);
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+      buttonRef.current.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (isDragging && buttonRef.current) {
+      if (!wasDragged) setWasDragged(true); // Mark as dragged on first move
+      
+      let newX = e.clientX - dragOffset.x;
+      let newY = e.clientY - dragOffset.y;
+
+      // Constrain position within the viewport
+      const buttonWidth = buttonRef.current.offsetWidth;
+      const buttonHeight = buttonRef.current.offsetHeight;
+      newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
+      newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
+
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (buttonRef.current) {
+      setIsDragging(false);
+      buttonRef.current.releasePointerCapture(e.pointerId);
+    }
+  };
+
   const handleButtonClick = () => {
+    // Only open the dialog if the button was clicked, not dragged
+    if (wasDragged) {
+      return;
+    }
+
     if (!hasRecognitionSupport) {
       toast({
         title: "Funcionalidade Indisponível",
@@ -134,11 +203,21 @@ export default function VoiceAssistant() {
   return (
     <>
       <Button
-        className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-50 h-16 w-16 rounded-full shadow-2xl"
+        ref={buttonRef}
+        style={{
+          position: 'fixed',
+          top: `${position.y}px`,
+          left: `${position.x}px`,
+          touchAction: 'none' // Prevents scrolling on mobile while dragging
+        }}
+        className="z-50 h-16 w-16 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
         size="icon"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         onClick={handleButtonClick}
         aria-label="Assistente de Voz"
-        title="Assistente de Voz"
+        title="Assistente de Voz (clique para abrir, arraste para mover)"
       >
         <Mic className="h-8 w-8" />
       </Button>
