@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from '@/components/ui/dialog';
-import { Mic, MicOff, Loader2, Send } from 'lucide-react';
+import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { interpretVoiceLog, type InterpretedLog } from '@/ai/flows/interpret-voice-log';
@@ -34,7 +34,6 @@ export default function VoiceAssistant() {
     if (isListening) {
       setAssistantState('listening');
     } else if (assistantState === 'listening') {
-      // When listening stops, if we have a transcript, process it.
       if (transcript.trim()) {
         handleProcessTranscript(transcript);
       } else {
@@ -50,20 +49,32 @@ export default function VoiceAssistant() {
     }
   }, [recognitionError]);
 
+  const handleButtonClick = () => {
+    if (!hasRecognitionSupport) {
+      toast({
+        title: "Funcionalidade Indisponível",
+        description: "O reconhecimento de voz não é suportado pelo seu navegador.",
+        variant: 'destructive'
+      });
+      return;
+    }
+    setIsOpen(true);
+  };
+
   const handleOpenChange = (open: boolean) => {
-    if (!open && isListening) {
-      stopListening();
+    if (!open) {
+      if (isListening) {
+        stopListening();
+      }
+      resetState();
     }
     setIsOpen(open);
-    if (open) {
-        resetState();
-    }
   };
   
   const resetState = () => {
     setAssistantState('idle');
     setConfirmationData(null);
-  }
+  };
 
   const handleProcessTranscript = async (text: string) => {
     setAssistantState('processing');
@@ -97,13 +108,7 @@ export default function VoiceAssistant() {
     });
     setIsOpen(false);
     resetState();
-  }
-
-  if (!hasRecognitionSupport) {
-    // Don't render the button at all if the browser doesn't support it.
-    // A console warning is logged from the hook.
-    return null;
-  }
+  };
 
   const renderConfirmationForm = () => {
     if (!confirmationData) return null;
@@ -114,13 +119,13 @@ export default function VoiceAssistant() {
 
     switch (confirmationData.logType) {
         case 'glucose':
-            return <GlucoseLogForm {...commonProps} initialData={confirmationData.data} />;
+            return <GlucoseLogForm {...commonProps} initialData={{...confirmationData.data}} />;
         case 'insulin':
-            return <InsulinLogForm {...commonProps} initialData={confirmationData.data} />;
+            return <InsulinLogForm {...commonProps} initialData={{...confirmationData.data}} />;
         case 'medication':
-            return <MedicationLogForm {...commonProps} initialData={confirmationData.data} />;
+            return <MedicationLogForm {...commonProps} initialData={{...confirmationData.data}} />;
         case 'activity':
-            return <ActivityLogForm {...commonProps} initialData={confirmationData.data} />;
+            return <ActivityLogForm {...commonProps} initialData={{...confirmationData.data}} />;
         default:
             return <p>Tipo de log desconhecido.</p>;
     }
@@ -131,7 +136,7 @@ export default function VoiceAssistant() {
       <Button
         className="fixed bottom-6 right-6 md:bottom-10 md:right-10 z-50 h-16 w-16 rounded-full shadow-2xl"
         size="icon"
-        onClick={() => setIsOpen(true)}
+        onClick={handleButtonClick}
         aria-label="Assistente de Voz"
         title="Assistente de Voz"
       >

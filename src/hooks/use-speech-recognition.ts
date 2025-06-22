@@ -30,7 +30,8 @@ export function useSpeechRecognition() {
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      setError('O reconhecimento de voz não é suportado por este navegador.');
+      console.warn('Speech Recognition not supported by this browser.');
+      // setError('O reconhecimento de voz não é suportado por este navegador.');
       return;
     }
 
