@@ -1,3 +1,4 @@
+
 # GlicemiaAI - Seu Assistente Inteligente para Controle Glicêmico
 
 ## Visão Geral
@@ -96,7 +97,7 @@ Gere relatórios completos para analisar suas tendências e compartilhar com seu
 -   **O que o relatório inclui:**
     *   **Métricas Glicêmicas:** Média, mínima, máxima, desvio padrão e **coeficiente de variação (CV%)**.
     *   **Tempo no Alvo:** Gráfico de pizza mostrando a porcentagem de tempo que sua glicemia ficou abaixo, dentro e acima da meta.
-    *   **Resumos:** Totais e médias de insulina, atividades e refeições.
+    *   **Resumos:** Totais e médias de insulina, outros medicamentos, atividades e refeições.
     *   **Gráficos Visuais:** Tendências diárias de glicemia, insulina e atividades.
     *   **Logs Detalhados:** Tabelas com todos os registros individuais do período.
     *   **Exportação para PDF:** Clique em "Exportar para PDF" para gerar um arquivo fácil de compartilhar.
@@ -109,7 +110,7 @@ Descubra padrões e receba dicas geradas pela inteligência artificial.
 -   **Como:** Acesse a página `Insights IA`.
 -   **O que você encontrará:**
     *   Cards com suas métricas chave (glicemia média, tempo no alvo, tendência).
-    *   Resumo de quantos registros de insulina, atividade e refeições você fez nos últimos 7 dias.
+    *   Resumo de quantos registros de insulina, outros medicamentos, atividade e refeições você fez nos últimos 7 dias.
     *   Um gráfico de tendência da sua glicemia média na última semana.
     *   Uma **dica personalizada** gerada pela IA com base no que ela observou em seus dados.
 
@@ -142,3 +143,5 @@ Ajuste o GlicemiaAI às suas preferências.
 -   **Aparência:** Alterne entre o **Modo Escuro** e o **Modo Claro**.
 -   **Idioma:** Defina o idioma preferido para as respostas da IA (ex: análise de refeição).
 -   **Sair:** Desconecte-se da sua conta com segurança.
+
+    
