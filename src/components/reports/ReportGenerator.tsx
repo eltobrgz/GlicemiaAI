@@ -11,8 +11,8 @@ import type { DateRange } from 'react-day-picker';
 import { format, subDays, startOfMonth, endOfMonth, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Loader2, FileSearch, Download } from 'lucide-react';
-import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis } from '@/types';
-import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses } from '@/lib/storage';
+import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis, MedicationLog } from '@/types';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses, getMedicationLogs } from '@/lib/storage';
 import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -84,11 +84,12 @@ export default function ReportGenerator() {
     setReportData(null);
 
     try {
-      const [allGlucoseReadings, allInsulinLogs, allActivityLogs, allMealAnalyses] = await Promise.all([
+      const [allGlucoseReadings, allInsulinLogs, allActivityLogs, allMealAnalyses, allMedicationLogs] = await Promise.all([
         getGlucoseReadings(userProfile),
         getInsulinLogs(),
         getActivityLogs(),
         getMealAnalyses(),
+        getMedicationLogs(),
       ]);
 
       const filteredGlucose = allGlucoseReadings.filter(r => {
@@ -106,6 +107,10 @@ export default function ReportGenerator() {
       const filteredMealAnalyses = allMealAnalyses.filter(meal => {
         const mealDate = parseISO(meal.timestamp);
         return mealDate >= range.from! && mealDate <= range.to!;
+      });
+      const filteredMedicationLogs = allMedicationLogs.filter(log => {
+        const logDate = parseISO(log.timestamp);
+        return logDate >= range.from! && logDate <= range.to!;
       });
 
 
@@ -181,6 +186,7 @@ export default function ReportGenerator() {
         insulinLogs: filteredInsulin,
         activityLogs: filteredActivityLogs,
         mealAnalyses: filteredMealAnalyses,
+        medicationLogs: filteredMedicationLogs,
         userProfile,
         summary: {
           averageGlucose,
@@ -205,6 +211,7 @@ export default function ReportGenerator() {
           averageMealCarbs,
           averageMealProtein,
           averageMealFat,
+          totalMedications: filteredMedicationLogs.length,
         },
       });
 
@@ -392,4 +399,3 @@ export default function ReportGenerator() {
     </Card>
   );
 }
-

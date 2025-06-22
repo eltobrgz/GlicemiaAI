@@ -1,4 +1,4 @@
-import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog } from '@/types';
+import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
 import { toast } from '@/hooks/use-toast'; // Import toast
@@ -630,6 +630,74 @@ export async function deleteActivityLog(id: string): Promise<void> {
 
   if (error) {
     console.error('Error deleting activity log:', error);
+    throw error;
+  }
+}
+
+// Medication Logs (Novo)
+export async function getMedicationLogs(): Promise<MedicationLog[]> {
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('medication_logs')
+    .select('*')
+    .eq('user_id', userId)
+    .order('timestamp', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching medication logs:', error);
+    throw error;
+  }
+  return data as MedicationLog[];
+}
+
+export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'created_at'> & { id?: string }): Promise<MedicationLog> {
+  const userId = await getCurrentUserId();
+  const logToSave = {
+    id: log.id,
+    user_id: userId,
+    timestamp: log.timestamp,
+    medication_name: log.medication_name,
+    dosage: log.dosage,
+    notes: log.notes || null,
+  };
+
+  let savedData;
+  if (log.id) {
+    const { id, ...updateData } = logToSave;
+    const { data, error } = await supabase
+      .from('medication_logs')
+      .update(updateData)
+      .eq('id', log.id)
+      .eq('user_id', userId)
+      .select()
+      .single();
+    if (error) throw error;
+    savedData = data;
+  } else {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { id, ...insertData } = logToSave;
+    const { data, error } = await supabase
+      .from('medication_logs')
+      .insert(insertData)
+      .select()
+      .single();
+    if (error) throw error;
+    savedData = data;
+  }
+  
+  return savedData as MedicationLog;
+}
+
+export async function deleteMedicationLog(id: string): Promise<void> {
+  const userId = await getCurrentUserId();
+  const { error } = await supabase
+    .from('medication_logs')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error deleting medication log:', error);
     throw error;
   }
 }

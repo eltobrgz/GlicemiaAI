@@ -196,7 +196,7 @@ export interface Database {
           custom_sound?: string | null
         }
       }
-      activity_logs: { // Nova tabela
+      activity_logs: {
         Row: {
           id: string // uuid, primary key
           user_id: string // uuid, foreign key to auth.users.id
@@ -222,6 +222,32 @@ export interface Database {
           activity_type?: string
           duration_minutes?: number
           intensity?: string | null
+          notes?: string | null
+        }
+      }
+      medication_logs: { // Nova tabela
+        Row: {
+          id: string // uuid, primary key
+          user_id: string // uuid, foreign key to auth.users.id
+          timestamp: string // timestamp with time zone
+          medication_name: string
+          dosage: string // Usar string para flexibilidade (e.g., "500mg", "1 comprimido")
+          notes: string | null
+          created_at: string // timestamp with time zone
+        }
+        Insert: {
+          id?: string // uuid
+          user_id: string
+          timestamp: string
+          medication_name: string
+          dosage: string
+          notes?: string | null
+          created_at?: string
+        }
+        Update: {
+          timestamp?: string
+          medication_name?: string
+          dosage?: string
           notes?: string | null
         }
       }

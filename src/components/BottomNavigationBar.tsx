@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText } from 'lucide-react'; // FileText Adicionado
+import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus } from 'lucide-react'; // ClipboardPlus Adicionado
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -22,10 +22,11 @@ export default function BottomNavigationBar() {
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { href: '/log/glucose', label: 'Glicemia', icon: Droplet },
     { href: '/log/insulin', label: 'Insulina', icon: Pill },
+    { href: '/log/medication', label: 'Medicamento', icon: ClipboardPlus },
     { href: '/log/activity', label: 'Atividade', icon: Bike },
     { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
-    { href: '/reports', label: 'Relatórios', icon: FileText }, // Adicionado
+    { href: '/reports', label: 'Relatórios', icon: FileText }, 
     { href: '/profile', label: 'Perfil', icon: User },
     { href: '/reminders', label: 'Lembretes', icon: BellRing },
     { href: '/insights', label: 'Insights IA', icon: BarChart3 },
@@ -43,7 +44,7 @@ export default function BottomNavigationBar() {
   const popoverItems = allNavItems.filter(
     item => !directVisibleItems.some(dItem => dItem.href === item.href)
   ).sort((a, b) => { // Optional: sort popover items for consistency
-    const order = ['/calendar', '/reports', '/log/activity', '/profile', '/reminders', '/insights', '/settings'];
+    const order = ['/calendar', '/reports', '/log/activity', '/log/medication', '/profile', '/reminders', '/insights', '/settings'];
     return order.indexOf(a.href) - order.indexOf(b.href);
   });
 

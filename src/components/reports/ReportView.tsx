@@ -1,14 +1,14 @@
 
 'use client';
 
-import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis } from '@/types';
+import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis, MedicationLog } from '@/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { ResponsiveContainer, LineChart, CartesianGrid, XAxis, YAxis, Tooltip, Legend, Line, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, type ChartConfig } from '@/components/ui/chart';
 import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
-import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info, Bike, Utensils, Calculator, FileSpreadsheet } from 'lucide-react';
+import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info, Bike, Utensils, Calculator, FileSpreadsheet, ClipboardPlus } from 'lucide-react';
 import { getGlucoseLevelColor, formatDateTime } from '@/lib/utils';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 import { useMemo } from 'react';
@@ -34,6 +34,7 @@ export interface ReportData {
   insulinLogs: InsulinLog[];
   activityLogs: ActivityLog[];
   mealAnalyses: MealAnalysis[];
+  medicationLogs: MedicationLog[];
   userProfile: UserProfile;
   summary: {
     averageGlucose: number | null;
@@ -58,6 +59,7 @@ export interface ReportData {
     averageMealCarbs: number | null;
     averageMealProtein: number | null;
     averageMealFat: number | null;
+    totalMedications: number;
   };
 }
 
@@ -102,7 +104,7 @@ const SummaryMetric: React.FC<{ title: string; value: string | number | null; un
 
 
 export default function ReportView({ data }: ReportViewProps) {
-  const { period, glucoseReadings, insulinLogs, activityLogs, mealAnalyses, userProfile, summary } = data;
+  const { period, glucoseReadings, insulinLogs, activityLogs, mealAnalyses, medicationLogs, userProfile, summary } = data;
 
   const glucoseTrendData = useMemo(() => {
     if (!glucoseReadings || glucoseReadings.length === 0) return [];
@@ -163,7 +165,7 @@ export default function ReportView({ data }: ReportViewProps) {
     }).filter(d => d.duration !== null);
   }, [activityLogs, period.start, period.end]);
   
-  const hasData = glucoseReadings.length > 0 || insulinLogs.length > 0 || activityLogs.length > 0 || mealAnalyses.length > 0;
+  const hasData = glucoseReadings.length > 0 || insulinLogs.length > 0 || activityLogs.length > 0 || mealAnalyses.length > 0 || medicationLogs.length > 0;
 
   if (!hasData) {
     return (
@@ -257,7 +259,7 @@ export default function ReportView({ data }: ReportViewProps) {
         )}
         
         {/* Other Summaries */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {insulinLogs.length > 0 && (
             <Card className="shadow-md">
                 <CardHeader><CardTitle className="flex items-center"><Syringe className="mr-2 h-5 w-5 text-accent"/>Resumo de Insulina</CardTitle></CardHeader>
@@ -265,6 +267,14 @@ export default function ReportView({ data }: ReportViewProps) {
                     <SummaryMetric title="Total Administrado" value={summary.totalInsulin?.toFixed(1)} unit="U"/>
                     <SummaryMetric title="Aplicações" value={summary.insulinApplications}/>
                     <SummaryMetric title="Média Diária" value={summary.averageDailyInsulin?.toFixed(1)} unit="U/dia" />
+                </CardContent>
+            </Card>
+            )}
+            {medicationLogs.length > 0 && (
+            <Card className="shadow-md">
+                <CardHeader><CardTitle className="flex items-center"><ClipboardPlus className="mr-2 h-5 w-5 text-purple-600"/>Resumo de Medicamentos</CardTitle></CardHeader>
+                <CardContent className="grid grid-cols-1 gap-4">
+                    <SummaryMetric title="Total de Registros" value={summary.totalMedications} />
                 </CardContent>
             </Card>
             )}
@@ -352,9 +362,10 @@ export default function ReportView({ data }: ReportViewProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="glucose">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="glucose" disabled={glucoseReadings.length === 0}>Glicemia</TabsTrigger>
                     <TabsTrigger value="insulin" disabled={insulinLogs.length === 0}>Insulina</TabsTrigger>
+                    <TabsTrigger value="medication" disabled={medicationLogs.length === 0}>Medicamentos</TabsTrigger>
                     <TabsTrigger value="activity" disabled={activityLogs.length === 0}>Atividades</TabsTrigger>
                     <TabsTrigger value="meals" disabled={mealAnalyses.length === 0}>Refeições</TabsTrigger>
                 </TabsList>
@@ -383,6 +394,21 @@ export default function ReportView({ data }: ReportViewProps) {
                                     <TableCell>{formatDateTime(log.timestamp)}</TableCell>
                                     <TableCell>{log.type}</TableCell>
                                     <TableCell className="font-bold">{log.dose}</TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
+                </TabsContent>
+                <TabsContent value="medication">
+                     <Table>
+                        <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Medicamento</TableHead><TableHead>Dosagem</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
+                        <TableBody>
+                            {medicationLogs.map(log => (
+                                <TableRow key={log.id}>
+                                    <TableCell>{formatDateTime(log.timestamp)}</TableCell>
+                                    <TableCell>{log.medication_name}</TableCell>
+                                    <TableCell>{log.dosage}</TableCell>
+                                    <TableCell>{log.notes || '-'}</TableCell>
                                 </TableRow>
                             ))}
                         </TableBody>

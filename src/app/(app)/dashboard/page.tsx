@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2, Bike } from 'lucide-react';
+import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2, Bike, ClipboardPlus } from 'lucide-react';
 import type { GlucoseReading, InsulinLog } from '@/types';
 import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; 
 import { formatDateTime, getGlucoseLevelColor } from '@/lib/utils';
@@ -59,7 +59,7 @@ export default function DashboardPage() {
     { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet, iconColor: 'text-blue-500' },
     { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill, iconColor: 'text-green-500' },
     { href: '/log/activity', label: 'Registrar Atividade', icon: Bike, iconColor: 'text-orange-500' },
-    { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera, iconColor: 'text-purple-500' },
+    { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus, iconColor: 'text-purple-500' },
   ];
 
   return (
@@ -68,7 +68,7 @@ export default function DashboardPage() {
 
       <section>
         <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"> {/* Adjusted for 4 items */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           {quickAccessItems.map((item) => (
             <Link href={item.href} key={item.href} className="block group">
                 <Card className="shadow-md hover:shadow-lg transition-all duration-200 ease-in-out group-hover:border-primary">
@@ -82,8 +82,8 @@ export default function DashboardPage() {
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card className="shadow-lg lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center">
               <Droplet className="mr-2 h-6 w-6 text-primary" />
@@ -151,7 +151,7 @@ export default function DashboardPage() {
             </Link>
           </CardContent>
         </Card>
-      </section>
+      </div>
       
       <Card className="shadow-lg">
         <CardHeader>

@@ -21,6 +21,16 @@ export interface InsulinLog {
   created_at: string;
 }
 
+export interface MedicationLog { // Novo tipo
+  id: string;
+  user_id: string;
+  timestamp: string;
+  medication_name: string;
+  dosage: string;
+  notes?: string;
+  created_at: string;
+}
+
 export type DayOfWeek = 'Dom' | 'Seg' | 'Ter' | 'Qua' | 'Qui' | 'Sex' | 'Sab';
 
 export interface ReminderConfig {

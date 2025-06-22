@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText } from 'lucide-react'; // FileText Adicionado
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus } from 'lucide-react'; // ClipboardPlus Adicionado
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
@@ -22,10 +22,11 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet },
   { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
+  { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus }, // Adicionado
   { href: '/log/activity', label: 'Registrar Atividade', icon: Bike },
   { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
   { href: '/calendar', label: 'Calendário', icon: CalendarDays },
-  { href: '/reports', label: 'Relatórios', icon: FileText }, // Adicionado
+  { href: '/reports', label: 'Relatórios', icon: FileText }, 
   { href: '/profile', label: 'Meu Perfil', icon: User },
   { href: '/reminders', label: 'Lembretes', icon: BellRing },
   { href: '/insights', label: 'Insights IA', icon: BarChart3 },

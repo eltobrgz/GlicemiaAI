@@ -6,8 +6,9 @@ import PageHeader from '@/components/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import GlucoseHistoryCalendar from '@/components/glucose/GlucoseHistoryCalendar';
 import InsulinHistoryCalendar from '@/components/insulin/InsulinHistoryCalendar';
-import ActivityHistoryCalendar from '@/components/activity/ActivityHistoryCalendar'; // Novo
-import { Droplet, Pill, Bike } from 'lucide-react'; // Bike adicionado
+import ActivityHistoryCalendar from '@/components/activity/ActivityHistoryCalendar';
+import MedicationHistoryCalendar from '@/components/medication/MedicationHistoryCalendar'; // Novo
+import { Droplet, Pill, Bike, ClipboardPlus } from 'lucide-react'; // ClipboardPlus adicionado
 
 export default function CalendarPage() {
   const searchParams = useSearchParams();
@@ -22,10 +23,10 @@ export default function CalendarPage() {
     <div className="space-y-6">
       <PageHeader
         title="Calendário de Acompanhamento"
-        description="Visualize suas medições de glicemia, registros de insulina e atividades físicas."
+        description="Visualize seus registros de saúde, incluindo glicemia, insulina, atividades e medicamentos."
       />
       <Tabs defaultValue={defaultTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="grid w-full grid-cols-3"> {/* Alterado para 3 colunas */}
+        <TabsList className="grid w-full grid-cols-4"> {/* Alterado para 4 colunas */}
           <TabsTrigger value="glucose">
             <Droplet className="mr-2 h-4 w-4" />
             Glicemia
@@ -34,9 +35,13 @@ export default function CalendarPage() {
             <Pill className="mr-2 h-4 w-4" />
             Insulina
           </TabsTrigger>
-          <TabsTrigger value="activity"> {/* Nova aba */}
+          <TabsTrigger value="activity">
             <Bike className="mr-2 h-4 w-4" />
             Atividade
+          </TabsTrigger>
+          <TabsTrigger value="medication"> {/* Nova aba */}
+            <ClipboardPlus className="mr-2 h-4 w-4" />
+            Medicamentos
           </TabsTrigger>
         </TabsList>
         <TabsContent value="glucose">
@@ -45,8 +50,11 @@ export default function CalendarPage() {
         <TabsContent value="insulin">
           <InsulinHistoryCalendar />
         </TabsContent>
-        <TabsContent value="activity"> {/* Novo conteúdo de aba */}
+        <TabsContent value="activity">
           <ActivityHistoryCalendar />
+        </TabsContent>
+        <TabsContent value="medication"> {/* Novo conteúdo de aba */}
+          <MedicationHistoryCalendar />
         </TabsContent>
       </Tabs>
     </div>
