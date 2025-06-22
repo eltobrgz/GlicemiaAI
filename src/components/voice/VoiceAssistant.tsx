@@ -41,8 +41,8 @@ export default function VoiceAssistant() {
   useEffect(() => {
     // This effect runs only on the client to set the initial button position
     const setInitialPosition = () => {
-      const buttonWidth = 64; // w-16
-      const buttonHeight = 64; // h-16
+      const buttonWidth = 56; // w-14
+      const buttonHeight = 56; // h-14
       const marginX = window.innerWidth > 768 ? 40 : 24; // md:right-10, right-6
       const marginY = window.innerHeight > 768 ? 40 : 24; // md:bottom-10, bottom-6
 
@@ -210,7 +210,7 @@ export default function VoiceAssistant() {
           left: `${position.x}px`,
           touchAction: 'none' // Prevents scrolling on mobile while dragging
         }}
-        className="z-50 h-16 w-16 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
+        className="z-50 h-14 w-14 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
         size="icon"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -219,7 +219,7 @@ export default function VoiceAssistant() {
         aria-label="Assistente de Voz"
         title="Assistente de Voz (clique para abrir, arraste para mover)"
       >
-        <Mic className="h-8 w-8" />
+        <Mic className="h-7 w-7" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
