@@ -1,20 +1,40 @@
--- #####################################################################
--- # SCRIPT PARA APAGAR COMPLETAMENTE TODAS AS TABELAS DA APLICAÇÃO   #
--- #####################################################################
--- ATENÇÃO: ESTE SCRIPT APAGARÁ TODOS OS DADOS DAS TABELAS DA APLICAÇÃO.
--- USE COM EXTREMA CAUTELA. FAÇA BACKUP ANTES SE NECESSÁRIO.
--- Descomente as linhas abaixo para executar.
+--------------------------------------------------------------------------------
+-- GlicemiaAI - SCRIPT DE EXCLUSÃO DO ESQUEMA DO BANCO DE DADOS
+--
+-- ATENÇÃO! ESTE SCRIPT É DESTRUTIVO.
+--
+-- Ele irá:
+-- 1. Apagar TODAS as tabelas da aplicação (`medication_logs`, `activity_logs`, `reminders`, `meal_analyses`, `insulin_logs`, `glucose_readings`, `profiles`).
+-- 2. Apagar a função e o trigger que cuidam da criação de novos perfis.
+-- 3. (Opcional, descomente para usar) Apagar TODOS os usuários da tabela `auth.users`.
+--
+-- USE COM EXTREMO CUIDADO. Ideal para resetar completamente o ambiente de desenvolvimento.
+--
+-- INSTRUÇÕES DE USO:
+-- 1. Navegue até o SQL Editor no seu painel Supabase.
+-- 2. Copie e cole o conteúdo deste arquivo.
+-- 3. **DESCOMENTE** as linhas `DROP TABLE IF EXISTS ...` que você deseja executar.
+-- 4. Clique em "RUN".
+--------------------------------------------------------------------------------
 
--- DROP TABLE IF EXISTS public.activity_logs CASCADE;
--- DROP TABLE IF EXISTS public.reminders CASCADE;
--- DROP TABLE IF EXISTS public.meal_analyses CASCADE;
--- DROP TABLE IF EXISTS public.insulin_logs CASCADE;
--- DROP TABLE IF EXISTS public.glucose_readings CASCADE;
--- DROP TABLE IF EXISTS public.profiles CASCADE; -- Deve ser a última tabela relacionada a dados do usuário, ou deletar auth.users primeiro
+-- Apaga as tabelas. A ordem é importante devido às Foreign Keys.
+DROP TABLE IF EXISTS public.medication_logs;
+DROP TABLE IF EXISTS public.activity_logs;
+DROP TABLE IF EXISTS public.reminders;
+DROP TABLE IF EXISTS public.meal_analyses;
+DROP TABLE IF EXISTS public.insulin_logs;
+DROP TABLE IF EXISTS public.glucose_readings;
+DROP TABLE IF EXISTS public.profiles;
 
--- Para apagar os usuários e todos os dados relacionados por cascade:
--- Descomente a linha abaixo COM MUITO CUIDADO. Isso apagará os usuários do sistema e, por CASCADE,
--- os registros nas tabelas que têm user_id como foreign key.
+-- Apaga a função e o trigger.
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+
+-- CUIDADO: O comando abaixo apaga TODOS os usuários da sua aplicação.
+-- Descomente apenas se tiver certeza absoluta que quer limpar todos os usuários.
 -- DELETE FROM auth.users;
 
--- SELECT 'Script de deleção de tabelas concluído (se linhas foram descomentadas).';
+--------------------------------------------------------------------------------
+-- FIM DO SCRIPT
+--------------------------------------------------------------------------------

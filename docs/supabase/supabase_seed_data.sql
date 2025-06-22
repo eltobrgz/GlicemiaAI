@@ -1,140 +1,121 @@
+--------------------------------------------------------------------------------
+-- GlicemiaAI - SCRIPT DE POVOAMENTO DE DADOS (SEED)
+--
+-- Este script irá:
+-- 1.  Criar dois usuários de exemplo (`usuario.teste@example.com` e `medico.teste@example.com`).
+-- 2.  Povoar as tabelas com dados de exemplo para o `usuario.teste@example.com`, incluindo glicemia, insulina, medicamentos, atividades, etc.
+--
+-- INSTRUÇÕES DE USO:
+-- 1.  Certifique-se de que as tabelas já foram criadas (execute `supabase_schema_create.sql` primeiro).
+-- 2.  Para facilitar o teste, você pode desabilitar a confirmação de email no painel do Supabase em "Authentication" -> "Settings".
+-- 3.  Navegue até o SQL Editor no seu painel Supabase.
+-- 4.  Copie e cole TODO o conteúdo deste arquivo.
+-- 5.  Clique em "RUN".
+-- 6.  Verifique a saída "Messages" para as credenciais de login dos usuários de exemplo.
+--------------------------------------------------------------------------------
 
--- #####################################################################
--- # SCRIPT PARA POVOAR O BANCO DE DADOS COM DADOS DE EXEMPLO         #
--- #####################################################################
--- Este script insere usuários de exemplo e dados associados.
--- Assegure-se de que as tabelas (profiles, glucose_readings, etc.)
--- já foram criadas com o script do arquivo supabase_schema_create.sql.
---
--- ATENÇÃO: Este script assume que a extensão pgcrypto está habilitada.
--- (Já incluído no script supabase_schema_create.sql)
---
--- As senhas dos usuários de exemplo são 'password123'.
+-- Desabilita a segurança a nível de linha temporariamente para inserir dados
+-- como se fôssemos o sistema, não um usuário específico.
+ALTER TABLE public.profiles DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.glucose_readings DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.insulin_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.medication_logs DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meal_analyses DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reminders DISABLE ROW LEVEL SECURITY;
 
 DO $$
 DECLARE
-    user_ana_id uuid := uuid_generate_v4();
-    user_bruno_id uuid := uuid_generate_v4();
-    user_charles_id uuid := uuid_generate_v4();
-    fixed_bcrypt_hash text := '$2a$10$OBG3kS3cXiGcoHnl9ey.uOEZ4S4049CCFuqgLkPGXjch2S48BKMHy'; -- Hash bcrypt para 'password123'
-    current_ts_utc timestamptz := timezone('utc', now());
+    -- Variáveis para armazenar os IDs dos usuários criados
+    test_user_id UUID;
+    doctor_user_id UUID;
 BEGIN
 
-    -- Inserir Usuários no auth.users
-    -- (O trigger handle_new_user criará entradas básicas em public.profiles)
-    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, recovery_token, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_sent_at)
-    VALUES
-        ('00000000-0000-0000-0000-000000000000', user_ana_id, 'authenticated', 'authenticated', 'ana.silva@example.com', fixed_bcrypt_hash, current_ts_utc, NULL, NULL, current_ts_utc,
-        '{"provider":"email","providers":["email"]}',
-        jsonb_build_object('full_name', 'Ana Silva', 'language_preference', 'pt-BR', 'avatar_url', 'https://placehold.co/150x150.png?text=AS'),
-        current_ts_utc, current_ts_utc, NULL, '', NULL
-        ),
-        ('00000000-0000-0000-0000-000000000000', user_bruno_id, 'authenticated', 'authenticated', 'bruno.costa@example.com', fixed_bcrypt_hash, current_ts_utc, NULL, NULL, current_ts_utc,
-        '{"provider":"email","providers":["email"]}',
-        jsonb_build_object('full_name', 'Bruno Costa', 'language_preference', 'pt-BR', 'avatar_url', 'https://placehold.co/150x150.png?text=BC'),
-        current_ts_utc, current_ts_utc, NULL, '', NULL
-        ),
-        ('00000000-0000-0000-0000-000000000000', user_charles_id, 'authenticated', 'authenticated', 'charles.smith@example.com', fixed_bcrypt_hash, current_ts_utc, NULL, NULL, current_ts_utc,
-        '{"provider":"email","providers":["email"]}',
-        jsonb_build_object('full_name', 'Charles Smith', 'language_preference', 'en-US', 'avatar_url', 'https://placehold.co/150x150.png?text=CS'),
-        current_ts_utc, current_ts_utc, NULL, '', NULL
-        );
-
-    RAISE NOTICE 'Usuários de exemplo inseridos em auth.users.';
-    RAISE NOTICE 'Ana Silva: ana.silva@example.com / password123 (ID: %)', user_ana_id;
-    RAISE NOTICE 'Bruno Costa: bruno.costa@example.com / password123 (ID: %)', user_bruno_id;
-    RAISE NOTICE 'Charles Smith: charles.smith@example.com / password123 (ID: %)', user_charles_id;
-
-    -- Atualizar Perfis em public.profiles (o trigger já criou a linha, aqui adicionamos detalhes)
-    -- Certifique-se de que as colunas target_glucose_low, target_glucose_high, hypo_glucose_threshold, hyper_glucose_threshold
-    -- existem na sua tabela profiles antes de executar este script.
-    -- Se não existirem, execute os comandos ALTER TABLE apropriados (veja SUPABASE_SETUP_GUIDE.md).
-    UPDATE public.profiles SET
-        name = 'Ana Silva',
-        email = 'ana.silva@example.com', -- Redundante se o trigger pegar do auth.users, mas garante
-        avatar_url = 'https://placehold.co/150x150.png?text=AS',
-        date_of_birth = '1985-05-15',
-        diabetes_type = 'tipo1',
-        language_preference = 'pt-BR',
-        target_glucose_low = 80,
-        target_glucose_high = 160,
-        hypo_glucose_threshold = 70,
-        hyper_glucose_threshold = 200,
-        updated_at = current_ts_utc
-    WHERE id = user_ana_id;
-
-    UPDATE public.profiles SET
-        name = 'Bruno Costa',
-        email = 'bruno.costa@example.com',
-        avatar_url = 'https://placehold.co/150x150.png?text=BC',
-        date_of_birth = '1992-11-30',
-        diabetes_type = 'tipo2',
-        language_preference = 'pt-BR',
-        target_glucose_low = 90,
-        target_glucose_high = 180,
-        hypo_glucose_threshold = 75,
-        hyper_glucose_threshold = 220,
-        updated_at = current_ts_utc
-    WHERE id = user_bruno_id;
+    -- 1. Criar usuários de exemplo
+    -- Senha para ambos é "password123"
     
-    UPDATE public.profiles SET
-        name = 'Charles Smith',
-        email = 'charles.smith@example.com',
-        avatar_url = 'https://placehold.co/150x150.png?text=CS',
-        date_of_birth = '1978-07-20',
-        diabetes_type = 'outro',
-        language_preference = 'en-US',
-        target_glucose_low = 70,
-        target_glucose_high = 150,
-        hypo_glucose_threshold = 65,
-        hyper_glucose_threshold = 180,
-        updated_at = current_ts_utc
-    WHERE id = user_charles_id;
+    -- Cria o primeiro usuário e obtém seu ID
+    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, recovery_token, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_sent_at, confirmed_at)
+    VALUES (
+        '00000000-0000-0000-0000-000000000000', uuid_generate_v4(), 'authenticated', 'authenticated', 'usuario.teste@example.com', crypt('password123', gen_salt('bf')), NOW(), NULL, NULL, NULL,
+        '{"provider": "email", "providers": ["email"]}',
+        '{"full_name": "Usuário de Teste"}',
+        NOW(), NOW(), NULL, '', NULL, NOW()
+    ) RETURNING id INTO test_user_id;
 
-    RAISE NOTICE 'Perfis de exemplo atualizados em public.profiles.';
+    -- Cria o segundo usuário (médico) e obtém seu ID
+    INSERT INTO auth.users (instance_id, id, aud, role, email, encrypted_password, email_confirmed_at, recovery_token, recovery_sent_at, last_sign_in_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at, confirmation_token, email_change, email_change_sent_at, confirmed_at)
+    VALUES (
+        '00000000-0000-0000-0000-000000000000', uuid_generate_v4(), 'authenticated', 'authenticated', 'medico.teste@example.com', crypt('password123', gen_salt('bf')), NOW(), NULL, NULL, NULL,
+        '{"provider": "email", "providers": ["email"]}',
+        '{"full_name": "Dr. House"}',
+        NOW(), NOW(), NULL, '', NULL, NOW()
+    ) RETURNING id INTO doctor_user_id;
 
-    -- Leituras de Glicemia para Ana Silva
+    -- O trigger `on_auth_user_created` cuidará da criação dos perfis básicos.
+    -- Agora, vamos atualizar o perfil do usuário de teste com mais detalhes.
+    UPDATE public.profiles
+    SET 
+        date_of_birth = '1990-05-15',
+        diabetes_type = 'tipo1',
+        hypo_glucose_threshold = 70,
+        target_glucose_low = 80,
+        target_glucose_high = 180,
+        hyper_glucose_threshold = 250,
+        updated_at = NOW()
+    WHERE id = test_user_id;
+    
+    -- 2. Inserir dados de exemplo para `usuario.teste@example.com`
+
+    -- Registros de Glicemia
     INSERT INTO public.glucose_readings (user_id, value, timestamp, meal_context, notes, level) VALUES
-    (user_ana_id, 95, current_ts_utc - interval '3 days 2 hours', 'jejum', 'Acordei bem', 'normal'),
-    (user_ana_id, 150, current_ts_utc - interval '3 days', 'depois_refeicao', 'Almoço com macarrão', 'alta'),
-    (user_ana_id, 110, current_ts_utc - interval '2 days 10 hours', 'antes_refeicao', 'Antes do jantar', 'normal'),
-    (user_ana_id, 65, current_ts_utc - interval '2 days 5 hours', 'outro', 'Senti tremedeira', 'baixa'),
-    (user_ana_id, 185, current_ts_utc - interval '1 day 3 hours', 'depois_refeicao', 'Pizza ontem à noite', 'alta');
+    (test_user_id, 95, NOW() - INTERVAL '3 days', 'jejum', 'Acordei bem', 'normal'),
+    (test_user_id, 150, NOW() - INTERVAL '3 days' + INTERVAL '4 hours', 'depois_refeicao', 'Após o almoço', 'alta'),
+    (test_user_id, 65, NOW() - INTERVAL '2 days' + INTERVAL '8 hours', 'outro', 'Senti tremedeira', 'baixa'),
+    (test_user_id, 190, NOW() - INTERVAL '2 days' + INTERVAL '12 hours', 'depois_refeicao', 'Jantar com pizza', 'muito_alta'),
+    (test_user_id, 110, NOW() - INTERVAL '1 day', 'antes_refeicao', 'Antes do café da manhã', 'normal');
 
-    -- Leituras de Glicemia para Bruno Costa
-    INSERT INTO public.glucose_readings (user_id, value, timestamp, meal_context, notes, level) VALUES
-    (user_bruno_id, 120, current_ts_utc - interval '2 days 1 hours', 'jejum', 'Manhã normal', 'normal'),
-    (user_bruno_id, 210, current_ts_utc - interval '1 day 20 hours', 'depois_refeicao', 'Sobremesa extra', 'muito_alta');
-
-    RAISE NOTICE 'Leituras de glicemia de exemplo inseridas.';
-
-    -- Registros de Insulina para Ana Silva
+    -- Registros de Insulina
     INSERT INTO public.insulin_logs (user_id, type, dose, timestamp) VALUES
-    (user_ana_id, 'Rápida (Lispro)', 8, current_ts_utc - interval '3 days'),
-    (user_ana_id, 'Lenta (Glargina)', 22, current_ts_utc - interval '3 days 20 minutes'),
-    (user_ana_id, 'Rápida (Lispro)', 6, current_ts_utc - interval '1 day 3 hours');
+    (test_user_id, 'Rápida (Lispro)', 5, NOW() - INTERVAL '3 days' + INTERVAL '4 hours'),
+    (test_user_id, 'Lenta (Glargina)', 20, NOW() - INTERVAL '3 days' + INTERVAL '22 hours'),
+    (test_user_id, 'Rápida (Lispro)', 8, NOW() - INTERVAL '2 days' + INTERVAL '12 hours'),
+    (test_user_id, 'Lenta (Glargina)', 20, NOW() - INTERVAL '2 days' + INTERVAL '22 hours');
 
-    RAISE NOTICE 'Registros de insulina de exemplo inseridos.';
+    -- Registros de Atividades
+    INSERT INTO public.activity_logs (user_id, activity_type, duration_minutes, intensity, timestamp, notes) VALUES
+    (test_user_id, 'caminhada', 30, 'moderada', NOW() - INTERVAL '3 days' + INTERVAL '18 hours', 'Caminhada no parque'),
+    (test_user_id, 'musculacao', 60, 'intensa', NOW() - INTERVAL '1 day' + INTERVAL '19 hours', 'Treino de pernas');
 
-    -- Análises de Refeição para Ana Silva
-    INSERT INTO public.meal_analyses (user_id, timestamp, image_url, original_image_file_name, food_identification, macronutrient_estimates, estimated_glucose_impact, suggested_insulin_dose, improvement_tips) VALUES
-    (user_ana_id, current_ts_utc - interval '2 days', 'https://placehold.co/600x400.png?text=Prato+Saudavel', 'prato_saudavel.jpg', 'Salada colorida com frango grelhado e quinoa.', '{"carbohydrates": 30, "protein": 40, "fat": 15}', 'Impacto glicêmico moderado, elevação gradual.', '4-6 unidades de insulina rápida, ajustar conforme sensibilidade.', 'Adicionar mais fibras de vegetais folhosos escuros.');
+    -- Registros de Medicamentos
+    INSERT INTO public.medication_logs (user_id, medication_name, dosage, timestamp) VALUES
+    (test_user_id, 'Metformina', '500mg', NOW() - INTERVAL '3 days' + INTERVAL '8 hours'),
+    (test_user_id, 'Vitamina D', '2000UI', NOW() - INTERVAL '2 days' + INTERVAL '8 hours');
 
-    RAISE NOTICE 'Análises de refeição de exemplo inseridas.';
+    -- Lembretes
+    INSERT INTO public.reminders (user_id, type, name, time, days, enabled, insulin_type, insulin_dose) VALUES
+    (test_user_id, 'glicemia', 'Glicemia em Jejum', '07:00:00', '["Seg", "Qua", "Sex"]'::jsonb, true, NULL, NULL),
+    (test_user_id, 'insulina', 'Insulina Lenta Noturna', '22:00:00', '"todos_os_dias"'::jsonb, true, 'Lenta (Glargina)', 20);
 
-    -- Lembretes para Ana Silva
-    INSERT INTO public.reminders (user_id, type, name, "time", days, enabled, insulin_type, insulin_dose) VALUES
-    (user_ana_id, 'glicemia', 'Glicemia Jejum', '07:00:00', '["Seg", "Qua", "Sex"]'::jsonb, true, NULL, NULL),
-    (user_ana_id, 'insulina', 'Insulina Basal Noite', '22:00:00', '"todos_os_dias"'::jsonb, true, 'Lenta (Glargina)', 22);
-
-    RAISE NOTICE 'Lembretes de exemplo inseridos.';
-
-    -- Atividades Físicas para Bruno Costa
-    INSERT INTO public.activity_logs (user_id, timestamp, activity_type, duration_minutes, intensity, notes) VALUES
-    (user_bruno_id, current_ts_utc - interval '1 day 10 hours', 'caminhada', 45, 'moderada', 'Caminhada no parque, ritmo bom.'),
-    (user_bruno_id, current_ts_utc - interval '3 days 8 hours', 'musculacao', 60, 'moderada', 'Treino de superiores.');
-
-    RAISE NOTICE 'Atividades físicas de exemplo inseridas.';
-    RAISE NOTICE 'Povoamento de dados concluído com sucesso!';
+    -- Mensagem de sucesso com credenciais
+    RAISE NOTICE 'Usuários de exemplo criados com sucesso!';
+    RAISE NOTICE '-----------------------------------------';
+    RAISE NOTICE 'Usuário 1: usuario.teste@example.com';
+    RAISE NOTICE 'Usuário 2: medico.teste@example.com';
+    RAISE NOTICE 'Senha para ambos: password123';
+    RAISE NOTICE '-----------------------------------------';
 
 END $$;
+
+-- Reabilita a segurança a nível de linha
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.glucose_readings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.insulin_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.medication_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meal_analyses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
+
+--------------------------------------------------------------------------------
+-- FIM DO SCRIPT
+--------------------------------------------------------------------------------

@@ -22,9 +22,9 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
 
   Para criar as tabelas necessárias e configurar as Row Level Security (RLS) policies
   no seu projeto Supabase, por favor, consulte o arquivo:
-  SUPABASE_SETUP_GUIDE.md
-  localizado na raiz do seu projeto.
+  docs/supabase/SUPABASE_SETUP_GUIDE.md
 
   Este guia contém todos os scripts SQL e instruções detalhadas.
 */
+
 
