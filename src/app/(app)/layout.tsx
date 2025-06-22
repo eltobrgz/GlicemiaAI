@@ -13,6 +13,7 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { ReminderConfig } from '@/types';
 import { getReminders } from '@/lib/storage';
 import { DAYS_OF_WEEK } from '@/config/constants';
+import VoiceAssistant from '@/components/voice/VoiceAssistant';
 
 const DAY_MAP: Record<number, typeof DAYS_OF_WEEK[number]['key']> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
@@ -215,6 +216,7 @@ export default function AppLayout({
       </SidebarInset>
 
       <BottomNavigationBar />
+      <VoiceAssistant />
     </div>
   );
 }
