@@ -1,3 +1,4 @@
+
 # Guia de Configuração do Supabase para o Projeto GlicemiaAI
 
 Este guia detalha os passos para configurar seu projeto no Supabase e conectá-lo à sua aplicação Next.js GlicemiaAI.
@@ -67,6 +68,22 @@ Para configurar as tabelas e as políticas de segurança (RLS) no seu banco de d
         *   Cole o script no SQL Editor do Supabase (pode ser em uma nova query ou após limpar a anterior).
         *   Clique em "**RUN**".
         *   Este script criará todas as tabelas (`profiles`, `glucose_readings`, `insulin_logs`, `meal_analyses`, `reminders`, `activity_logs`), suas colunas, RLS e a trigger `handle_new_user`.
+        
+    *   **Para Atualizar um Esquema Existente (Ex: Adicionar Colunas de Metas Glicêmicas):**
+        *   Se você já tem uma tabela `profiles` e só quer adicionar as novas colunas de metas, você pode rodar o seguinte comando SQL:
+        ```sql
+        ALTER TABLE public.profiles
+        ADD COLUMN IF NOT EXISTS hypo_glucose_threshold INTEGER,
+        ADD COLUMN IF NOT EXISTS target_glucose_low INTEGER,
+        ADD COLUMN IF NOT EXISTS target_glucose_high INTEGER,
+        ADD COLUMN IF NOT EXISTS hyper_glucose_threshold INTEGER;
+
+        COMMENT ON COLUMN public.profiles.hypo_glucose_threshold IS 'Limite para hipoglicemia definido pelo usuário (mg/dL).';
+        COMMENT ON COLUMN public.profiles.target_glucose_low IS 'Limite inferior da meta glicêmica do usuário (mg/dL).';
+        COMMENT ON COLUMN public.profiles.target_glucose_high IS 'Limite superior da meta glicêmica do usuário (mg/dL).';
+        COMMENT ON COLUMN public.profiles.hyper_glucose_threshold IS 'Limite para hiperglicemia definido pelo usuário (mg/dL).';
+        ```
+        *   O `ADD COLUMN IF NOT EXISTS` garante que o comando não dará erro se as colunas já existirem.
 
 ## Passo 5: Configurar o Supabase Storage (Buckets e Políticas)
 
@@ -210,6 +227,6 @@ npm run dev
     *   Verifique se as políticas de RLS nas suas tabelas (`supabase_schema_create.sql`) estão corretas e permitem as operações necessárias (INSERT, SELECT, UPDATE, DELETE) para os usuários autenticados e para `auth.uid() = user_id`.
 *   **ERRO `column "target_glucose_low" of relation "profiles" does not exist` (ou similar para outras colunas de metas)**:
     *   Isso indica que sua tabela `profiles` não possui essas colunas. Execute o script `supabase_schema_create.sql` (após possivelmente rodar `supabase_schema_drop.sql` se quiser limpar tudo) para criar as tabelas com o esquema mais recente.
-    *   Alternativamente, adicione as colunas faltantes usando `ALTER TABLE` (veja "Opção para Atualizar a Tabela `profiles` Existente" no `supabase_schema_create.sql`).
+    *   Alternativamente, adicione as colunas faltantes usando o comando `ALTER TABLE` mostrado no Passo 4 deste guia.
 
 Seguindo estes passos, você deverá ter seu projeto Supabase configurado e conectado corretamente!
