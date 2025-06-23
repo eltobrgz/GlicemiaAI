@@ -17,6 +17,8 @@ import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 
 type VoiceAssistantState = 'idle' | 'listening' | 'processing' | 'confirming' | 'error';
 
+const VOICE_ASSISTANT_POSITION_KEY = 'glicemiaai-voice-assistant-position';
+
 export default function VoiceAssistant() {
   const [isOpen, setIsOpen] = useState(false);
   const [assistantState, setAssistantState] = useState<VoiceAssistantState>('idle');
@@ -31,7 +33,6 @@ export default function VoiceAssistant() {
   } = useSpeechRecognition();
   const { toast } = useToast();
 
-  // States for making the button draggable
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -39,22 +40,49 @@ export default function VoiceAssistant() {
   const [wasDragged, setWasDragged] = useState(false);
 
   useEffect(() => {
-    // This effect runs only on the client to set the initial button position
     const setInitialPosition = () => {
-      const buttonWidth = 56; // w-14
-      const buttonHeight = 56; // h-14
-      const marginX = window.innerWidth > 768 ? 40 : 24; // md:right-10, right-6
-      const marginY = window.innerHeight > 768 ? 40 : 24; // md:bottom-10, bottom-6
+      try {
+        const savedPosition = localStorage.getItem(VOICE_ASSISTANT_POSITION_KEY);
+        if (savedPosition) {
+          const parsedPosition = JSON.parse(savedPosition);
+          setPosition(parsedPosition);
+        } else {
+          const buttonWidth = 48; // w-12
+          const buttonHeight = 48; // h-12
+          const marginX = window.innerWidth > 768 ? 40 : 24;
+          const marginY = window.innerHeight > 768 ? 40 : 24;
+          setPosition({
+            x: window.innerWidth - buttonWidth - marginX,
+            y: window.innerHeight - buttonHeight - marginY,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to parse saved position, using default.", error);
+        const buttonWidth = 48;
+        const buttonHeight = 48;
+        const marginX = window.innerWidth > 768 ? 40 : 24;
+        const marginY = window.innerHeight > 768 ? 40 : 24;
+        setPosition({
+          x: window.innerWidth - buttonWidth - marginX,
+          y: window.innerHeight - buttonHeight - marginY,
+        });
+      }
+    };
+    setInitialPosition();
 
-      setPosition({
-        x: window.innerWidth - buttonWidth - marginX,
-        y: window.innerHeight - buttonHeight - marginY,
-      });
+    const handleResize = () => {
+      if (buttonRef.current) {
+        const buttonWidth = buttonRef.current.offsetWidth;
+        const buttonHeight = buttonRef.current.offsetHeight;
+        setPosition(currentPos => ({
+          x: Math.max(0, Math.min(currentPos.x, window.innerWidth - buttonWidth)),
+          y: Math.max(0, Math.min(currentPos.y, window.innerHeight - buttonHeight))
+        }));
+      }
     };
 
-    setInitialPosition();
-    window.addEventListener('resize', setInitialPosition);
-    return () => window.removeEventListener('resize', setInitialPosition);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -91,12 +119,11 @@ export default function VoiceAssistant() {
 
   const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (isDragging && buttonRef.current) {
-      if (!wasDragged) setWasDragged(true); // Mark as dragged on first move
+      if (!wasDragged) setWasDragged(true);
       
       let newX = e.clientX - dragOffset.x;
       let newY = e.clientY - dragOffset.y;
 
-      // Constrain position within the viewport
       const buttonWidth = buttonRef.current.offsetWidth;
       const buttonHeight = buttonRef.current.offsetHeight;
       newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
@@ -110,15 +137,16 @@ export default function VoiceAssistant() {
     if (buttonRef.current) {
       setIsDragging(false);
       buttonRef.current.releasePointerCapture(e.pointerId);
+      if (wasDragged) {
+        localStorage.setItem(VOICE_ASSISTANT_POSITION_KEY, JSON.stringify(position));
+      }
     }
   };
 
   const handleButtonClick = () => {
-    // Only open the dialog if the button was clicked, not dragged
     if (wasDragged) {
       return;
     }
-
     if (!hasRecognitionSupport) {
       toast({
         title: "Funcionalidade Indisponível",
@@ -208,9 +236,9 @@ export default function VoiceAssistant() {
           position: 'fixed',
           top: `${position.y}px`,
           left: `${position.x}px`,
-          touchAction: 'none' // Prevents scrolling on mobile while dragging
+          touchAction: 'none'
         }}
-        className="z-50 h-14 w-14 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
+        className="z-50 h-12 w-12 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
         size="icon"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -219,7 +247,7 @@ export default function VoiceAssistant() {
         aria-label="Assistente de Voz"
         title="Assistente de Voz (clique para abrir, arraste para mover)"
       >
-        <Mic className="h-7 w-7" />
+        <Mic className="h-6 w-6" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
