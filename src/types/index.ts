@@ -69,10 +69,10 @@ export interface UserProfile {
   diabetesType?: 'tipo1' | 'tipo2' | 'gestacional' | 'outro'; 
   languagePreference?: string; // Added for language selection, e.g., 'pt-BR', 'en-US'
   // Metas personalizadas de glicemia
+  hypo_glucose_threshold?: number;
   target_glucose_low?: number;
   target_glucose_high?: number;
   hyper_glucose_threshold?: number;
-  hypo_glucose_threshold?: number;
   created_at?: string;
   updated_at?: string;
 }

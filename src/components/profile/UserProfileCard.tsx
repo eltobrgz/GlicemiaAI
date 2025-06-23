@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -8,16 +9,16 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import type { UserProfile } from '@/types';
 import { getUserProfile, saveUserProfile } from '@/lib/storage'; 
-import { Edit3, Save, UserCircle, Mail, ShieldCheck, CalendarDays, Droplet, FileText, Loader2, Upload } from 'lucide-react';
+import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-
+import { GLUCOSE_THRESHOLDS } from '@/config/constants';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function UserProfileCard() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  // editForm não precisa mais de avatarUrl, pois é gerenciado por avatarPreview e avatarFile
-  const [editForm, setEditForm] = useState<Partial<Omit<UserProfile, 'avatarUrl'>>>({});
+  const [editForm, setEditForm] = useState<Partial<UserProfile>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -32,13 +33,7 @@ export default function UserProfileCard() {
         const profile = await getUserProfile();
         if (profile) {
           setUser(profile);
-          setEditForm({ 
-            name: profile.name, 
-            email: profile.email, // Email não é editável aqui
-            dateOfBirth: profile.dateOfBirth || '',
-            diabetesType: profile.diabetesType || 'outro',
-            languagePreference: profile.languagePreference || 'pt-BR',
-          });
+          setEditForm(profile); // Initialize form with full profile data
           if (profile.avatarUrl) {
             setAvatarPreview(profile.avatarUrl);
           }
@@ -51,16 +46,9 @@ export default function UserProfileCard() {
                     email: authUser.email || '',
                     avatarUrl: authUser.user_metadata?.avatar_url,
                     languagePreference: 'pt-BR',
-                    // dateOfBirth and diabetesType start as undefined
                 };
                 setUser(newProfile);
-                setEditForm({
-                    name: newProfile.name,
-                    email: newProfile.email,
-                    dateOfBirth: '',
-                    diabetesType: 'outro',
-                    languagePreference: 'pt-BR',
-                });
+                setEditForm(newProfile);
                 if (newProfile.avatarUrl) setAvatarPreview(newProfile.avatarUrl);
                 toast({ title: "Complete seu Perfil", description: "Por favor, revise e complete suas informações de perfil."});
                 setIsEditing(true); 
@@ -84,24 +72,18 @@ export default function UserProfileCard() {
       setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatarPreview(reader.result as string); // Mostra o preview do novo arquivo
+        setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
-    } else { // Usuário cancelou a seleção de arquivo ou não selecionou nenhum
+    } else {
       setAvatarFile(null);
-      setAvatarPreview(user?.avatarUrl || null); // Volta para a imagem salva anteriormente ou null se não houver
+      setAvatarPreview(user?.avatarUrl || null);
     }
   };
 
   const handleEditToggle = () => {
     if (user && !isEditing) { 
-      setEditForm({ 
-        name: user.name, 
-        email: user.email,
-        dateOfBirth: user.dateOfBirth || '',
-        diabetesType: user.diabetesType || 'outro',
-        languagePreference: user.languagePreference || 'pt-BR',
-      });
+      setEditForm(user);
       setAvatarPreview(user.avatarUrl || null); 
       setAvatarFile(null); 
     }
@@ -109,30 +91,32 @@ export default function UserProfileCard() {
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setEditForm(prev => ({ ...prev, [name]: value }));
+    const { name, value, type } = e.target;
+    // Handle number inputs correctly
+    const val = type === 'number' ? (value === '' ? undefined : parseFloat(value)) : value;
+    setEditForm(prev => ({ ...prev, [name]: val }));
   };
+
 
   const handleSave = async () => {
     if (user) {
       setIsSaving(true);
       try {
         const profileToSave: UserProfile = {
-          id: user.id, 
-          name: editForm.name || user.name, // Usa o valor do formulário ou o original se não alterado
-          email: user.email, // Email não é editado aqui
-          avatarUrl: user.avatarUrl, // Passa a URL ATUAL. saveUserProfile cuidará do upload do avatarFile.
-          dateOfBirth: editForm.dateOfBirth || undefined,
-          diabetesType: editForm.diabetesType as UserProfile['diabetesType'] || undefined,
-          languagePreference: editForm.languagePreference || user.languagePreference || 'pt-BR',
+          ...user,
+          ...editForm,
         };
         
         const updatedProfile = await saveUserProfile(profileToSave, avatarFile || undefined);
         setUser(updatedProfile); 
+        setEditForm(updatedProfile);
         setAvatarPreview(updatedProfile.avatarUrl || null); 
         setIsEditing(false);
         setAvatarFile(null); 
         toast({ title: "Perfil Atualizado", description: "Suas informações foram salvas." });
+        // Force a page reload to ensure all components get the new profile settings
+        window.location.reload();
+
       } catch (error: any) {
          toast({ title: "Erro ao Salvar Perfil", description: error.message, variant: "destructive" });
       } finally {
@@ -177,19 +161,15 @@ export default function UserProfileCard() {
       icon: CalendarDays, 
       label: "Data de Nascimento", 
       value: user.dateOfBirth ? new Date(user.dateOfBirth + 'T00:00:00').toLocaleDateString('pt-BR') : 'Não informado', 
-      formValue: editForm.dateOfBirth, 
       formKey: 'dateOfBirth',
-      type: 'date',
-      editable: true 
+      type: 'date'
     },
     { 
       icon: Droplet, 
       label: "Tipo de Diabetes", 
       value: user.diabetesType ? (user.diabetesType.charAt(0).toUpperCase() + user.diabetesType.slice(1)).replace('tipo', 'Tipo ') : 'Não informado',
-      formValue: editForm.diabetesType,
       formKey: 'diabetesType',
       type: 'select',
-      editable: true,
       options: [
         {value: 'tipo1', label: 'Tipo 1'},
         {value: 'tipo2', label: 'Tipo 2'},
@@ -200,127 +180,161 @@ export default function UserProfileCard() {
   ];
 
   return (
-    <Card className="w-full max-w-2xl mx-auto shadow-xl">
-      <CardHeader className="items-center text-center border-b pb-6">
-        <div className="relative group">
-          <Avatar className="w-32 h-32 mb-4 border-4 border-primary shadow-lg" data-ai-hint="person avatar portrait">
-            <AvatarImage src={avatarPreview || `https://placehold.co/128x128.png`} alt={user.name || 'Avatar do usuário'} />
-            <AvatarFallback className="text-5xl bg-primary/20 text-primary font-semibold">
-              {(user.name)?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2) || <UserCircle size={64}/>}
-            </AvatarFallback>
-          </Avatar>
-          {isEditing && (
-            <Button 
-              variant="outline" 
-              size="icon" 
-              className="absolute bottom-4 right-0 rounded-full bg-background hover:bg-muted border-primary text-primary hover:text-primary/90 shadow-md"
-              onClick={() => fileInputRef.current?.click()}
-              title="Alterar foto de perfil"
-              disabled={isSaving}
-            >
-              <Upload className="h-5 w-5" />
-              <span className="sr-only">Alterar foto de perfil</span>
-            </Button>
-          )}
-        </div>
-        <Input 
-            type="file" 
-            accept="image/png, image/jpeg, image/webp" 
-            className="hidden" 
-            ref={fileInputRef} 
-            onChange={handleAvatarFileChange} 
-            disabled={!isEditing || isSaving}
-        />
-        
-        {isEditing ? (
-          <Input 
-            id="name" 
-            name="name" 
-            value={editForm.name || ''} 
-            onChange={handleInputChange} 
-            className="mt-2 text-3xl font-bold text-center h-auto p-1 border-2 border-transparent focus:border-primary rounded-md" 
-            placeholder="Seu Nome Completo"
-            disabled={isSaving}
-          />
-        ) : (
-          <CardTitle className="text-3xl font-headline text-primary mt-2">{user.name || 'Usuário'}</CardTitle>
-        )}
-         <CardDescription className="text-lg text-muted-foreground">{user.email}</CardDescription>
-      </CardHeader>
-      <CardContent className="p-6 space-y-6">
-        {profileInfoItems.map(item => (
-            <div key={item.formKey} className="flex items-start space-x-4">
-              <item.icon className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
-              <div className="flex-grow">
-                <Label htmlFor={item.formKey} className="text-sm text-muted-foreground">{item.label}</Label>
-                {isEditing && item.editable ? (
-                  item.type === 'select' && item.options ? (
-                    <select 
-                      name={item.formKey} 
-                      id={item.formKey} 
-                      value={(editForm as any)[item.formKey] || ''} 
-                      onChange={handleInputChange}
-                      className="mt-1 block w-full rounded-md border-input bg-background p-2.5 text-base focus:border-primary focus:ring-primary shadow-sm"
-                      disabled={isSaving}
-                    >
-                      <option value="" disabled>Selecione...</option>
-                      {item.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                    </select>
-                  ) : (
-                    <Input 
-                      id={item.formKey} 
-                      name={item.formKey} 
-                      type={item.type} 
-                      value={(editForm as any)[item.formKey] || ''} 
-                      onChange={handleInputChange} 
-                      className="mt-1 text-base p-2.5" 
-                      disabled={isSaving || !item.editable}
-                    />
-                  )
-                ) : (
-                  <p className="text-lg font-medium text-card-foreground mt-0.5">{item.value || 'Não informado'}</p>
-                )}
-              </div>
-            </div>
-        ))}
-        
-        {!isEditing && (
-          <>
-            <div className="flex items-start space-x-4 pt-4 border-t">
-              <ShieldCheck className="mr-3 h-6 w-6 text-primary mt-1 flex-shrink-0" />
-              <div className="flex-grow">
-                <p className="text-sm text-muted-foreground">Segurança da Conta</p>
-                <Button variant="link" className="p-0 h-auto text-lg text-primary hover:underline">Alterar Senha</Button>
-              </div>
-            </div>
-            <div className="flex items-start space-x-4">
-              <FileText className="mr-3 h-6 w-6 text-primary mt-1 flex-shrink-0" />
-              <div className="flex-grow">
-                <p className="text-sm text-muted-foreground">Dados e Privacidade</p>
-                <Button variant="link" className="p-0 h-auto text-lg text-primary hover:underline">Gerenciar dados</Button>
-              </div>
-            </div>
-          </>
-        )}
-      </CardContent>
-      <CardFooter className="border-t pt-6">
-        {isEditing ? (
-          <div className="flex gap-4 w-full">
-            <Button onClick={handleSave} className="flex-1" disabled={isSaving}>
-              {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
-              {isSaving? 'Salvando...' : 'Salvar Alterações'}
-            </Button>
-            <Button variant="outline" onClick={handleEditToggle} className="flex-1" disabled={isSaving}>
-              Cancelar
-            </Button>
+    <>
+      <Card className="w-full max-w-2xl mx-auto shadow-xl">
+        <CardHeader className="items-center text-center border-b pb-6">
+          <div className="relative group">
+            <Avatar className="w-32 h-32 mb-4 border-4 border-primary shadow-lg" data-ai-hint="person avatar portrait">
+              <AvatarImage src={avatarPreview || `https://placehold.co/128x128.png`} alt={user.name || 'Avatar do usuário'} />
+              <AvatarFallback className="text-5xl bg-primary/20 text-primary font-semibold">
+                {(user.name)?.split(' ').map(n => n[0]).join('').toUpperCase().substring(0,2) || <UserCircle size={64}/>}
+              </AvatarFallback>
+            </Avatar>
+            {isEditing && (
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="absolute bottom-4 right-0 rounded-full bg-background hover:bg-muted border-primary text-primary hover:text-primary/90 shadow-md"
+                onClick={() => fileInputRef.current?.click()}
+                title="Alterar foto de perfil"
+                disabled={isSaving}
+              >
+                <Upload className="h-5 w-5" />
+                <span className="sr-only">Alterar foto de perfil</span>
+              </Button>
+            )}
           </div>
-        ) : (
-          <Button onClick={handleEditToggle} className="w-full">
-            <Edit3 className="mr-2 h-4 w-4" /> Editar Perfil
-          </Button>
+          <Input 
+              type="file" 
+              accept="image/png, image/jpeg, image/webp" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleAvatarFileChange} 
+              disabled={!isEditing || isSaving}
+          />
+          
+          {isEditing ? (
+            <Input 
+              id="name" 
+              name="name" 
+              value={editForm.name || ''} 
+              onChange={handleInputChange} 
+              className="mt-2 text-3xl font-bold text-center h-auto p-1 border-2 border-transparent focus:border-primary rounded-md" 
+              placeholder="Seu Nome Completo"
+              disabled={isSaving}
+            />
+          ) : (
+            <CardTitle className="text-3xl font-headline text-primary mt-2">{user.name || 'Usuário'}</CardTitle>
+          )}
+           <CardDescription className="text-lg text-muted-foreground">{user.email}</CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-6">
+          {profileInfoItems.map(item => (
+              <div key={item.formKey} className="flex items-start space-x-4">
+                <item.icon className="h-6 w-6 text-primary mt-1 flex-shrink-0" />
+                <div className="flex-grow">
+                  <Label htmlFor={item.formKey} className="text-sm text-muted-foreground">{item.label}</Label>
+                  {isEditing ? (
+                    item.type === 'select' && item.options ? (
+                      <select 
+                        name={item.formKey} 
+                        id={item.formKey} 
+                        value={(editForm as any)[item.formKey] || ''} 
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border-input bg-background p-2.5 text-base focus:border-primary focus:ring-primary shadow-sm"
+                        disabled={isSaving}
+                      >
+                        <option value="" disabled>Selecione...</option>
+                        {item.options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                    ) : (
+                      <Input 
+                        id={item.formKey} 
+                        name={item.formKey} 
+                        type={item.type} 
+                        value={(editForm as any)[item.formKey] || ''} 
+                        onChange={handleInputChange} 
+                        className="mt-1 text-base p-2.5" 
+                        disabled={isSaving}
+                      />
+                    )
+                  ) : (
+                    <p className="text-lg font-medium text-card-foreground mt-0.5">{item.value || 'Não informado'}</p>
+                  )}
+                </div>
+              </div>
+          ))}
+        </CardContent>
+        {isEditing ? null : (
+            <CardFooter className="border-t pt-6">
+                <Button onClick={handleEditToggle} className="w-full">
+                    <Edit3 className="mr-2 h-4 w-4" /> Editar Perfil e Metas
+                </Button>
+            </CardFooter>
         )}
-      </CardFooter>
-    </Card>
+      </Card>
+      
+      {/* Glucose Targets Card */}
+      <Card className="w-full max-w-2xl mx-auto shadow-xl">
+        <CardHeader>
+          <CardTitle className="text-xl font-headline text-primary flex items-center">
+            <Target className="mr-2 h-5 w-5" /> Minhas Metas Glicêmicas
+          </CardTitle>
+          <CardDescription>
+            Personalize as faixas que o aplicativo usa para classificar seus níveis de glicose.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+            {isEditing ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="hypo_glucose_threshold">Limite de Hipoglicemia (mg/dL)</Label>
+                  <Input id="hypo_glucose_threshold" name="hypo_glucose_threshold" type="number" value={editForm.hypo_glucose_threshold ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.low}`} disabled={isSaving}/>
+                  <p className="text-xs text-muted-foreground mt-1">Valores abaixo disso são 'baixa'.</p>
+                </div>
+                <div>
+                  <Label htmlFor="target_glucose_low">Início da Faixa Alvo (mg/dL)</Label>
+                  <Input id="target_glucose_low" name="target_glucose_low" type="number" value={editForm.target_glucose_low ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.low}`} disabled={isSaving}/>
+                  <p className="text-xs text-muted-foreground mt-1">Início da faixa 'normal'.</p>
+                </div>
+                 <div>
+                  <Label htmlFor="target_glucose_high">Fim da Faixa Alvo (mg/dL)</Label>
+                  <Input id="target_glucose_high" name="target_glucose_high" type="number" value={editForm.target_glucose_high ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.normalIdealMax}`} disabled={isSaving}/>
+                  <p className="text-xs text-muted-foreground mt-1">Fim da faixa 'normal'.</p>
+                </div>
+                 <div>
+                  <Label htmlFor="hyper_glucose_threshold">Início da Hiperglicemia (mg/dL)</Label>
+                  <Input id="hyper_glucose_threshold" name="hyper_glucose_threshold" type="number" value={editForm.hyper_glucose_threshold ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.high}`} disabled={isSaving}/>
+                  <p className="text-xs text-muted-foreground mt-1">Valores acima disso são 'muito alta'.</p>
+                </div>
+              </div>
+            ) : (
+               <Alert>
+                 <Info className="h-4 w-4" />
+                 <AlertTitle>Metas Atuais</AlertTitle>
+                 <AlertDescription className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    <span>Hipoglicemia:</span> <strong>&lt; {user.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low} mg/dL</strong>
+                    <span>Faixa Alvo:</span> <strong>{user.target_glucose_low ?? GLUCOSE_THRESHOLDS.low} - {user.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL</strong>
+                    <span>Hiperglicemia:</span> <strong>&gt; {user.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL</strong>
+                    <span>Hiper. Grave:</span> <strong>&gt; {user.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high} mg/dL</strong>
+                 </AlertDescription>
+               </Alert>
+            )}
+        </CardContent>
+        {isEditing && (
+             <CardFooter className="border-t pt-6">
+                <div className="flex gap-4 w-full">
+                    <Button onClick={handleSave} className="flex-1" disabled={isSaving}>
+                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />} 
+                        {isSaving? 'Salvando...' : 'Salvar Alterações'}
+                    </Button>
+                    <Button variant="outline" onClick={handleEditToggle} className="flex-1" disabled={isSaving}>
+                        Cancelar
+                    </Button>
+                </div>
+            </CardFooter>
+        )}
+      </Card>
+    </>
   );
 }
-    

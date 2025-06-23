@@ -17,6 +17,7 @@ import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 
 type PeriodOption = 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -143,11 +144,7 @@ export default function ReportGenerator() {
           }
         }
 
-        const tLow = userProfile.hypo_glucose_threshold ?? 70;
-        const tNormalMin = userProfile.target_glucose_low ?? 70;
-        const tNormalMax = userProfile.target_glucose_high ?? 180;
-        const tHigh = userProfile.hyper_glucose_threshold ?? 250;
-
+        // Use classified levels which are based on user's profile goals
         filteredGlucose.forEach(r => {
             if (r.level === 'baixa') countHypo++;
             else if (r.level === 'normal') countNormal++;
@@ -399,5 +396,3 @@ export default function ReportGenerator() {
     </Card>
   );
 }
-
-    

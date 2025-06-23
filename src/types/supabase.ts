@@ -26,9 +26,9 @@ export interface Database {
           diabetes_type: string | null // 'tipo1', 'tipo2', 'gestacional', 'outro'
           language_preference: string | null // e.g., 'pt-BR', 'en-US'
           // Metas personalizadas de glicemia
+          hypo_glucose_threshold: number | null
           target_glucose_low: number | null
           target_glucose_high: number | null
-          hypo_glucose_threshold: number | null
           hyper_glucose_threshold: number | null
           created_at: string // timestamp with time zone
           updated_at: string // timestamp with time zone
@@ -41,9 +41,9 @@ export interface Database {
           date_of_birth?: string | null
           diabetes_type?: string | null
           language_preference?: string | null
+          hypo_glucose_threshold?: number | null
           target_glucose_low?: number | null
           target_glucose_high?: number | null
-          hypo_glucose_threshold?: number | null
           hyper_glucose_threshold?: number | null
           created_at?: string
           updated_at?: string
@@ -55,9 +55,9 @@ export interface Database {
           date_of_birth?: string | null
           diabetes_type?: string | null
           language_preference?: string | null
+          hypo_glucose_threshold?: number | null
           target_glucose_low?: number | null
           target_glucose_high?: number | null
-          hypo_glucose_threshold?: number | null
           hyper_glucose_threshold?: number | null
           updated_at?: string
         }

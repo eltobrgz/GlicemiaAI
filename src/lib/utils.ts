@@ -14,21 +14,17 @@ export function cn(...inputs: ClassValue[]) {
 export function classifyGlucoseLevel(value: number, userProfile?: UserProfile | null): GlucoseReading['level'] {
   const thresholds = {
     low: userProfile?.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low,
-    normalIdealMin: userProfile?.target_glucose_low ?? GLUCOSE_THRESHOLDS.low, // Se target_glucose_low não definido, usa o mesmo que hypo
+    normalIdealMin: userProfile?.target_glucose_low ?? GLUCOSE_THRESHOLDS.low,
     normalIdealMax: userProfile?.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax,
-    high: userProfile?.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high, // Limite para 'alta' antes de 'muito_alta'
-    // veryHigh não tem um limite superior explícito no perfil, mas é o que está acima de 'high'
+    high: userProfile?.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high,
   };
 
   if (value < thresholds.low) return 'baixa';
-  // Considera-se 'normal' se estiver entre o mínimo ideal (ou o limite de hipo se o mínimo ideal não estiver definido) E o máximo ideal.
   if (value >= thresholds.normalIdealMin && value <= thresholds.normalIdealMax) return 'normal';
-  // 'alta' está entre o máximo ideal e o limiar de hiperglicemia definido pelo usuário ou padrão.
   if (value > thresholds.normalIdealMax && value <= thresholds.high) return 'alta';
-  // 'muito_alta' é qualquer valor acima do limiar de hiperglicemia.
   if (value > thresholds.high) return 'muito_alta';
   
-  return 'normal'; // Fallback, embora a lógica acima deva cobrir todos os casos.
+  return 'normal'; // Fallback
 }
 
 export function getGlucoseLevelColor(level?: GlucoseReading['level'], userProfile?: UserProfile): string {

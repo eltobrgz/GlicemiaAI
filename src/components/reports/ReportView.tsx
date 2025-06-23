@@ -216,7 +216,7 @@ export default function ReportView({ data }: ReportViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center"><PieChartIcon className="mr-2 h-5 w-5 text-primary" />Tempo nos Alvos Glicêmicos</CardTitle>
               <CardDescription>
-                Alvo Normal definido como {userProfile.target_glucose_low || GLUCOSE_THRESHOLDS.low} - {userProfile.target_glucose_high || GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL
+                Alvo Normal definido como {userProfile.target_glucose_low ?? GLUCOSE_THRESHOLDS.low} - {userProfile.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL
               </CardDescription>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
@@ -378,7 +378,7 @@ export default function ReportView({ data }: ReportViewProps) {
                                     <TableCell>{formatDateTime(r.timestamp)}</TableCell>
                                     <TableCell className="font-bold">{r.value}</TableCell>
                                     <TableCell>{r.mealContext?.replace('_',' ') || '-'}</TableCell>
-                                    <TableCell><Badge variant="outline" className={getGlucoseLevelColor(r.level)}>{r.level || '-'}</Badge></TableCell>
+                                    <TableCell><Badge variant="outline" className={getGlucoseLevelColor(r.level, userProfile)}>{r.level || '-'}</Badge></TableCell>
                                     <TableCell>{r.notes || '-'}</TableCell>
                                 </TableRow>
                             ))}
@@ -452,5 +452,3 @@ export default function ReportView({ data }: ReportViewProps) {
     </div>
   );
 }
-
-    

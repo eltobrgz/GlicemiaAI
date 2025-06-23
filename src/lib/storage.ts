@@ -1,3 +1,4 @@
+
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
@@ -72,9 +73,9 @@ export async function getUserProfile(): Promise<UserProfile | null> {
                 avatarUrl: user.user_metadata?.avatar_url || undefined,
                 languagePreference: 'pt-BR', // Default language
                 // Metas padrão podem ser nulas/undefined inicialmente
+                hypo_glucose_threshold: undefined, 
                 target_glucose_low: undefined, 
                 target_glucose_high: undefined,
-                hypo_glucose_threshold: undefined, 
                 hyper_glucose_threshold: undefined,
             };
             return defaultProfile;
@@ -90,9 +91,9 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       dateOfBirth: data.date_of_birth || undefined,
       diabetesType: data.diabetes_type as UserProfile['diabetesType'] || undefined,
       languagePreference: data.language_preference || 'pt-BR',
+      hypo_glucose_threshold: data.hypo_glucose_threshold === null ? undefined : data.hypo_glucose_threshold,
       target_glucose_low: data.target_glucose_low === null ? undefined : data.target_glucose_low,
       target_glucose_high: data.target_glucose_high === null ? undefined : data.target_glucose_high,
-      hypo_glucose_threshold: data.hypo_glucose_threshold === null ? undefined : data.hypo_glucose_threshold,
       hyper_glucose_threshold: data.hyper_glucose_threshold === null ? undefined : data.hyper_glucose_threshold,
       created_at: data.created_at,
       updated_at: data.updated_at,
@@ -134,9 +135,9 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
     date_of_birth: profile.dateOfBirth || null,
     diabetes_type: profile.diabetesType || null,
     language_preference: profile.languagePreference || 'pt-BR',
+    hypo_glucose_threshold: profile.hypo_glucose_threshold === undefined ? null : profile.hypo_glucose_threshold,
     target_glucose_low: profile.target_glucose_low === undefined ? null : profile.target_glucose_low,
     target_glucose_high: profile.target_glucose_high === undefined ? null : profile.target_glucose_high,
-    hypo_glucose_threshold: profile.hypo_glucose_threshold === undefined ? null : profile.hypo_glucose_threshold,
     hyper_glucose_threshold: profile.hyper_glucose_threshold === undefined ? null : profile.hyper_glucose_threshold,
     updated_at: new Date().toISOString(),
   };
@@ -160,9 +161,9 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
       dateOfBirth: savedData.date_of_birth || undefined,
       diabetesType: savedData.diabetes_type as UserProfile['diabetesType'] || undefined,
       languagePreference: savedData.language_preference || 'pt-BR',
+      hypo_glucose_threshold: savedData.hypo_glucose_threshold === null ? undefined : savedData.hypo_glucose_threshold,
       target_glucose_low: savedData.target_glucose_low === null ? undefined : savedData.target_glucose_low,
       target_glucose_high: savedData.target_glucose_high === null ? undefined : savedData.target_glucose_high,
-      hypo_glucose_threshold: savedData.hypo_glucose_threshold === null ? undefined : savedData.hypo_glucose_threshold,
       hyper_glucose_threshold: savedData.hyper_glucose_threshold === null ? undefined : savedData.hyper_glucose_threshold,
       created_at: savedData.created_at,
       updated_at: savedData.updated_at,

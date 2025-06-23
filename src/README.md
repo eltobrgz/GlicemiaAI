@@ -1,4 +1,5 @@
 
+
 # GlicemiaAI - Seu Assistente Inteligente para Controle Glicêmico
 
 ## Visão Geral
@@ -15,13 +16,14 @@ Lembre-se: As informações e sugestões fornecidas pelo GlicemiaAI, especialmen
     *   [Registrar Insulina](#registrar-insulina)
     *   [Registrar Atividade Física](#registrar-atividade-física)
     *   [Registrar Outros Medicamentos](#registrar-outros-medicamentos)
-3.  [Análise de Refeição com IA](#3-análise-de-refeição-com-inteligência-artificial)
-4.  [Calendário de Acompanhamento](#4-calendário-de-acompanhamento)
-5.  [Relatórios Detalhados](#5-relatórios-detalhados)
-6.  [Insights da IA](#6-insights-da-ia)
-7.  [Perfil do Usuário e Metas](#7-perfil-do-usuário-e-metas)
-8.  [Lembretes Inteligentes](#8-lembretes-inteligentes)
-9.  [Configurações do Aplicativo](#9-configurações-do-aplicativo)
+3.  [Registro por Voz com IA](#3-registro-por-voz-com-ia)
+4.  [Análise de Refeição com IA](#4-análise-de-refeição-com-ia)
+5.  [Calendário de Acompanhamento](#5-calendário-de-acompanhamento)
+6.  [Relatórios Detalhados](#6-relatórios-detalhados)
+7.  [Insights da IA](#7-insights-da-ia)
+8.  [Perfil do Usuário e Metas](#8-perfil-do-usuário-e-metas)
+9.  [Lembretes Inteligentes](#9-lembretes-inteligentes)
+10. [Configurações do Aplicativo](#10-configurações-do-aplicativo)
 
 ---
 
@@ -58,7 +60,16 @@ Manter um histórico preciso é a chave para um bom controle.
 -   **O quê:** Acompanhe outros medicamentos importantes para seu tratamento.
 -   **Como:** Em `Registrar Medicamento`, informe o nome do remédio, a dosagem (ex: "500mg", "1 comprimido") e o horário em que foi tomado.
 
-### 3. Análise de Refeição com Inteligência Artificial
+### 3. Registro por Voz com IA
+
+-   **O quê:** Registre qualquer um dos dados acima usando apenas sua voz.
+-   **Como:**
+    1.  Clique no **botão flutuante de microfone** no canto inferior direito da tela.
+    2.  Pressione o ícone do microfone na janela que se abre e comece a falar. Ex: "Minha glicemia agora é 110", "10 unidades de Lantus", "30 minutos de caminhada".
+    3.  A IA interpretará sua fala e preencherá um formulário de confirmação.
+    4.  Verifique os dados, corrija se necessário, e clique em "Salvar".
+
+### 4. Análise de Refeição com Inteligência Artificial
 
 Uma das funcionalidades mais poderosas do GlicemiaAI.
 
@@ -74,7 +85,7 @@ Uma das funcionalidades mais poderosas do GlicemiaAI.
         *   Dicas para melhorar a composição da refeição.
 -   **Histórico:** Todas as suas análises, incluindo a foto, ficam salvas para consulta futura.
 
-### 4. Calendário de Acompanhamento
+### 5. Calendário de Acompanhamento
 
 Visualize todos os seus registros de forma unificada e interativa.
 
@@ -85,7 +96,7 @@ Visualize todos os seus registros de forma unificada e interativa.
     *   Dias com registros são destacados. Clique em um dia para ver todos os dados correspondentes.
     *   Você pode apagar registros diretamente desta tela.
 
-### 5. Relatórios Detalhados
+### 6. Relatórios Detalhados
 
 Gere relatórios completos para analisar suas tendências e compartilhar com seu médico.
 
@@ -96,13 +107,13 @@ Gere relatórios completos para analisar suas tendências e compartilhar com seu
     3.  Clique em "Gerar Relatório".
 -   **O que o relatório inclui:**
     *   **Métricas Glicêmicas:** Média, mínima, máxima, desvio padrão e **coeficiente de variação (CV%)**.
-    *   **Tempo no Alvo:** Gráfico de pizza mostrando a porcentagem de tempo que sua glicemia ficou abaixo, dentro e acima da meta.
+    *   **Tempo no Alvo:** Gráfico de pizza mostrando a porcentagem de tempo que sua glicemia ficou abaixo, dentro e acima da sua meta pessoal.
     *   **Resumos:** Totais e médias de insulina, outros medicamentos, atividades e refeições.
     *   **Gráficos Visuais:** Tendências diárias de glicemia, insulina e atividades.
     *   **Logs Detalhados:** Tabelas com todos os registros individuais do período.
     *   **Exportação para PDF:** Clique em "Exportar para PDF" para gerar um arquivo fácil de compartilhar.
 
-### 6. Insights da IA
+### 7. Insights da IA
 
 Descubra padrões e receba dicas geradas pela inteligência artificial.
 
@@ -114,7 +125,7 @@ Descubra padrões e receba dicas geradas pela inteligência artificial.
     *   Um gráfico de tendência da sua glicemia média na última semana.
     *   Uma **dica personalizada** gerada pela IA com base no que ela observou em seus dados.
 
-### 7. Perfil do Usuário e Metas
+### 8. Perfil do Usuário e Metas
 
 Personalize o aplicativo para as suas necessidades.
 
@@ -122,9 +133,9 @@ Personalize o aplicativo para as suas necessidades.
 -   **Como:** Na página `Meu Perfil`, você pode:
     *   Editar seu nome e data de nascimento.
     *   Fazer upload de uma foto de perfil.
-    *   **Definir suas Metas Glicêmicas:** Insira os valores (em mg/dL) que definem suas faixas de **Hipoglicemia**, **Alvo (mínimo e máximo)** e **Hiperglicemia**. Estes valores são usados em todo o aplicativo para colorir seus registros e calcular o tempo no alvo.
+    *   **Definir suas Metas Glicêmicas:** Clique em "Editar Perfil" e vá para a seção "Minhas Metas Glicêmicas". Insira os valores (em mg/dL) que definem suas faixas de **Hipoglicemia**, **Alvo (mínimo e máximo)** e **Hiperglicemia**, conforme orientado pelo seu médico. Estes valores são usados em todo o aplicativo para classificar seus registros e calcular o tempo no alvo.
 
-### 8. Lembretes Inteligentes
+### 9. Lembretes Inteligentes
 
 Configure notificações para não esquecer de seus cuidados.
 
@@ -135,7 +146,7 @@ Configure notificações para não esquecer de seus cuidados.
     *   Defina o nome, tipo (glicemia ou insulina), horário e dias da semana.
     *   **Chamada Simulada:** Ative esta opção para que a notificação apareça com um texto de "chamada", para chamar mais atenção (não é uma ligação real).
 
-### 9. Configurações do Aplicativo
+### 10. Configurações do Aplicativo
 
 Ajuste o GlicemiaAI às suas preferências.
 
@@ -143,5 +154,3 @@ Ajuste o GlicemiaAI às suas preferências.
 -   **Aparência:** Alterne entre o **Modo Escuro** e o **Modo Claro**.
 -   **Idioma:** Defina o idioma preferido para as respostas da IA (ex: análise de refeição).
 -   **Sair:** Desconecte-se da sua conta com segurança.
-
-    

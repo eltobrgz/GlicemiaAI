@@ -79,11 +79,9 @@ export default function InsightsDisplay() {
 
   const timeInTarget = useMemo(() => {
     if (glucoseReadings.length === 0) return null;
-    const targetMin = currentGlucoseTargets.normalIdealMin;
-    const targetMax = currentGlucoseTargets.normalIdealMax;
-    const inTargetCount = glucoseReadings.filter(r => r.value >= targetMin && r.value <= targetMax).length;
+    const inTargetCount = glucoseReadings.filter(r => r.level === 'normal').length;
     return (inTargetCount / glucoseReadings.length) * 100;
-  }, [glucoseReadings, currentGlucoseTargets]);
+  }, [glucoseReadings]);
 
   const recentTrend = useMemo(() => {
     if (glucoseReadings.length < 2) return null;
@@ -176,7 +174,7 @@ export default function InsightsDisplay() {
          <Lightbulb className="h-5 w-5 text-primary" />
         <AlertTitle className="text-primary font-semibold">Análise da IA (Simplificada)</AlertTitle>
         <AlertDescription className="text-primary/90">
-          Esta seção apresenta uma análise básica dos seus dados. Uma IA mais avançada poderia identificar padrões complexos e fornecer dicas ainda mais personalizadas. As faixas de referência usadas aqui são: Baixa (&lt;{currentGlucoseTargets.low}), Normal ({currentGlucoseTargets.normalIdealMin}-{currentGlucoseTargets.normalIdealMax}), Alta (&gt;{currentGlucoseTargets.normalIdealMax}).
+          Esta seção apresenta uma análise básica dos seus dados. As faixas de referência usadas aqui são baseadas nas metas definidas no seu perfil: Baixa (&lt;{currentGlucoseTargets.low}), Normal ({currentGlucoseTargets.normalIdealMin}-{currentGlucoseTargets.normalIdealMax}), Alta (&gt;{currentGlucoseTargets.normalIdealMax}).
         </AlertDescription>
       </Alert>
 
@@ -334,5 +332,3 @@ export default function InsightsDisplay() {
     </div>
   );
 }
-
-    
