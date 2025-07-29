@@ -1,5 +1,4 @@
 
-
 // src/types/supabase.ts
 
 // These type definitions are based on the assumed Supabase table structures.

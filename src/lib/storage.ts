@@ -1,5 +1,4 @@
 
-
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';

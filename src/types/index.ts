@@ -1,5 +1,4 @@
 
-
 import type { z } from 'zod';
 import type { 
   WeeklyInsightsInputSchema, 
@@ -126,4 +125,3 @@ export const ACTIVITY_INTENSITIES = [
 export type WeeklyInsightsInput = z.infer<typeof WeeklyInsightsInputSchema>;
 export type WeeklyInsightsOutput = z.infer<typeof WeeklyInsightsOutputSchema>;
 export type InterpretedLog = z.infer<typeof InterpretedLogSchema>;
-

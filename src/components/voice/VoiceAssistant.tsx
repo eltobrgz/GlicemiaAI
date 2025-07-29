@@ -48,24 +48,24 @@ export default function VoiceAssistant() {
           const parsedPosition = JSON.parse(savedPosition);
           setPosition(parsedPosition);
         } else {
-          const buttonWidth = 48; // w-12
-          const buttonHeight = 48; // h-12
+          const buttonWidth = 40; // w-10
+          const buttonHeight = 40; // h-10
           const marginX = window.innerWidth > 768 ? 40 : 24;
           const marginY = window.innerHeight > 768 ? 40 : 24;
           setPosition({
             x: window.innerWidth - buttonWidth - marginX,
-            y: window.innerHeight - buttonHeight - marginY,
+            y: window.innerHeight - buttonHeight - marginY - 80, // Adjust for bottom nav bar
           });
         }
       } catch (error) {
         console.error("Failed to parse saved position, using default.", error);
-        const buttonWidth = 48;
-        const buttonHeight = 48;
+        const buttonWidth = 40;
+        const buttonHeight = 40;
         const marginX = window.innerWidth > 768 ? 40 : 24;
         const marginY = window.innerHeight > 768 ? 40 : 24;
         setPosition({
           x: window.innerWidth - buttonWidth - marginX,
-          y: window.innerHeight - buttonHeight - marginY,
+          y: window.innerHeight - buttonHeight - marginY - 80,
         });
       }
     };
@@ -239,7 +239,7 @@ export default function VoiceAssistant() {
           left: `${position.x}px`,
           touchAction: 'none'
         }}
-        className="z-50 h-10 w-10 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
+        className="z-50 h-12 w-12 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
         size="icon"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -248,7 +248,7 @@ export default function VoiceAssistant() {
         aria-label="Assistente de Voz"
         title="Assistente de Voz (clique para abrir, arraste para mover)"
       >
-        <Mic className="h-5 w-5" />
+        <Mic className="h-6 w-6" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>

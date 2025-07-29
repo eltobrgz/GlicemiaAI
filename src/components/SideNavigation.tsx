@@ -1,5 +1,4 @@
 
-
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
@@ -21,7 +20,6 @@ import { supabase } from '@/lib/supabaseClient';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/bolus-calculator', label: 'Calculadora de Bolus', icon: Calculator },
   { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet },
   { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
   { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus }, // Adicionado

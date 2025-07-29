@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import Link from 'next/link';
@@ -196,7 +195,7 @@ export default function DashboardPage() {
 const quickAccessItems = [
   { href: '/log/glucose', label: 'Glicemia', icon: Droplet, iconColor: 'text-blue-500' },
   { href: '/log/insulin', label: 'Insulina', icon: Pill, iconColor: 'text-green-500' },
-  { href: '/bolus-calculator', label: 'Calcular Dose', icon: Calculator, iconColor: 'text-red-500' },
-  { href: '/log/activity', label: 'Atividade', icon: Bike, iconColor: 'text-orange-500' },
   { href: '/log/medication', label: 'Medicamento', icon: ClipboardPlus, iconColor: 'text-purple-500' },
+  { href: '/log/activity', label: 'Atividade', icon: Bike, iconColor: 'text-orange-500' },
+  { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera, iconColor: 'text-red-500' },
 ];
