@@ -97,7 +97,7 @@ export async function countReadingsByLevel(params: { days: number }) {
   return counts;
 }
 
-// Nova ferramenta para encontrar a leitura máxima ou mínima
+
 export async function findExtremeGlucoseReading(params: { startDate: string, endDate: string, type: 'max' | 'min' }) {
     const userId = await getCurrentUserId();
     
@@ -117,5 +117,62 @@ export async function findExtremeGlucoseReading(params: { startDate: string, end
         throw new Error(`Falha ao buscar a ${params.type === 'max' ? 'maior' : 'menor'} leitura de glicemia.`);
     }
 
+    return data;
+}
+
+// Tool to get the most recent insulin log
+export async function getMostRecentInsulinLog() {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+        .from('insulin_logs')
+        .select('type, dose, timestamp')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        console.error('Error fetching most recent insulin log:', error);
+        throw new Error('Falha ao buscar o último registro de insulina.');
+    }
+    return data;
+}
+
+// Tool to get the most recent activity log
+export async function getMostRecentActivityLog() {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+        .from('activity_logs')
+        .select('activity_type, duration_minutes, timestamp')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        console.error('Error fetching most recent activity log:', error);
+        throw new Error('Falha ao buscar o último registro de atividade física.');
+    }
+    return data;
+}
+
+// Tool to get the most recent medication log
+export async function getMostRecentMedicationLog() {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+        .from('medication_logs')
+        .select('medication_name, dosage, timestamp')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: false })
+        .limit(1)
+        .single();
+
+    if (error) {
+        if (error.code === 'PGRST116') return null;
+        console.error('Error fetching most recent medication log:', error);
+        throw new Error('Falha ao buscar o último registro de medicamento.');
+    }
     return data;
 }

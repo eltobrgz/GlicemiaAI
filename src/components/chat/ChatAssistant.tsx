@@ -3,20 +3,20 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, Bot, User, X } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Bot, User, X, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { conversationalAgent } from '@/ai/flows/conversational-agent';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 interface Message {
-  role: 'user' | 'model';
+  role: 'user' | 'model' | 'welcome';
   text: string;
 }
 
-const VOICE_ASSISTANT_POSITION_KEY = 'glicemiaai-chat-assistant-position';
+const CHAT_ASSISTANT_POSITION_KEY = 'glicemiaai-chat-assistant-position';
 
 export default function ChatAssistant() {
   const [isOpen, setIsOpen] = useState(false);
@@ -35,13 +35,13 @@ export default function ChatAssistant() {
   useEffect(() => {
     const setInitialPosition = () => {
        try {
-        const savedPosition = localStorage.getItem(VOICE_ASSISTANT_POSITION_KEY);
+        const savedPosition = localStorage.getItem(CHAT_ASSISTANT_POSITION_KEY);
         if (savedPosition) {
           const parsedPosition = JSON.parse(savedPosition);
           setPosition(parsedPosition);
         } else {
-          const buttonWidth = 40; // w-10
-          const buttonHeight = 40; // h-10
+          const buttonWidth = 48; // w-12
+          const buttonHeight = 48; // h-12
           const marginX = window.innerWidth > 768 ? 40 : 24;
           const marginY = window.innerHeight > 768 ? 40 : 24;
           setPosition({
@@ -51,8 +51,8 @@ export default function ChatAssistant() {
         }
       } catch (error) {
         console.error("Failed to parse saved position for chat, using default.", error);
-         const buttonWidth = 40;
-         const buttonHeight = 40;
+         const buttonWidth = 48;
+         const buttonHeight = 48;
          const marginX = window.innerWidth > 768 ? 40 : 24;
          const marginY = window.innerHeight > 768 ? 40 : 24;
         setPosition({
@@ -112,7 +112,7 @@ export default function ChatAssistant() {
       setIsDragging(false);
       buttonRef.current.releasePointerCapture(e.pointerId);
       if (wasDragged) {
-        localStorage.setItem(VOICE_ASSISTANT_POSITION_KEY, JSON.stringify(position));
+        localStorage.setItem(CHAT_ASSISTANT_POSITION_KEY, JSON.stringify(position));
       }
     }
   };
@@ -121,9 +121,8 @@ export default function ChatAssistant() {
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
     if (open && messages.length === 0) {
-      // Add a welcome message when chat is opened for the first time
       setMessages([
-        { role: 'model', text: 'Olá! Eu sou o assistente GlicemiaAI. Como posso ajudar? Você pode me perguntar sobre seus dados de saúde.' },
+        { role: 'welcome', text: 'Welcome Message' },
       ]);
     }
   };
@@ -149,7 +148,7 @@ export default function ChatAssistant() {
     if (!input.trim() || isLoading) return;
 
     const newUserMessage: Message = { role: 'user', text: input };
-    const currentMessages: any[] = [...messages, newUserMessage].map(msg => ({
+    const currentMessages: any[] = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
       role: msg.role,
       content: [{ text: msg.text }],
     }));
@@ -175,7 +174,6 @@ export default function ChatAssistant() {
         description: error.message || "Não foi possível obter uma resposta da IA.",
         variant: "destructive",
       });
-      // Optional: add an error message to the chat
       const errorMessage: Message = { role: 'model', text: 'Desculpe, ocorreu um erro. Por favor, tente novamente.' };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
@@ -232,36 +230,57 @@ export default function ChatAssistant() {
           
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
               <div className="space-y-4">
-                {messages.map((message, index) => (
-                  <div
-                    key={index}
-                    className={cn(
-                      'flex items-start gap-3',
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    )}
-                  >
-                    {message.role === 'model' && (
-                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
-                         <Bot className="h-5 w-5 text-primary" />
-                      </div>
-                    )}
+                {messages.map((message, index) => {
+                  if (message.role === 'welcome') {
+                    return (
+                        <Alert variant="info" key="welcome-message">
+                            <Info className="h-4 w-4" />
+                            <AlertTitle>Olá! Como posso ajudar?</AlertTitle>
+                            <AlertDescription>
+                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde. Lembre-se, eu sou uma IA e não um profissional de saúde.</p>
+                                <strong className="block mb-1">Experimente perguntar:</strong>
+                                <ul className="list-disc list-inside text-xs">
+                                    <li>Qual foi minha última glicemia?</li>
+                                    <li>Qual minha maior glicemia no último mês?</li>
+                                    <li>Qual foi a última dose de insulina que apliquei?</li>
+                                    <li>Fiz algum exercício hoje?</li>
+                                    <li>Qual o último remédio que registrei?</li>
+                                </ul>
+                            </AlertDescription>
+                        </Alert>
+                    )
+                  }
+                  return (
                     <div
-                      className={cn(
-                        'rounded-xl p-3 max-w-[80%] break-words text-sm',
-                        message.role === 'user'
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-muted'
-                      )}
+                        key={index}
+                        className={cn(
+                        'flex items-start gap-3',
+                        message.role === 'user' ? 'justify-end' : 'justify-start'
+                        )}
                     >
-                      {message.text}
+                        {message.role === 'model' && (
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                            <Bot className="h-5 w-5 text-primary" />
+                        </div>
+                        )}
+                        <div
+                        className={cn(
+                            'rounded-xl p-3 max-w-[80%] break-words text-sm',
+                            message.role === 'user'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted'
+                        )}
+                        >
+                        {message.text}
+                        </div>
+                        {message.role === 'user' && (
+                        <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                            <User className="h-5 w-5 text-foreground" />
+                        </div>
+                        )}
                     </div>
-                     {message.role === 'user' && (
-                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
-                         <User className="h-5 w-5 text-foreground" />
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  )
+                })}
                 {isLoading && (
                   <div className="flex items-start gap-3 justify-start">
                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">

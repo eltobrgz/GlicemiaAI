@@ -10,7 +10,10 @@ import {
   getMostRecentGlucoseReading,
   getGlucoseReadingsInRange,
   countReadingsByLevel,
-  findExtremeGlucoseReading, // Importando a nova ferramenta
+  findExtremeGlucoseReading,
+  getMostRecentInsulinLog,    // Novo
+  getMostRecentActivityLog,  // Novo
+  getMostRecentMedicationLog, // Novo
 } from '@/lib/data-tools';
 
 // Define tools that the AI can use to answer questions
@@ -60,7 +63,7 @@ const tools = {
       },
       async ({ days }) => await countReadingsByLevel({ days })
   ),
-  findExtremeGlucoseReading: ai.defineTool( // Adicionando a nova ferramenta
+  findExtremeGlucoseReading: ai.defineTool(
     {
         name: 'findExtremeGlucoseReading',
         description: 'Find the highest (max) or lowest (min) glucose reading within a specified date range.',
@@ -76,6 +79,36 @@ const tools = {
     },
     async ({ startDate, endDate, type }) => await findExtremeGlucoseReading({ startDate, endDate, type })
   ),
+  getMostRecentInsulinLog: ai.defineTool({
+    name: 'getMostRecentInsulinLog',
+    description: "Get the user's most recent insulin application log.",
+    input: z.object({}),
+    output: z.object({
+        type: z.string(),
+        dose: z.number(),
+        timestamp: z.string(),
+    }).nullable(),
+  }, async () => await getMostRecentInsulinLog()),
+  getMostRecentActivityLog: ai.defineTool({
+      name: 'getMostRecentActivityLog',
+      description: "Get the user's most recent physical activity log.",
+      input: z.object({}),
+      output: z.object({
+          activity_type: z.string(),
+          duration_minutes: z.number(),
+          timestamp: z.string(),
+      }).nullable(),
+  }, async () => await getMostRecentActivityLog()),
+  getMostRecentMedicationLog: ai.defineTool({
+      name: 'getMostRecentMedicationLog',
+      description: "Get the user's most recent non-insulin medication log.",
+      input: z.object({}),
+      output: z.object({
+          medication_name: z.string(),
+          dosage: z.string(),
+          timestamp: z.string(),
+      }).nullable(),
+  }, async () => await getMostRecentMedicationLog()),
 };
 
 const chatPrompt = ai.definePrompt({
@@ -83,7 +116,7 @@ const chatPrompt = ai.definePrompt({
   system: `You are GlicemiaAI, a friendly and helpful AI assistant for diabetes management.
 - Your responses MUST be in Brazilian Portuguese (pt-BR).
 - Use the provided tools to answer questions about the user's health data.
-- If you don't have a tool to answer a question, say that you cannot answer it.
+- If you don't have a tool to answer a question, say that you cannot answer it. For example, you cannot calculate averages or totals unless a specific tool for that exists.
 - Do not provide medical advice. Always advise the user to consult with their doctor for medical decisions.
 - Keep your answers concise and easy to understand.
 - When you use a tool and it returns data, present it to the user in a clear, friendly way. For dates, use relative terms like "hoje", "ontem", ou "dd/MM" when possible.
@@ -91,11 +124,11 @@ const chatPrompt = ai.definePrompt({
 - You can also answer general knowledge questions about diabetes, health, and nutrition in a helpful, educational way.
 - For questions about periods like "this month" or "last month", you must calculate the correct start and end dates to use with the tools. Today's date is ${new Date().toISOString()}.`,
   tools: Object.values(tools),
-  prompt: z.array(z.any()), // Tornando o prompt obrigatório para corrigir o erro
+  prompt: z.array(z.any()),
 });
 
 export async function conversationalAgent(history: any[]) {
     console.log("HISTORY", history);
-    const response = await chatPrompt(history); // Corrigindo a chamada
+    const response = await chatPrompt(history);
     return response.content;
 }
