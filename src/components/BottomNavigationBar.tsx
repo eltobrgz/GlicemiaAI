@@ -27,6 +27,7 @@ export default function BottomNavigationBar() {
     { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
     { href: '/reports', label: 'Relatórios', icon: FileText }, 
+    { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator },
     { href: '/profile', label: 'Perfil', icon: User },
     { href: '/reminders', label: 'Lembretes', icon: BellRing },
     { href: '/insights', label: 'Insights IA', icon: BarChart3 },
@@ -44,7 +45,7 @@ export default function BottomNavigationBar() {
   const popoverItems = allNavItems.filter(
     item => !directVisibleItems.some(dItem => dItem.href === item.href)
   ).sort((a, b) => { // Optional: sort popover items for consistency
-    const order = ['/calendar', '/reports', '/log/activity', '/log/medication', '/profile', '/reminders', '/insights', '/settings'];
+    const order = ['/calendar', '/reports', '/bolus-calculator', '/log/activity', '/log/medication', '/profile', '/reminders', '/insights', '/settings'];
     return order.indexOf(a.href) - order.indexOf(b.href);
   });
 

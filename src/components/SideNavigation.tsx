@@ -22,9 +22,10 @@ const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
   { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet },
   { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
-  { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus }, // Adicionado
+  { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus },
   { href: '/log/activity', label: 'Registrar Atividade', icon: Bike },
   { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
+  { href: '/bolus-calculator', label: 'Calculadora de Bolus', icon: Calculator },
   { href: '/calendar', label: 'Calendário', icon: CalendarDays },
   { href: '/reports', label: 'Relatórios', icon: FileText }, 
   { href: '/insights', label: 'Insights IA', icon: BarChart3 },

@@ -85,7 +85,7 @@ export default function DashboardPage() {
 
         <section>
           <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
             {quickAccessItems.map((item) => (
               <Link href={item.href} key={item.href} className="block group">
                   <Card className="shadow-md hover:shadow-lg transition-all duration-200 ease-in-out group-hover:border-primary">
@@ -197,5 +197,6 @@ const quickAccessItems = [
   { href: '/log/insulin', label: 'Insulina', icon: Pill, iconColor: 'text-green-500' },
   { href: '/log/medication', label: 'Medicamento', icon: ClipboardPlus, iconColor: 'text-purple-500' },
   { href: '/log/activity', label: 'Atividade', icon: Bike, iconColor: 'text-orange-500' },
-  { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera, iconColor: 'text-red-500' },
+  { href: '/meal-analysis', label: 'Refeição', icon: Camera, iconColor: 'text-red-500' },
+  { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator, iconColor: 'text-indigo-500' },
 ];
