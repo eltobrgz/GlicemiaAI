@@ -77,6 +77,6 @@ const chatPrompt = ai.definePrompt({
 
 export async function conversationalAgent(history: any[]) {
     console.log("HISTORY", history);
-  const { response } = await chatPrompt(history);
+  const response = await chatPrompt(history);
   return response?.content;
 }
