@@ -11,9 +11,9 @@ import {
   getGlucoseReadingsInRange,
   countReadingsByLevel,
   findExtremeGlucoseReading,
-  getMostRecentInsulinLog,    // Novo
-  getMostRecentActivityLog,  // Novo
-  getMostRecentMedicationLog, // Novo
+  getMostRecentInsulinLog,
+  getMostRecentActivityLog,
+  getMostRecentMedicationLog,
 } from '@/lib/data-tools';
 
 // Define tools that the AI can use to answer questions
@@ -111,6 +111,13 @@ const tools = {
   }, async () => await getMostRecentMedicationLog()),
 };
 
+const chatHistorySchema = z.array(
+  z.object({
+    role: z.string(),
+    content: z.array(z.object({ text: z.string() })),
+  })
+);
+
 const chatPrompt = ai.definePrompt({
   name: 'conversationalAgentPrompt',
   system: `You are GlicemiaAI, a friendly and helpful AI assistant for diabetes management.
@@ -124,10 +131,12 @@ const chatPrompt = ai.definePrompt({
 - You can also answer general knowledge questions about diabetes, health, and nutrition in a helpful, educational way.
 - For questions about periods like "this month" or "last month", you must calculate the correct start and end dates to use with the tools. Today's date is ${new Date().toISOString()}.`,
   tools: Object.values(tools),
-  prompt: z.array(z.any()),
+  input: {
+    schema: chatHistorySchema,
+  },
 });
 
-export async function conversationalAgent(history: any[]) {
+export async function conversationalAgent(history: z.infer<typeof chatHistorySchema>) {
     console.log("HISTORY", history);
     const response = await chatPrompt(history);
     return response.content;
