@@ -2,20 +2,24 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { GlucoseReading, UserProfile } from '@/types';
-import { calculateDashboardMetrics, calculateConsecutiveDaysStreak } from '@/lib/utils';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import type { GlucoseReading, InsulinLog, UserProfile } from '@/types';
+import { calculateDashboardMetrics, calculateConsecutiveDaysStreak, getGlucoseLevelColor, formatDateTime } from '@/lib/utils';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Target, Activity, Droplet, Flame } from 'lucide-react';
+import { Target, Activity, Droplet, Flame, Pill, PlusCircle } from 'lucide-react';
 import TodayGlucoseChart from './TodayGlucoseChart';
 import { subHours, parseISO } from 'date-fns';
+import { Button } from '../ui/button';
+import Link from 'next/link';
 
 interface DashboardStatsProps {
   userProfile: UserProfile;
   glucoseReadings: GlucoseReading[];
+  lastGlucose: GlucoseReading | null;
+  lastInsulin: InsulinLog | null;
 }
 
-export default function DashboardStats({ userProfile, glucoseReadings }: DashboardStatsProps) {
+export default function DashboardStats({ userProfile, glucoseReadings, lastGlucose, lastInsulin }: DashboardStatsProps) {
   const metrics = useMemo(
     () => calculateDashboardMetrics(glucoseReadings, userProfile),
     [glucoseReadings, userProfile]
@@ -82,15 +86,75 @@ export default function DashboardStats({ userProfile, glucoseReadings }: Dashboa
                 </CardContent>
             </Card>
         </div>
-         <Card className="col-span-1 lg:col-span-2 shadow-lg">
-            <CardHeader>
-              <CardTitle className="text-xl font-headline text-primary">Tendência das Últimas 24 Horas</CardTitle>
-              <p className="text-sm text-muted-foreground">Um olhar rápido sobre suas flutuações de glicose recentes.</p>
-            </CardHeader>
-            <CardContent>
-                <TodayGlucoseChart readings={glucoseLast24h} userProfile={userProfile} />
-            </CardContent>
-          </Card>
+
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+                <Card className="shadow-lg h-full">
+                    <CardHeader>
+                        <CardTitle className="text-xl font-headline text-primary">Tendência das Últimas 24 Horas</CardTitle>
+                        <CardDescription>Um olhar rápido sobre suas flutuações de glicose recentes.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <TodayGlucoseChart readings={glucoseLast24h} userProfile={userProfile} />
+                    </CardContent>
+                </Card>
+            </div>
+            <div className="space-y-6">
+                <Card className="shadow-lg">
+                    <CardHeader>
+                        <CardTitle className="flex items-center">
+                            <Droplet className="mr-2 h-6 w-6 text-primary" />
+                            Última Glicemia
+                        </CardTitle>
+                        {lastGlucose && <CardDescription>{formatDateTime(lastGlucose.timestamp)}</CardDescription>}
+                    </CardHeader>
+                    <CardContent>
+                        {lastGlucose ? (
+                            <div>
+                                <p className={`text-4xl font-bold ${getGlucoseLevelColor(lastGlucose.level, userProfile || undefined)}`}>
+                                    {lastGlucose.value} <span className="text-xl text-muted-foreground">mg/dL</span>
+                                </p>
+                                {lastGlucose.mealContext && <p className="text-sm text-muted-foreground capitalize">Contexto: {lastGlucose.mealContext.replace('_', ' ')}</p>}
+                                {lastGlucose.notes && <p className="text-sm text-muted-foreground truncate" title={lastGlucose.notes}>Notas: {lastGlucose.notes}</p>}
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">Nenhum registro de glicemia.</p>
+                        )}
+                         <Link href="/log/glucose">
+                            <Button variant="outline" size="sm" className="mt-4 w-full">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+                 <Card className="shadow-lg">
+                    <CardHeader>
+                    <CardTitle className="flex items-center">
+                        <Pill className="mr-2 h-6 w-6 text-accent" />
+                        Última Insulina
+                    </CardTitle>
+                    {lastInsulin && <CardDescription>{formatDateTime(lastInsulin.timestamp)}</CardDescription>}
+                    </CardHeader>
+                    <CardContent>
+                        {lastInsulin ? (
+                            <div>
+                                <p className="text-3xl font-bold">
+                                    {lastInsulin.dose} <span className="text-xl text-muted-foreground">unidades</span>
+                                </p>
+                                <p className="text-sm text-muted-foreground truncate" title={lastInsulin.type}>Tipo: {lastInsulin.type}</p>
+                            </div>
+                        ) : (
+                            <p className="text-muted-foreground">Nenhum registro de insulina.</p>
+                        )}
+                        <Link href="/log/insulin">
+                            <Button variant="outline" size="sm" className="mt-4 w-full">
+                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
+                            </Button>
+                        </Link>
+                    </CardContent>
+                </Card>
+            </div>
+        </div>
     </div>
   );
 }

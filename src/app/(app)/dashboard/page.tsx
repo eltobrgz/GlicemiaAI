@@ -6,10 +6,9 @@ import { useEffect, useState, Fragment } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2, Bike, ClipboardPlus, Calculator } from 'lucide-react';
+import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator } from 'lucide-react';
 import type { GlucoseReading, InsulinLog } from '@/types';
 import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; 
-import { formatDateTime, getGlucoseLevelColor } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { getUserProfile } from '@/lib/storage';
 import type { UserProfile } from '@/types';
@@ -78,16 +77,21 @@ export default function DashboardPage() {
         <PageHeader title="Dashboard" description="Bem-vindo(a) ao GlicemiaAI! Seu painel de controle para gerenciamento de diabetes." />
 
         {isLoading ? (
-             <div className="flex items-center justify-center h-40">
+             <div className="flex items-center justify-center h-64">
                 <Loader2 className="h-10 w-10 animate-spin text-primary" />
              </div>
         ) : (
-            userProfile && <DashboardStats userProfile={userProfile} glucoseReadings={allGlucose} />
+            userProfile && <DashboardStats 
+              userProfile={userProfile} 
+              glucoseReadings={allGlucose}
+              lastGlucose={lastGlucose}
+              lastInsulin={lastInsulin}
+            />
         )}
         
         <section>
           <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {quickAccessItems.map((item) => (
               <Link href={item.href} key={item.href} className="block group">
                   <Card className="shadow-md hover:shadow-lg transition-all duration-200 ease-in-out group-hover:border-primary">
@@ -100,77 +104,6 @@ export default function DashboardPage() {
             ))}
           </div>
         </section>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Card className="shadow-lg lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Droplet className="mr-2 h-6 w-6 text-primary" />
-                Última Glicemia Registrada
-              </CardTitle>
-              {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-              {!isLoading && lastGlucose && (
-                <CardDescription>{formatDateTime(lastGlucose.timestamp)}</CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center h-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                </div>
-              ) : lastGlucose ? (
-                <div>
-                  <p className={`text-4xl font-bold ${getGlucoseLevelColor(lastGlucose.level, userProfile || undefined)}`}>
-                    {lastGlucose.value} <span className="text-xl text-muted-foreground">mg/dL</span>
-                  </p>
-                  {lastGlucose.mealContext && <p className="text-sm text-muted-foreground capitalize">Contexto: {lastGlucose.mealContext.replace('_', ' ')}</p>}
-                  {lastGlucose.notes && <p className="text-sm text-muted-foreground">Notas: {lastGlucose.notes}</p>}
-                </div>
-              ) : (
-                <p className="text-muted-foreground">Nenhum registro de glicemia encontrado.</p>
-              )}
-              <Link href="/log/glucose">
-                <Button variant="outline" className="mt-4 w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Registro
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-          <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Pill className="mr-2 h-6 w-6 text-accent" />
-                Última Insulina Registrada
-              </CardTitle>
-              {isLoading && <Loader2 className="h-5 w-5 animate-spin text-accent" />}
-              {!isLoading && lastInsulin && (
-                <CardDescription>{formatDateTime(lastInsulin.timestamp)}</CardDescription>
-              )}
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="flex items-center justify-center h-20">
-                  <Loader2 className="h-8 w-8 animate-spin text-accent" />
-                </div>
-              ) : lastInsulin ? (
-                <div>
-                  <p className="text-3xl font-bold">
-                    {lastInsulin.dose} <span className="text-xl text-muted-foreground">unidades</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">Tipo: {lastInsulin.type}</p>
-                </div>
-              ) : (
-                <p className="text-muted-foreground">Nenhum registro de insulina encontrado.</p>
-              )}
-              <Link href="/log/insulin">
-                <Button variant="outline" className="mt-4 w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Novo Registro
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
         
         <Card className="shadow-lg">
           <CardHeader>
@@ -202,5 +135,3 @@ const quickAccessItems = [
   { href: '/meal-analysis', label: 'Refeição', icon: Camera, iconColor: 'text-red-500' },
   { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator, iconColor: 'text-indigo-500' },
 ];
-
-    
