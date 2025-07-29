@@ -55,8 +55,8 @@ export function SideNavigation() {
         title: "Logout Realizado",
         description: "Você foi desconectado com sucesso.",
       });
-      router.replace('/login'); // Use replace for better auth flow
-      router.refresh(); 
+      // Use window.location.reload() for a full page refresh to ensure state is cleared.
+      window.location.reload();
     }
   };
 

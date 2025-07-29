@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { getUserProfile, saveUserProfile } from '@/lib/storage';
 import type { UserProfile } from '@/types';
-import { Form, FormControl, FormField, FormItem, FormLabel as ShadFormLabel, FormMessage } from '@/components/ui/form'; // Renamed FormLabel
+import { Form, FormControl, FormField, FormLabel as ShadFormLabel, FormMessage } from '@/components/ui/form'; // Renamed FormLabel
 
 const THEME_STORAGE_KEY = 'glicemiaai-theme';
 const LANGUAGES = [
@@ -120,12 +120,12 @@ export default function SettingsPageContent() {
     const { error } = await supabase.auth.signOut();
     if (error) {
       toast({ title: "Erro ao Sair", description: error.message, variant: "destructive" });
+      setIsLoggingOut(false);
     } else {
       toast({ title: "Logout Realizado", description: "Você foi desconectado com sucesso." });
-      router.replace('/login'); // Use replace for better auth flow
-      router.refresh();
+      // Use window.location.reload() for a full page refresh to ensure state is cleared.
+      window.location.reload();
     }
-    setIsLoggingOut(false);
   };
 
   const handleChangePassword = async () => {
