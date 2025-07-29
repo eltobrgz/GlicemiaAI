@@ -3,48 +3,14 @@
  * @fileOverview An AI flow to interpret natural language text into a structured health log entry.
  *
  * - interpretVoiceLog - A function that handles the interpretation process.
- * - InterpretedLog - The output type for the interpretVoiceLog function.
  */
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import type { InterpretedLog } from '@/types';
+import { InterpretedLogSchema, VoiceLogInputSchema } from '@/types/schemas';
 
-// Define base schemas for each log type that can be extracted from voice
-const GlucoseLogSchema = z.object({
-  value: z.number().describe('The blood glucose value in mg/dL.'),
-  notes: z.string().optional().describe('Any additional notes or context mentioned by the user.'),
-});
-
-const InsulinLogSchema = z.object({
-  dose: z.number().describe('The dose of insulin in units.'),
-  type: z.string().describe('The type or brand name of the insulin.'),
-});
-
-const MedicationLogSchema = z.object({
-  medication_name: z.string().describe('The name of the medication.'),
-  dosage: z.string().describe('The dosage of the medication (e.g., "500mg", "1 comprimido").'),
-});
-
-const ActivityLogSchema = z.object({
-  activity_type: z.string().describe('The type of physical activity.'),
-  duration_minutes: z.number().describe('The duration of the activity in minutes.'),
-});
-
-// Create a discriminated union for the output
-const InterpretedLogSchema = z.discriminatedUnion('logType', [
-  z.object({ logType: z.literal('glucose'), data: GlucoseLogSchema }),
-  z.object({ logType: z.literal('insulin'), data: InsulinLogSchema }),
-  z.object({ logType: z.literal('medication'), data: MedicationLogSchema }),
-  z.object({ logType: z.literal('activity'), data: ActivityLogSchema }),
-  z.object({ logType: z.literal('unrecognized'), data: z.object({ reason: z.string().describe('Reason why the input could not be interpreted.') }) }),
-]);
-export type InterpretedLog = z.infer<typeof InterpretedLogSchema>;
-
-// The input is a simple string from the user's speech
-const VoiceLogInputSchema = z.string();
-export type VoiceLogInput = z.infer<typeof VoiceLogInputSchema>;
 
 // The wrapper function to be called from the frontend
-export async function interpretVoiceLog(input: VoiceLogInput): Promise<InterpretedLog> {
+export async function interpretVoiceLog(input: string): Promise<InterpretedLog> {
   return interpretVoiceLogFlow(input);
 }
 

@@ -1,5 +1,17 @@
 
-import type { AnalyzeMealImageOutput as GenAIAnalyzeMealImageOutput } from '@/ai/flows/analyze-meal-image';
+
+import type { z } from 'zod';
+import type { 
+  WeeklyInsightsInputSchema, 
+  WeeklyInsightsOutputSchema,
+  InterpretedLogSchema,
+  AnalyzeMealImageOutputSchema,
+  AnalyzeMealImageInputSchema,
+} from './schemas';
+
+// export type AnalyzeMealImageOutput = GenAIAnalyzeMealImageOutput;
+export type AnalyzeMealImageInput = z.infer<typeof AnalyzeMealImageInputSchema>;
+export type AnalyzeMealImageOutput = z.infer<typeof AnalyzeMealImageOutputSchema>;
 
 export interface GlucoseReading {
   id: string; 
@@ -48,8 +60,6 @@ export interface ReminderConfig {
   customSound?: string; 
   created_at: string;
 }
-
-export type AnalyzeMealImageOutput = GenAIAnalyzeMealImageOutput;
 
 export interface MealAnalysis extends AnalyzeMealImageOutput {
   id: string; 
@@ -106,3 +116,10 @@ export const ACTIVITY_INTENSITIES = [
   { value: 'moderada', label: 'Moderada' },
   { value: 'intensa', label: 'Intensa' },
 ];
+
+
+// Genkit Flow Types
+export type WeeklyInsightsInput = z.infer<typeof WeeklyInsightsInputSchema>;
+export type WeeklyInsightsOutput = z.infer<typeof WeeklyInsightsOutputSchema>;
+export type InterpretedLog = z.infer<typeof InterpretedLogSchema>;
+

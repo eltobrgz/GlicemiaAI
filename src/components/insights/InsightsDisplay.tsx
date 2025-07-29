@@ -4,9 +4,9 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis, MedicationLog } from '@/types';
+import type { UserProfile, WeeklyInsightsOutput, WeeklyInsightsInput } from '@/types';
 import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses, getMedicationLogs } from '@/lib/storage';
-import { generateWeeklyInsights, type WeeklyInsightsOutput, type WeeklyInsightsInput } from '@/ai/flows/generate-weekly-insights';
+import { generateWeeklyInsights } from '@/ai/flows/generate-weekly-insights';
 import { Loader2, Lightbulb, Sparkles, TrendingUp, CheckCircle, Target } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { format, subDays, parseISO } from 'date-fns';
@@ -34,14 +34,14 @@ export default function InsightsDisplay() {
       }
 
       // 2. Fetch all data from the last 14 days
-      const fourteenDaysAgo = subDays(new Date(), 14).toISOString();
+      const fourteenDaysAgo = subDays(new Date(), 14);
       const allGlucose = await getGlucoseReadings(profile);
       const allInsulin = await getInsulinLogs();
       const allActivity = await getActivityLogs();
       const allMeals = await getMealAnalyses();
       const allMedication = await getMedicationLogs();
       
-      const filterByDate = (items: any[]) => items.filter(item => parseISO(item.timestamp) >= parseISO(fourteenDaysAgo));
+      const filterByDate = (items: any[]) => items.filter(item => parseISO(item.timestamp) >= fourteenDaysAgo);
 
       const inputForAI: WeeklyInsightsInput = {
         userProfile: {

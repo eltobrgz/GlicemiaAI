@@ -13,8 +13,8 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { UploadCloud, Loader2, Camera } from 'lucide-react';
-import type { MealAnalysis, AnalyzeMealImageOutput, UserProfile } from '@/types';
-import { analyzeMealImage as analyzeMealImageFlow, type AnalyzeMealImageInput } from '@/ai/flows/analyze-meal-image';
+import type { MealAnalysis, AnalyzeMealImageOutput, UserProfile, AnalyzeMealImageInput } from '@/types';
+import { analyzeMealImage as analyzeMealImageFlow } from '@/ai/flows/analyze-meal-image';
 import { fileToDataUri } from '@/lib/utils';
 import { saveMealAnalysis, getUserProfile } from '@/lib/storage';
 

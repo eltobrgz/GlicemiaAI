@@ -6,51 +6,12 @@
  * @fileOverview Analyzes a photo of a meal to estimate macronutrients and potential blood glucose impact.
  *
  * - analyzeMealImage - A function that handles the meal image analysis process.
- * - AnalyzeMealImageInput - The input type for the analyzeMealImage function.
- * - AnalyzeMealImageOutput - The return type for the analyzeMealImage function.
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import type { AnalyzeMealImageInput, AnalyzeMealImageOutput } from '@/types';
+import { AnalyzeMealImageInputSchema, AnalyzeMealImageOutputSchema } from '@/types/schemas';
 
-const AnalyzeMealImageInputSchema = z.object({
-  mealPhotoDataUri: z
-    .string()
-    .describe(
-      "A photo of a meal, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
-    ),
-  userContext: z
-    .string()
-    .optional()
-    .describe('Additional context about the user, such as their current blood glucose level, insulin sensitivity, and dietary preferences.'),
-  language: z
-    .string()
-    .optional()
-    .default('pt-BR')
-    .describe('The preferred language for the AI response (e.g., "pt-BR", "en-US"). Defaults to "pt-BR" if not provided.'),
-});
-export type AnalyzeMealImageInput = z.infer<typeof AnalyzeMealImageInputSchema>;
-
-const AnalyzeMealImageOutputSchema = z.object({
-  foodIdentification: z.string().describe('A description of the food items in the meal.'),
-  macronutrientEstimates: z
-    .object({
-      carbohydrates: z.number().describe('Estimated grams of carbohydrates in the meal.'),
-      protein: z.number().describe('Estimated grams of protein in the meal.'),
-      fat: z.number().describe('Estimated grams of fat in the meal.'),
-    })
-    .describe('Estimates of the macronutrient content of the meal.'),
-  estimatedGlucoseImpact: z
-    .string()
-    .describe('An estimation of how this meal will impact the users blood glucose levels.'),
-  suggestedInsulinDose: z
-    .string()
-    .describe(
-      'Suggested insulin dose to be taken with the meal, taking into consideration user context if provided.'
-    ),
-  improvementTips: z.string().describe('Suggestions for improving the meal composition.'),
-});
-export type AnalyzeMealImageOutput = z.infer<typeof AnalyzeMealImageOutputSchema>;
 
 export async function analyzeMealImage(input: AnalyzeMealImageInput): Promise<AnalyzeMealImageOutput> {
   return analyzeMealImageFlow(input);

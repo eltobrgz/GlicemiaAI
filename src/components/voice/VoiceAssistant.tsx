@@ -7,7 +7,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
-import { interpretVoiceLog, type InterpretedLog } from '@/ai/flows/interpret-voice-log';
+import { interpretVoiceLog } from '@/ai/flows/interpret-voice-log';
+import type { InterpretedLog } from '@/types';
 
 import GlucoseLogForm from '@/components/glucose/GlucoseLogForm';
 import InsulinLogForm from '@/components/insulin/InsulinLogForm';
@@ -238,7 +239,7 @@ export default function VoiceAssistant() {
           left: `${position.x}px`,
           touchAction: 'none'
         }}
-        className="z-50 h-12 w-12 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
+        className="z-50 h-10 w-10 rounded-full shadow-2xl cursor-grab active:cursor-grabbing"
         size="icon"
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
@@ -247,7 +248,7 @@ export default function VoiceAssistant() {
         aria-label="Assistente de Voz"
         title="Assistente de Voz (clique para abrir, arraste para mover)"
       >
-        <Mic className="h-6 w-6" />
+        <Mic className="h-5 w-5" />
       </Button>
 
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
