@@ -7,11 +7,11 @@ import PageHeader from '@/components/PageHeader';
 export default function LogMedicationPage() {
   return (
     <div className="space-y-6">
-      <PageHeader 
+      <PageHeader
         title="Registrar Medicamento"
         description="Adicione outros medicamentos que você utiliza para um acompanhamento completo."
       />
-      <MedicationLogForm />
+      <MedicationLogForm onFormSubmit={() => {}} />
     </div>
   );
 }
