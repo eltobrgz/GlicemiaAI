@@ -1,4 +1,5 @@
 
+
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
@@ -77,6 +78,9 @@ export async function getUserProfile(): Promise<UserProfile | null> {
                 target_glucose_low: undefined, 
                 target_glucose_high: undefined,
                 hyper_glucose_threshold: undefined,
+                carb_ratio: undefined,
+                correction_factor: undefined,
+                target_glucose: undefined,
             };
             return defaultProfile;
         }
@@ -95,6 +99,9 @@ export async function getUserProfile(): Promise<UserProfile | null> {
       target_glucose_low: data.target_glucose_low === null ? undefined : data.target_glucose_low,
       target_glucose_high: data.target_glucose_high === null ? undefined : data.target_glucose_high,
       hyper_glucose_threshold: data.hyper_glucose_threshold === null ? undefined : data.hyper_glucose_threshold,
+      carb_ratio: data.carb_ratio === null ? undefined : data.carb_ratio,
+      correction_factor: data.correction_factor === null ? undefined : data.correction_factor,
+      target_glucose: data.target_glucose === null ? undefined : data.target_glucose,
       created_at: data.created_at,
       updated_at: data.updated_at,
     };
@@ -139,6 +146,9 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
     target_glucose_low: profile.target_glucose_low === undefined ? null : profile.target_glucose_low,
     target_glucose_high: profile.target_glucose_high === undefined ? null : profile.target_glucose_high,
     hyper_glucose_threshold: profile.hyper_glucose_threshold === undefined ? null : profile.hyper_glucose_threshold,
+    carb_ratio: profile.carb_ratio === undefined ? null : profile.carb_ratio,
+    correction_factor: profile.correction_factor === undefined ? null : profile.correction_factor,
+    target_glucose: profile.target_glucose === undefined ? null : profile.target_glucose,
     updated_at: new Date().toISOString(),
   };
     
@@ -165,6 +175,9 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
       target_glucose_low: savedData.target_glucose_low === null ? undefined : savedData.target_glucose_low,
       target_glucose_high: savedData.target_glucose_high === null ? undefined : savedData.target_glucose_high,
       hyper_glucose_threshold: savedData.hyper_glucose_threshold === null ? undefined : savedData.hyper_glucose_threshold,
+      carb_ratio: savedData.carb_ratio === null ? undefined : savedData.carb_ratio,
+      correction_factor: savedData.correction_factor === null ? undefined : savedData.correction_factor,
+      target_glucose: savedData.target_glucose === null ? undefined : savedData.target_glucose,
       created_at: savedData.created_at,
       updated_at: savedData.updated_at,
   };

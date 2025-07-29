@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import { useEffect, useState, Fragment } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2, Bike, ClipboardPlus } from 'lucide-react';
+import { Droplet, Pill, Camera, PlusCircle, BarChart3, Loader2, Bike, ClipboardPlus, Calculator } from 'lucide-react';
 import type { GlucoseReading, InsulinLog } from '@/types';
 import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; 
 import { formatDateTime, getGlucoseLevelColor } from '@/lib/utils';
@@ -85,13 +86,13 @@ export default function DashboardPage() {
 
         <section>
           <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
             {quickAccessItems.map((item) => (
               <Link href={item.href} key={item.href} className="block group">
                   <Card className="shadow-md hover:shadow-lg transition-all duration-200 ease-in-out group-hover:border-primary">
-                    <CardContent className="p-6 flex flex-col items-center justify-center text-center h-36">
-                      <item.icon className={`h-10 w-10 mb-3 ${item.iconColor} transition-transform group-hover:scale-110`} />
-                      <span className="font-medium text-card-foreground group-hover:text-primary">{item.label}</span>
+                    <CardContent className="p-4 flex flex-col items-center justify-center text-center h-32 sm:h-36">
+                      <item.icon className={`h-8 w-8 sm:h-10 sm:w-10 mb-2 sm:mb-3 ${item.iconColor} transition-transform group-hover:scale-110`} />
+                      <span className="font-medium text-sm sm:text-base text-card-foreground group-hover:text-primary">{item.label}</span>
                     </CardContent>
                   </Card>
               </Link>
@@ -179,10 +180,10 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              Em breve, você verá aqui dicas e análises personalizadas da nossa IA para te ajudar a gerenciar melhor sua glicemia.
+              Descubra padrões e receba dicas personalizadas geradas por IA com base nos seus dados da última semana.
             </p>
             <Link href="/insights">
-              <Button variant="link" className="mt-2 p-0">Ver mais insights</Button>
+              <Button variant="link" className="mt-2 p-0">Ver minha análise semanal</Button>
             </Link>
           </CardContent>
         </Card>
@@ -193,8 +194,9 @@ export default function DashboardPage() {
 }
 
 const quickAccessItems = [
-  { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet, iconColor: 'text-blue-500' },
-  { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill, iconColor: 'text-green-500' },
-  { href: '/log/activity', label: 'Registrar Atividade', icon: Bike, iconColor: 'text-orange-500' },
-  { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus, iconColor: 'text-purple-500' },
+  { href: '/log/glucose', label: 'Glicemia', icon: Droplet, iconColor: 'text-blue-500' },
+  { href: '/log/insulin', label: 'Insulina', icon: Pill, iconColor: 'text-green-500' },
+  { href: '/bolus-calculator', label: 'Calcular Dose', icon: Calculator, iconColor: 'text-red-500' },
+  { href: '/log/activity', label: 'Atividade', icon: Bike, iconColor: 'text-orange-500' },
+  { href: '/log/medication', label: 'Medicamento', icon: ClipboardPlus, iconColor: 'text-purple-500' },
 ];

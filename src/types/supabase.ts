@@ -1,4 +1,5 @@
 
+
 // src/types/supabase.ts
 
 // These type definitions are based on the assumed Supabase table structures.
@@ -30,6 +31,10 @@ export interface Database {
           target_glucose_low: number | null
           target_glucose_high: number | null
           hyper_glucose_threshold: number | null
+          // Fatores de Cálculo de Bolus
+          carb_ratio: number | null
+          correction_factor: number | null
+          target_glucose: number | null
           created_at: string // timestamp with time zone
           updated_at: string // timestamp with time zone
         }
@@ -45,6 +50,9 @@ export interface Database {
           target_glucose_low?: number | null
           target_glucose_high?: number | null
           hyper_glucose_threshold?: number | null
+          carb_ratio?: number | null
+          correction_factor?: number | null
+          target_glucose?: number | null
           created_at?: string
           updated_at?: string
         }
@@ -59,6 +67,9 @@ export interface Database {
           target_glucose_low?: number | null
           target_glucose_high?: number | null
           hyper_glucose_threshold?: number | null
+          carb_ratio?: number | null
+          correction_factor?: number | null
+          target_glucose?: number | null
           updated_at?: string
         }
       }

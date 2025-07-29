@@ -1,8 +1,9 @@
 
+
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus } from 'lucide-react'; // ClipboardPlus Adicionado
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus, Calculator } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
@@ -20,6 +21,7 @@ import { supabase } from '@/lib/supabaseClient';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: Home },
+  { href: '/bolus-calculator', label: 'Calculadora de Bolus', icon: Calculator },
   { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet },
   { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
   { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus }, // Adicionado
@@ -27,12 +29,12 @@ const navItems = [
   { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
   { href: '/calendar', label: 'Calendário', icon: CalendarDays },
   { href: '/reports', label: 'Relatórios', icon: FileText }, 
-  { href: '/profile', label: 'Meu Perfil', icon: User },
-  { href: '/reminders', label: 'Lembretes', icon: BellRing },
   { href: '/insights', label: 'Insights IA', icon: BarChart3 },
 ];
 
-const utilityNavItems = [
+const userNavItems = [
+  { href: '/profile', label: 'Meu Perfil', icon: User },
+  { href: '/reminders', label: 'Lembretes', icon: BellRing },
   { href: '/settings', label: 'Configurações', icon: Settings },
 ];
 
@@ -59,6 +61,30 @@ export function SideNavigation() {
     }
   };
 
+  const renderMenuItems = (items: typeof navItems) => {
+    return items.map((item) => (
+      <SidebarMenuItem key={item.href}>
+        <SidebarMenuButton
+          asChild
+          isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))}
+          className={cn(
+            "justify-start w-full",
+            (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))) 
+              ? "bg-primary/10 text-primary hover:bg-primary/20" 
+              : "hover:bg-accent/10 hover:text-accent-foreground"
+          )}
+          tooltip={{ children: item.label, side: 'right', align: 'center' }}
+        >
+          <Link href={item.href}>
+            <item.icon className="h-5 w-5" />
+            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+          </Link>
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    ));
+  };
+
+
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
       <SidebarHeader className="p-4 items-center gap-2">
@@ -70,57 +96,15 @@ export function SideNavigation() {
       
       <SidebarContent className="flex-grow p-2">
         <SidebarMenu>
-          {navItems.map((item) => (
-            <SidebarMenuItem key={item.href}>
-              <SidebarMenuButton
-                asChild
-                isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))}
-                className={cn(
-                  "justify-start w-full",
-                  (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))) 
-                    ? "bg-primary/10 text-primary hover:bg-primary/20" 
-                    : "hover:bg-accent/10 hover:text-accent-foreground"
-                )}
-                tooltip={{ children: item.label, side: 'right', align: 'center' }}
-              >
-                <Link href={item.href}>
-                  <item.icon className="h-5 w-5" />
-                  <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          ))}
+          {renderMenuItems(navItems)}
         </SidebarMenu>
       </SidebarContent>
 
       <SidebarFooter className="p-2">
-        {utilityNavItems.length > 0 && (
-          <>
-            <SidebarMenu>
-              {utilityNavItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.href}
-                     className={cn(
-                      "justify-start w-full",
-                      (pathname === item.href)
-                        ? "bg-primary/10 text-primary hover:bg-primary/20"
-                        : "hover:bg-accent/10 hover:text-accent-foreground"
-                    )}
-                    tooltip={{ children: item.label, side: 'right', align: 'center' }}
-                  >
-                    <Link href={item.href}>
-                      <item.icon className="h-5 w-5" />
-                      <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-            <Separator className="my-2" />
-          </>
-        )}
+         <SidebarMenu>
+          {renderMenuItems(userNavItems)}
+        </SidebarMenu>
+        <Separator className="my-2" />
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -9,11 +10,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import type { UserProfile } from '@/types';
 import { getUserProfile, saveUserProfile } from '@/lib/storage'; 
-import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info } from 'lucide-react';
+import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '../ui/separator';
 
 export default function UserProfileCard() {
   const [user, setUser] = useState<UserProfile | null>(null);
@@ -268,58 +270,96 @@ export default function UserProfileCard() {
         {isEditing ? null : (
             <CardFooter className="border-t pt-6">
                 <Button onClick={handleEditToggle} className="w-full">
-                    <Edit3 className="mr-2 h-4 w-4" /> Editar Perfil e Metas
+                    <Edit3 className="mr-2 h-4 w-4" /> Editar Perfil e Configurações
                 </Button>
             </CardFooter>
         )}
       </Card>
       
-      {/* Glucose Targets Card */}
+      {/* Glucose Targets & Bolus Calculator Settings */}
       <Card className="w-full max-w-2xl mx-auto shadow-xl">
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary flex items-center">
-            <Target className="mr-2 h-5 w-5" /> Minhas Metas Glicêmicas
+            <Target className="mr-2 h-5 w-5" /> Configurações de Tratamento
           </CardTitle>
           <CardDescription>
-            Personalize as faixas que o aplicativo usa para classificar seus níveis de glicose.
+            Personalize as faixas glicêmicas e os fatores para cálculo de bolus de insulina.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-            {isEditing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="hypo_glucose_threshold">Limite de Hipoglicemia (mg/dL)</Label>
-                  <Input id="hypo_glucose_threshold" name="hypo_glucose_threshold" type="number" value={editForm.hypo_glucose_threshold ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.low}`} disabled={isSaving}/>
-                  <p className="text-xs text-muted-foreground mt-1">Valores abaixo disso são 'baixa'.</p>
-                </div>
-                <div>
-                  <Label htmlFor="target_glucose_low">Início da Faixa Alvo (mg/dL)</Label>
-                  <Input id="target_glucose_low" name="target_glucose_low" type="number" value={editForm.target_glucose_low ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.low}`} disabled={isSaving}/>
-                  <p className="text-xs text-muted-foreground mt-1">Início da faixa 'normal'.</p>
-                </div>
-                 <div>
-                  <Label htmlFor="target_glucose_high">Fim da Faixa Alvo (mg/dL)</Label>
-                  <Input id="target_glucose_high" name="target_glucose_high" type="number" value={editForm.target_glucose_high ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.normalIdealMax}`} disabled={isSaving}/>
-                  <p className="text-xs text-muted-foreground mt-1">Fim da faixa 'normal'.</p>
-                </div>
-                 <div>
-                  <Label htmlFor="hyper_glucose_threshold">Início da Hiperglicemia (mg/dL)</Label>
-                  <Input id="hyper_glucose_threshold" name="hyper_glucose_threshold" type="number" value={editForm.hyper_glucose_threshold ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.high}`} disabled={isSaving}/>
-                  <p className="text-xs text-muted-foreground mt-1">Valores acima disso são 'muito alta'.</p>
-                </div>
-              </div>
-            ) : (
-               <Alert>
-                 <Info className="h-4 w-4" />
-                 <AlertTitle>Metas Atuais</AlertTitle>
-                 <AlertDescription className="grid grid-cols-2 gap-x-4 gap-y-1">
-                    <span>Hipoglicemia:</span> <strong>&lt; {user.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low} mg/dL</strong>
-                    <span>Faixa Alvo:</span> <strong>{user.target_glucose_low ?? GLUCOSE_THRESHOLDS.low} - {user.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL</strong>
-                    <span>Hiperglicemia:</span> <strong>&gt; {user.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL</strong>
-                    <span>Hiper. Grave:</span> <strong>&gt; {user.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high} mg/dL</strong>
-                 </AlertDescription>
-               </Alert>
-            )}
+        <CardContent className="space-y-6">
+            <div className="space-y-4">
+                <h3 className="font-semibold flex items-center"><Target className="mr-2 h-4 w-4"/> Metas Glicêmicas</h3>
+                {isEditing ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="hypo_glucose_threshold">Limite de Hipoglicemia (mg/dL)</Label>
+                      <Input id="hypo_glucose_threshold" name="hypo_glucose_threshold" type="number" value={editForm.hypo_glucose_threshold ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.low}`} disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">Valores abaixo disso são 'baixa'.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="target_glucose_low">Início da Faixa Alvo (mg/dL)</Label>
+                      <Input id="target_glucose_low" name="target_glucose_low" type="number" value={editForm.target_glucose_low ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.low}`} disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">Início da faixa 'normal'.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="target_glucose_high">Fim da Faixa Alvo (mg/dL)</Label>
+                      <Input id="target_glucose_high" name="target_glucose_high" type="number" value={editForm.target_glucose_high ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.normalIdealMax}`} disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">Fim da faixa 'normal'.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="hyper_glucose_threshold">Início da Hiperglicemia (mg/dL)</Label>
+                      <Input id="hyper_glucose_threshold" name="hyper_glucose_threshold" type="number" value={editForm.hyper_glucose_threshold ?? ''} onChange={handleInputChange} placeholder={`${GLUCOSE_THRESHOLDS.high}`} disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">Valores acima disso são 'muito alta'.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Metas Atuais</AlertTitle>
+                    <AlertDescription className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <span>Hipoglicemia:</span> <strong>&lt; {user.hypo_glucose_threshold ?? GLUCOSE_THRESHOLDS.low} mg/dL</strong>
+                        <span>Faixa Alvo:</span> <strong>{user.target_glucose_low ?? GLUCOSE_THRESHOLDS.low} - {user.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL</strong>
+                        <span>Hiperglicemia:</span> <strong>&gt; {user.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax} mg/dL</strong>
+                        <span>Hiper. Grave:</span> <strong>&gt; {user.hyper_glucose_threshold ?? GLUCOSE_THRESHOLDS.high} mg/dL</strong>
+                    </AlertDescription>
+                  </Alert>
+                )}
+            </div>
+
+            <Separator />
+            
+            <div className="space-y-4">
+                <h3 className="font-semibold flex items-center"><Calculator className="mr-2 h-4 w-4"/> Fatores para Cálculo de Bolus</h3>
+                {isEditing ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="carb_ratio">Ratio Carboidrato/Insulina</Label>
+                      <Input id="carb_ratio" name="carb_ratio" type="number" step="0.1" value={editForm.carb_ratio ?? ''} onChange={handleInputChange} placeholder="Ex: 15" disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">1 unidade de insulina para X gramas de carboidrato.</p>
+                    </div>
+                    <div>
+                      <Label htmlFor="correction_factor">Fator de Correção/Sensibilidade</Label>
+                      <Input id="correction_factor" name="correction_factor" type="number" step="0.1" value={editForm.correction_factor ?? ''} onChange={handleInputChange} placeholder="Ex: 50" disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">Quantos mg/dL 1 unidade de insulina reduz.</p>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <Label htmlFor="target_glucose">Glicemia Alvo para Correção (mg/dL)</Label>
+                      <Input id="target_glucose" name="target_glucose" type="number" value={editForm.target_glucose ?? ''} onChange={handleInputChange} placeholder="Ex: 100" disabled={isSaving}/>
+                      <p className="text-xs text-muted-foreground mt-1">O valor que a dose de correção tentará alcançar.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <Alert variant="info">
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Fatores Atuais</AlertTitle>
+                    <AlertDescription className="grid grid-cols-2 gap-x-4 gap-y-1">
+                        <span>Ratio Carboidrato:</span> <strong>{user.carb_ratio ? `1 U : ${user.carb_ratio} g` : 'Não definido'}</strong>
+                        <span>Fator de Correção:</span> <strong>{user.correction_factor ? `1 U ~ ${user.correction_factor} mg/dL` : 'Não definido'}</strong>
+                        <span>Glicemia Alvo:</span> <strong>{user.target_glucose ? `${user.target_glucose} mg/dL` : 'Não definido'}</strong>
+                    </AlertDescription>
+                  </Alert>
+                )}
+            </div>
         </CardContent>
         {isEditing && (
              <CardFooter className="border-t pt-6">

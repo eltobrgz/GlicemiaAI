@@ -83,6 +83,10 @@ export interface UserProfile {
   target_glucose_low?: number;
   target_glucose_high?: number;
   hyper_glucose_threshold?: number;
+  // Fatores de Cálculo de Bolus
+  carb_ratio?: number; // Ratio Carboidrato/Insulina (ex: 15 para 1:15)
+  correction_factor?: number; // Fator de Sensibilidade/Correção (ex: 50 para 1U:50mg/dL)
+  target_glucose?: number; // Glicemia alvo para cálculos de correção (ex: 100 mg/dL)
   created_at?: string;
   updated_at?: string;
 }
