@@ -44,7 +44,7 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
     resolver: zodResolver(insulinSchema),
     defaultValues: {
       type: initialData?.type || searchParams.get('type') || '',
-      dose: initialData?.dose ?? (searchParams.get('dose') ? parseFloat(searchParams.get('dose')!) : ''),
+      dose: initialData?.dose ?? (searchParams.get('dose') ? parseFloat(searchParams.get('dose')!) : ('' as any)),
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : defaultTimestamp,
     },
   });
@@ -81,7 +81,7 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
       form.reset({
           timestamp: defaultTimestamp,
           type: '',
-          dose: ''
+          dose: '' as any
       });
       if (onFormSubmit) {
         onFormSubmit();

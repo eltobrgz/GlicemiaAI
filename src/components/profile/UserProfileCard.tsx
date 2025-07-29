@@ -95,7 +95,7 @@ export default function UserProfileCard() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
     // Handle number inputs correctly
-    const val = type === 'number' ? (value === '' ? undefined : parseFloat(value)) : value;
+    const val = type === 'number' ? (value === '' ? '' : parseFloat(value)) : value;
     setEditForm(prev => ({ ...prev, [name]: val }));
   };
 

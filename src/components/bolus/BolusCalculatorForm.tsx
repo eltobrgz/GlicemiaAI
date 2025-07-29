@@ -38,8 +38,8 @@ export default function BolusCalculatorForm() {
   const form = useForm<CalculatorFormData>({
     resolver: zodResolver(calculatorSchema),
     defaultValues: {
-      carbs: undefined,
-      currentGlucose: undefined,
+      carbs: '' as any, // Initialize with empty string
+      currentGlucose: '' as any, // Initialize with empty string
     },
   });
 
@@ -61,19 +61,19 @@ export default function BolusCalculatorForm() {
   const canCalculate = userProfile?.carb_ratio && userProfile?.correction_factor && userProfile?.target_glucose;
 
   const onSubmit = (data: CalculatorFormData) => {
-    if (!canCalculate) {
+    if (!canCalculate || !userProfile?.carb_ratio || !userProfile?.correction_factor || !userProfile?.target_glucose) {
       toast({ title: 'Configuração Incompleta', description: 'Por favor, configure seus fatores de cálculo no seu perfil.', variant: 'destructive' });
       return;
     }
 
     // Cobertura de carboidratos
-    const coverageDose = data.carbs / userProfile.carb_ratio!;
+    const coverageDose = data.carbs / userProfile.carb_ratio;
 
     // Correção de glicemia
     let correctionDose = 0;
-    const glucoseDifference = data.currentGlucose - userProfile.target_glucose!;
+    const glucoseDifference = data.currentGlucose - userProfile.target_glucose;
     if (glucoseDifference > 0) {
-      correctionDose = glucoseDifference / userProfile.correction_factor!;
+      correctionDose = glucoseDifference / userProfile.correction_factor;
     }
     // Nota: A lógica para hipoglicemia (correção negativa) pode ser adicionada aqui se necessário, mas geralmente não é subtraída da dose de cobertura.
 

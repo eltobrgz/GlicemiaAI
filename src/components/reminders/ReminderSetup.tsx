@@ -30,7 +30,7 @@ const reminderSchema = z.object({
   days: z.union([z.array(z.enum(['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab'])).min(1, "Selecione pelo menos um dia."), z.literal('todos_os_dias')]),
   enabled: z.boolean().default(true),
   insulinType: z.string().optional(),
-  insulinDose: z.coerce.number().optional(),
+  insulinDose: z.coerce.number().optional().or(z.literal('')),
   isSimulatedCall: z.boolean().optional(),
   simulatedCallContact: z.string().optional(),
   customSound: z.string().optional(),
@@ -89,6 +89,7 @@ export default function ReminderSetup() {
       time: '08:00',
       days: 'todos_os_dias',
       enabled: true,
+      insulinDose: '',
     },
   });
   
@@ -105,7 +106,7 @@ export default function ReminderSetup() {
         days: editingReminder.days,
         enabled: editingReminder.enabled,
         insulinType: editingReminder.insulinType,
-        insulinDose: editingReminder.insulinDose,
+        insulinDose: editingReminder.insulinDose ?? '',
         isSimulatedCall: editingReminder.isSimulatedCall,
         simulatedCallContact: editingReminder.simulatedCallContact,
         customSound: editingReminder.customSound,
@@ -113,7 +114,7 @@ export default function ReminderSetup() {
     } else {
       form.reset({
         type: 'glicemia', name: '', time: '08:00', days: 'todos_os_dias', enabled: true,
-        insulinType: '', insulinDose: undefined, isSimulatedCall: false, simulatedCallContact: '', customSound: ''
+        insulinType: '', insulinDose: '', isSimulatedCall: false, simulatedCallContact: '', customSound: ''
       });
     }
   }, [editingReminder, form]);
@@ -121,11 +122,11 @@ export default function ReminderSetup() {
   const onSubmit = async (data: ReminderFormData) => {
     setIsSaving(true);
     try {
-      const reminderToSave: Omit<ReminderConfig, 'id'> & { id?: string } = {
+      const reminderToSave: Omit<ReminderConfig, 'id' | 'created_at' | 'user_id'> & { id?: string } = {
         id: data.id,
         ...data,
         insulinType: data.type === 'insulina' ? data.insulinType : undefined,
-        insulinDose: data.type === 'insulina' ? data.insulinDose : undefined,
+        insulinDose: data.type === 'insulina' && data.insulinDose !== '' ? Number(data.insulinDose) : undefined,
         isSimulatedCall: data.isSimulatedCall,
         simulatedCallContact: data.isSimulatedCall ? data.simulatedCallContact : undefined,
       };
@@ -221,7 +222,7 @@ export default function ReminderSetup() {
                 <FormField control={form.control} name="type" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Tipo de Lembrete</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
                       <SelectContent>
                         <SelectItem value="glicemia">Medição de Glicemia</SelectItem>
@@ -396,5 +397,3 @@ export default function ReminderSetup() {
     </div>
   );
 }
-
-    

@@ -65,7 +65,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
         id: initialData?.id, 
         value: data.value,
         timestamp: new Date(data.timestamp).toISOString(),
-        mealContext: data.mealContext || undefined,
+        mealContext: data.mealContext as GlucoseReading['mealContext'] || undefined,
         notes: data.notes || undefined,
       };
 
@@ -141,7 +141,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
               render={({ field }) => (
                 <FormItem>
                   <FormLabel htmlFor="mealContext">Contexto da Refeição</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || ''}>
                     <FormControl>
                       <SelectTrigger id="mealContext">
                         <SelectValue placeholder="Selecionar contexto" />

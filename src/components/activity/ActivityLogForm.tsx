@@ -44,7 +44,7 @@ export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityL
     resolver: zodResolver(activitySchema),
     defaultValues: {
       activity_type: initialData?.activity_type || '',
-      duration_minutes: initialData?.duration_minutes ?? undefined,
+      duration_minutes: initialData?.duration_minutes ?? ('' as any),
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
       intensity: initialData?.intensity || '',
       notes: initialData?.notes || '',
@@ -70,7 +70,7 @@ export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityL
       });
       form.reset({
           activity_type: '',
-          duration_minutes: undefined,
+          duration_minutes: '' as any,
           timestamp: new Date().toISOString().substring(0, 16),
           intensity: '',
           notes: ''
