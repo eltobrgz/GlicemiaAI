@@ -6,6 +6,7 @@
 import { supabase } from './supabaseClient';
 import { startOfDay, subDays, endOfDay, parseISO } from 'date-fns';
 import { getUserProfile, getGlucoseReadings } from './storage';
+import type { GlucoseReading } from '@/types';
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string> {
@@ -96,3 +97,25 @@ export async function countReadingsByLevel(params: { days: number }) {
   return counts;
 }
 
+// Nova ferramenta para encontrar a leitura máxima ou mínima
+export async function findExtremeGlucoseReading(params: { startDate: string, endDate: string, type: 'max' | 'min' }) {
+    const userId = await getCurrentUserId();
+    
+    const { data, error } = await supabase
+        .from('glucose_readings')
+        .select('value, timestamp')
+        .eq('user_id', userId)
+        .gte('timestamp', params.startDate)
+        .lte('timestamp', params.endDate)
+        .order('value', { ascending: params.type === 'min' }) // true para min, false para max
+        .limit(1)
+        .single();
+    
+    if (error) {
+        if (error.code === 'PGRST116') return null; // No rows found
+        console.error(`Error fetching ${params.type} glucose reading:`, error);
+        throw new Error(`Falha ao buscar a ${params.type === 'max' ? 'maior' : 'menor'} leitura de glicemia.`);
+    }
+
+    return data;
+}
