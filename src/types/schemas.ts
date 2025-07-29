@@ -1,3 +1,4 @@
+
 // src/types/schemas.ts
 import { z } from 'zod';
 
@@ -41,25 +42,25 @@ export const AnalyzeMealImageOutputSchema = z.object({
 
 
 // Schemas for generateWeeklyInsights flow
-const GlucoseReadingSchema = z.object({
+const WeeklyGlucoseReadingSchema = z.object({
   value: z.number(),
   timestamp: z.string(),
   level: z.string(), // e.g., 'normal', 'baixa'
 });
 
-const InsulinLogSchema = z.object({
+const WeeklyInsulinLogSchema = z.object({
   dose: z.number(),
   timestamp: z.string(),
   type: z.string(),
 });
 
-const ActivityLogSchema = z.object({
+const WeeklyActivityLogSchema = z.object({
   activity_type: z.string(),
   duration_minutes: z.number(),
   timestamp: z.string(),
 });
 
-const MealAnalysisSchema = z.object({
+const WeeklyMealAnalysisSchema = z.object({
   foodIdentification: z.string(),
   macronutrientEstimates: z.object({
     carbohydrates: z.number(),
@@ -69,7 +70,7 @@ const MealAnalysisSchema = z.object({
   timestamp: z.string(),
 });
 
-const MedicationLogSchema = z.object({
+const WeeklyMedicationLogSchema = z.object({
     medication_name: z.string(),
     dosage: z.string(),
     timestamp: z.string(),
@@ -85,11 +86,11 @@ const UserProfileSchema = z.object({
 
 export const WeeklyInsightsInputSchema = z.object({
   userProfile: UserProfileSchema,
-  glucoseReadings: z.array(GlucoseReadingSchema),
-  insulinLogs: z.array(InsulinLogSchema),
-  activityLogs: z.array(ActivityLogSchema),
-  mealAnalyses: z.array(MealAnalysisSchema),
-  medicationLogs: z.array(MedicationLogSchema),
+  glucoseReadings: z.array(WeeklyGlucoseReadingSchema),
+  insulinLogs: z.array(WeeklyInsulinLogSchema),
+  activityLogs: z.array(WeeklyActivityLogSchema),
+  mealAnalyses: z.array(WeeklyMealAnalysisSchema),
+  medicationLogs: z.array(WeeklyMedicationLogSchema),
   language: z.string().optional().default('pt-BR'),
 });
 
@@ -102,31 +103,31 @@ export const WeeklyInsightsOutputSchema = z.object({
 
 
 // Schemas for interpretVoiceLog flow
-const GlucoseLogSchema = z.object({
+const VoiceGlucoseLogSchema = z.object({
   value: z.number().describe('The blood glucose value in mg/dL.'),
   notes: z.string().optional().describe('Any additional notes or context mentioned by the user.'),
 });
 
-const InsulinLogSchema = z.object({
+const VoiceInsulinLogSchema = z.object({
   dose: z.number().describe('The dose of insulin in units.'),
   type: z.string().describe('The type or brand name of the insulin.'),
 });
 
-const MedicationLogSchema = z.object({
+const VoiceMedicationLogSchema = z.object({
   medication_name: z.string().describe('The name of the medication.'),
   dosage: z.string().describe('The dosage of the medication (e.g., "500mg", "1 comprimido").'),
 });
 
-const ActivityLogSchema = z.object({
+const VoiceActivityLogSchema = z.object({
   activity_type: z.string().describe('The type of physical activity.'),
   duration_minutes: z.number().describe('The duration of the activity in minutes.'),
 });
 
 export const InterpretedLogSchema = z.discriminatedUnion('logType', [
-  z.object({ logType: z.literal('glucose'), data: GlucoseLogSchema }),
-  z.object({ logType: z.literal('insulin'), data: InsulinLogSchema }),
-  z.object({ logType: z.literal('medication'), data: MedicationLogSchema }),
-  z.object({ logType: z.literal('activity'), data: ActivityLogSchema }),
+  z.object({ logType: z.literal('glucose'), data: VoiceGlucoseLogSchema }),
+  z.object({ logType: z.literal('insulin'), data: VoiceInsulinLogSchema }),
+  z.object({ logType: z.literal('medication'), data: VoiceMedicationLogSchema }),
+  z.object({ logType: z.literal('activity'), data: VoiceActivityLogSchema }),
   z.object({ logType: z.literal('unrecognized'), data: z.object({ reason: z.string().describe('Reason why the input could not be interpreted.') }) }),
 ]);
 
