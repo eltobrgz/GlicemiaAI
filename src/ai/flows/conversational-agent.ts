@@ -22,8 +22,8 @@ const tools = {
     {
       name: 'getMostRecentGlucoseReading',
       description: 'Get the most recent blood glucose reading for the user.',
-      input: z.object({}),
-      output: z.object({
+      inputSchema: z.object({}),
+      outputSchema: z.object({
         value: z.number(),
         timestamp: z.string(),
         level: z.string(),
@@ -35,11 +35,11 @@ const tools = {
     {
       name: 'getGlucoseReadingsInRange',
       description: 'Get all blood glucose readings for the user within a specified date range.',
-      input: z.object({
+      inputSchema: z.object({
         startDate: z.string().describe('The start date of the range in ISO format.'),
         endDate: z.string().describe('The end date of the range in ISO format.'),
       }),
-      output: z.array(z.object({
+      outputSchema: z.array(z.object({
         value: z.number(),
         timestamp: z.string(),
         level: z.string(),
@@ -51,10 +51,10 @@ const tools = {
       {
           name: 'countReadingsByLevel',
           description: 'Count the number of glucose readings for each level (low, normal, high, very high) in a given period.',
-           input: z.object({
+           inputSchema: z.object({
                 days: z.number().describe('The number of past days to analyze (e.g., 7 for the last week).'),
            }),
-          output: z.object({
+          outputSchema: z.object({
                 low: z.number(),
                 normal: z.number(),
                 high: z.number(),
@@ -67,12 +67,12 @@ const tools = {
     {
         name: 'findExtremeGlucoseReading',
         description: 'Find the highest (max) or lowest (min) glucose reading within a specified date range.',
-        input: z.object({
+        inputSchema: z.object({
             startDate: z.string().describe('The start date of the range in ISO format.'),
             endDate: z.string().describe('The end date of the range in ISO format.'),
             type: z.enum(['max', 'min']).describe('The type of extreme to find: "max" for highest, "min" for lowest.'),
         }),
-        output: z.object({
+        outputSchema: z.object({
             value: z.number(),
             timestamp: z.string(),
         }).nullable(),
@@ -82,8 +82,8 @@ const tools = {
   getMostRecentInsulinLog: ai.defineTool({
     name: 'getMostRecentInsulinLog',
     description: "Get the user's most recent insulin application log.",
-    input: z.object({}),
-    output: z.object({
+    inputSchema: z.object({}),
+    outputSchema: z.object({
         type: z.string(),
         dose: z.number(),
         timestamp: z.string(),
@@ -92,8 +92,8 @@ const tools = {
   getMostRecentActivityLog: ai.defineTool({
       name: 'getMostRecentActivityLog',
       description: "Get the user's most recent physical activity log.",
-      input: z.object({}),
-      output: z.object({
+      inputSchema: z.object({}),
+      outputSchema: z.object({
           activity_type: z.string(),
           duration_minutes: z.number(),
           timestamp: z.string(),
@@ -102,8 +102,8 @@ const tools = {
   getMostRecentMedicationLog: ai.defineTool({
       name: 'getMostRecentMedicationLog',
       description: "Get the user's most recent non-insulin medication log.",
-      input: z.object({}),
-      output: z.object({
+      inputSchema: z.object({}),
+      outputSchema: z.object({
           medication_name: z.string(),
           dosage: z.string(),
           timestamp: z.string(),
@@ -134,10 +134,13 @@ const chatPrompt = ai.definePrompt({
   input: {
     schema: chatHistorySchema,
   },
+  output: {
+    schema: z.string(),
+  },
 });
 
 export async function conversationalAgent(history: z.infer<typeof chatHistorySchema>) {
     console.log("HISTORY", history);
     const response = await chatPrompt(history);
-    return response.content;
+    return response.text();
 }
