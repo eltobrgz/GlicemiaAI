@@ -148,7 +148,7 @@ export default function ChatAssistant() {
     if (!input.trim() || isLoading) return;
 
     const newUserMessage: Message = { role: 'user', text: input };
-    const currentMessages: any[] = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
+    const currentMessages = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
       role: msg.role,
       content: [{ text: msg.text }],
     }));
@@ -159,10 +159,10 @@ export default function ChatAssistant() {
     scrollToBottom();
 
     try {
-      const response = await conversationalAgent(currentMessages);
+      const responseText = await conversationalAgent(currentMessages);
       
-      if (response && response[0]?.text) {
-        const newAiMessage: Message = { role: 'model', text: response[0].text };
+      if (responseText) {
+        const newAiMessage: Message = { role: 'model', text: responseText };
         setMessages(prev => [...prev, newAiMessage]);
       } else {
         throw new Error("A resposta da IA está vazia ou em formato inesperado.");
