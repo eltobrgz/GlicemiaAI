@@ -1,0 +1,297 @@
+
+'use client';
+
+import { useState, useRef, useEffect } from 'react';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { MessageSquare, Send, Loader2, Bot, User, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { conversationalAgent } from '@/ai/flows/conversational-agent';
+import { useToast } from '@/hooks/use-toast';
+
+interface Message {
+  role: 'user' | 'model';
+  text: string;
+}
+
+const VOICE_ASSISTANT_POSITION_KEY = 'glicemiaai-chat-assistant-position';
+
+export default function ChatAssistant() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
+  
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [wasDragged, setWasDragged] = useState(false);
+
+  useEffect(() => {
+    const setInitialPosition = () => {
+       try {
+        const savedPosition = localStorage.getItem(VOICE_ASSISTANT_POSITION_KEY);
+        if (savedPosition) {
+          const parsedPosition = JSON.parse(savedPosition);
+          setPosition(parsedPosition);
+        } else {
+          const buttonWidth = 40; // w-10
+          const buttonHeight = 40; // h-10
+          const marginX = window.innerWidth > 768 ? 40 : 24;
+          const marginY = window.innerHeight > 768 ? 40 : 24;
+          setPosition({
+            x: window.innerWidth - buttonWidth - marginX,
+            y: window.innerHeight - buttonHeight - marginY - 140, // Adjust for bottom nav bar and voice assistant
+          });
+        }
+      } catch (error) {
+        console.error("Failed to parse saved position for chat, using default.", error);
+         const buttonWidth = 40;
+         const buttonHeight = 40;
+         const marginX = window.innerWidth > 768 ? 40 : 24;
+         const marginY = window.innerHeight > 768 ? 40 : 24;
+        setPosition({
+          x: window.innerWidth - buttonWidth - marginX,
+          y: window.innerHeight - buttonHeight - marginY - 140,
+        });
+      }
+    };
+    setInitialPosition();
+
+    const handleResize = () => {
+      if (buttonRef.current) {
+        const buttonWidth = buttonRef.current.offsetWidth;
+        const buttonHeight = buttonRef.current.offsetHeight;
+        setPosition(currentPos => ({
+          x: Math.max(0, Math.min(currentPos.x, window.innerWidth - buttonWidth)),
+          y: Math.max(0, Math.min(currentPos.y, window.innerHeight - buttonHeight))
+        }));
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (buttonRef.current) {
+      setWasDragged(false);
+      setIsDragging(true);
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      });
+      buttonRef.current.setPointerCapture(e.pointerId);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (isDragging && buttonRef.current) {
+      if (!wasDragged) setWasDragged(true);
+      
+      let newX = e.clientX - dragOffset.x;
+      let newY = e.clientY - dragOffset.y;
+
+      const buttonWidth = buttonRef.current.offsetWidth;
+      const buttonHeight = buttonRef.current.offsetHeight;
+      newX = Math.max(0, Math.min(newX, window.innerWidth - buttonWidth));
+      newY = Math.max(0, Math.min(newY, window.innerHeight - buttonHeight));
+
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (buttonRef.current) {
+      setIsDragging(false);
+      buttonRef.current.releasePointerCapture(e.pointerId);
+      if (wasDragged) {
+        localStorage.setItem(VOICE_ASSISTANT_POSITION_KEY, JSON.stringify(position));
+      }
+    }
+  };
+
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && messages.length === 0) {
+      // Add a welcome message when chat is opened for the first time
+      setMessages([
+        { role: 'model', text: 'Olá! Eu sou o assistente GlicemiaAI. Como posso ajudar? Você pode me perguntar sobre seus dados de saúde.' },
+      ]);
+    }
+  };
+
+  const handleButtonClick = () => {
+      if(wasDragged) return;
+      handleOpenChange(!isOpen);
+  }
+
+  const scrollToBottom = () => {
+    setTimeout(() => {
+        if (scrollAreaRef.current) {
+            const scrollableView = scrollAreaRef.current.children[0] as HTMLDivElement;
+            if(scrollableView) {
+                 scrollableView.scrollTop = scrollableView.scrollHeight;
+            }
+        }
+    }, 100);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!input.trim() || isLoading) return;
+
+    const newUserMessage: Message = { role: 'user', text: input };
+    const currentMessages: any[] = [...messages, newUserMessage].map(msg => ({
+      role: msg.role,
+      content: [{ text: msg.text }],
+    }));
+    
+    setMessages(prev => [...prev, newUserMessage]);
+    setInput('');
+    setIsLoading(true);
+    scrollToBottom();
+
+    try {
+      const response = await conversationalAgent(currentMessages);
+      
+      if (response && response[0]?.text) {
+        const newAiMessage: Message = { role: 'model', text: response[0].text };
+        setMessages(prev => [...prev, newAiMessage]);
+      } else {
+        throw new Error("A resposta da IA está vazia ou em formato inesperado.");
+      }
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      toast({
+        title: "Erro no Chat",
+        description: error.message || "Não foi possível obter uma resposta da IA.",
+        variant: "destructive",
+      });
+      // Optional: add an error message to the chat
+      const errorMessage: Message = { role: 'model', text: 'Desculpe, ocorreu um erro. Por favor, tente novamente.' };
+      setMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      scrollToBottom();
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      scrollToBottom();
+    }
+  }, [messages, isOpen]);
+
+  return (
+    <>
+     <Button
+        ref={buttonRef}
+        style={{
+          position: 'fixed',
+          top: `${position.y}px`,
+          left: `${position.x}px`,
+          touchAction: 'none'
+        }}
+        className="z-50 h-12 w-12 rounded-full shadow-2xl bg-accent hover:bg-accent/90 cursor-grab active:cursor-grabbing"
+        size="icon"
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onClick={handleButtonClick}
+        aria-label="Assistente de Chat"
+        title="Assistente de Chat (clique para abrir, arraste para mover)"
+      >
+        <MessageSquare className="h-6 w-6" />
+      </Button>
+
+      {isOpen && (
+        <div 
+          className="fixed z-50 rounded-xl shadow-2xl bg-card border w-[calc(100vw-32px)] max-w-sm h-[65vh] max-h-[600px] flex flex-col transition-all duration-300 animate-in fade-in-50 slide-in-from-bottom-10"
+          style={{
+             bottom: '80px', // Adjust to be above bottom nav
+             right: '16px'
+          }}
+        >
+            <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2">
+                    <Bot className="h-6 w-6 text-primary"/>
+                    <h3 className="font-semibold text-lg">Assistente GlicemiaAI</h3>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)}>
+                    <X className="h-5 w-5"/>
+                </Button>
+            </div>
+          
+            <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+              <div className="space-y-4">
+                {messages.map((message, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      'flex items-start gap-3',
+                      message.role === 'user' ? 'justify-end' : 'justify-start'
+                    )}
+                  >
+                    {message.role === 'model' && (
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                         <Bot className="h-5 w-5 text-primary" />
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        'rounded-xl p-3 max-w-[80%] break-words text-sm',
+                        message.role === 'user'
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted'
+                      )}
+                    >
+                      {message.text}
+                    </div>
+                     {message.role === 'user' && (
+                      <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                         <User className="h-5 w-5 text-foreground" />
+                      </div>
+                    )}
+                  </div>
+                ))}
+                {isLoading && (
+                  <div className="flex items-start gap-3 justify-start">
+                     <div className="flex-shrink-0 h-8 w-8 rounded-full bg-primary/20 flex items-center justify-center">
+                         <Bot className="h-5 w-5 text-primary" />
+                      </div>
+                     <div className="rounded-xl p-3 bg-muted flex items-center space-x-2">
+                        <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                        <span>Pensando...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+            
+            <div className="p-4 border-t">
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
+                <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    placeholder="Pergunte algo..."
+                    className="flex-1"
+                    disabled={isLoading}
+                />
+                <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                </Button>
+                </form>
+            </div>
+        </div>
+      )}
+    </>
+  );
+}
