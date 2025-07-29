@@ -14,20 +14,20 @@ import { useToast } from '@/hooks/use-toast';
 import { getUserProfile } from '@/lib/storage';
 import type { UserProfile } from '@/types';
 import WelcomeGoalsModal from '@/components/profile/WelcomeGoalsModal';
+import DashboardStats from '@/components/dashboard/DashboardStats';
 
 export default function DashboardPage() {
   const [lastGlucose, setLastGlucose] = useState<GlucoseReading | null>(null);
+  const [allGlucose, setAllGlucose] = useState<GlucoseReading[]>([]);
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
-  const [isLoadingGlucose, setIsLoadingGlucose] = useState(true);
-  const [isLoadingInsulin, setIsLoadingInsulin] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      setIsLoadingGlucose(true);
-      setIsLoadingInsulin(true);
+      setIsLoading(true);
       try {
         const profile = await getUserProfile();
         setUserProfile(profile);
@@ -37,25 +37,21 @@ export default function DashboardPage() {
           setIsWelcomeModalOpen(true);
         }
 
-        const glucoseReadings = await getGlucoseReadings(profile); // Pass profile
+        const glucoseReadings = await getGlucoseReadings(profile);
+        setAllGlucose(glucoseReadings);
         if (glucoseReadings.length > 0) {
           setLastGlucose(glucoseReadings[0]);
         }
-      } catch (error: any) {
-        toast({ title: "Erro ao buscar glicemias", description: error.message, variant: "destructive" });
-      } finally {
-        setIsLoadingGlucose(false);
-      }
-
-      try {
+        
         const insulinLogs = await getInsulinLogs();
         if (insulinLogs.length > 0) {
           setLastInsulin(insulinLogs[0]);
         }
+
       } catch (error: any) {
-        toast({ title: "Erro ao buscar registros de insulina", description: error.message, variant: "destructive" });
+        toast({ title: "Erro ao buscar dados", description: error.message, variant: "destructive" });
       } finally {
-        setIsLoadingInsulin(false);
+        setIsLoading(false);
       }
     };
 
@@ -65,8 +61,6 @@ export default function DashboardPage() {
   const handleModalClose = (goalsUpdated: boolean) => {
     setIsWelcomeModalOpen(false);
     if (goalsUpdated) {
-      // Recarregar a página é a forma mais eficaz de garantir que todas as
-      // partes do app (Dashboard, Calendário, Relatórios) usem o novo perfil.
       window.location.reload();
     }
   };
@@ -83,6 +77,14 @@ export default function DashboardPage() {
       <div className="space-y-8">
         <PageHeader title="Dashboard" description="Bem-vindo(a) ao GlicemiaAI! Seu painel de controle para gerenciamento de diabetes." />
 
+        {isLoading ? (
+             <div className="flex items-center justify-center h-40">
+                <Loader2 className="h-10 w-10 animate-spin text-primary" />
+             </div>
+        ) : (
+            userProfile && <DashboardStats userProfile={userProfile} glucoseReadings={allGlucose} />
+        )}
+        
         <section>
           <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4">
@@ -106,13 +108,13 @@ export default function DashboardPage() {
                 <Droplet className="mr-2 h-6 w-6 text-primary" />
                 Última Glicemia Registrada
               </CardTitle>
-              {isLoadingGlucose && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
-              {!isLoadingGlucose && lastGlucose && (
+              {isLoading && <Loader2 className="h-5 w-5 animate-spin text-primary" />}
+              {!isLoading && lastGlucose && (
                 <CardDescription>{formatDateTime(lastGlucose.timestamp)}</CardDescription>
               )}
             </CardHeader>
             <CardContent>
-              {isLoadingGlucose ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center h-20">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -141,13 +143,13 @@ export default function DashboardPage() {
                 <Pill className="mr-2 h-6 w-6 text-accent" />
                 Última Insulina Registrada
               </CardTitle>
-              {isLoadingInsulin && <Loader2 className="h-5 w-5 animate-spin text-accent" />}
-              {!isLoadingInsulin && lastInsulin && (
+              {isLoading && <Loader2 className="h-5 w-5 animate-spin text-accent" />}
+              {!isLoading && lastInsulin && (
                 <CardDescription>{formatDateTime(lastInsulin.timestamp)}</CardDescription>
               )}
             </CardHeader>
             <CardContent>
-              {isLoadingInsulin ? (
+              {isLoading ? (
                 <div className="flex items-center justify-center h-20">
                   <Loader2 className="h-8 w-8 animate-spin text-accent" />
                 </div>
@@ -200,3 +202,5 @@ const quickAccessItems = [
   { href: '/meal-analysis', label: 'Refeição', icon: Camera, iconColor: 'text-red-500' },
   { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator, iconColor: 'text-indigo-500' },
 ];
+
+    

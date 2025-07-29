@@ -3,7 +3,7 @@ import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 import type { GlucoseReading, UserProfile } from "@/types";
 import { GLUCOSE_THRESHOLDS } from "@/config/constants";
-import { format } from 'date-fns';
+import { format, subDays, startOfDay, isSameDay, parseISO, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 
@@ -87,3 +87,84 @@ export function fileToDataUri(file: File): Promise<string> {
     reader.readAsDataURL(file);
   });
 }
+
+// *** NEW DASHBOARD METRICS FUNCTIONS ***
+
+export function calculateDashboardMetrics(readings: GlucoseReading[], userProfile: UserProfile | null) {
+  const sevenDaysAgo = subDays(new Date(), 7);
+  const recentReadings = readings.filter(r => parseISO(r.timestamp) >= sevenDaysAgo);
+
+  let averageGlucose: number | null = null;
+  let timeInTarget = 0;
+  let hypoEvents = 0;
+  let hyperEvents = 0;
+
+  if (recentReadings.length > 0) {
+    const sum = recentReadings.reduce((acc, r) => acc + r.value, 0);
+    averageGlucose = sum / recentReadings.length;
+
+    const normalReadings = recentReadings.filter(r => r.level === 'normal').length;
+    timeInTarget = (normalReadings / recentReadings.length) * 100;
+    
+    hypoEvents = recentReadings.filter(r => r.level === 'baixa').length;
+    hyperEvents = recentReadings.filter(r => r.level === 'alta' || r.level === 'muito_alta').length;
+  }
+  
+  return {
+    averageGlucose,
+    timeInTarget,
+    hypoEvents,
+    hyperEvents,
+    totalReadings: recentReadings.length,
+  };
+}
+
+export function calculateConsecutiveDaysStreak(readings: GlucoseReading[]): number {
+  if (readings.length === 0) {
+    return 0;
+  }
+
+  // Get unique days with readings, sorted from most recent to oldest
+  const uniqueDays = [
+    ...new Set(readings.map(r => startOfDay(parseISO(r.timestamp)).toISOString())),
+  ].sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+  if (uniqueDays.length === 0) {
+    return 0;
+  }
+
+  let streak = 0;
+  let today = startOfDay(new Date());
+  let yesterday = startOfDay(subDays(today, 1));
+
+  // Check if there is a reading for today or yesterday to start the streak count
+  const mostRecentReadingDay = new Date(uniqueDays[0]);
+  if (!isSameDay(mostRecentReadingDay, today) && !isSameDay(mostRecentReadingDay, yesterday)) {
+    return 0; // No readings for today or yesterday, streak is 0
+  }
+
+  streak = isSameDay(mostRecentReadingDay, today) || isSameDay(mostRecentReadingDay, yesterday) ? 1 : 0;
+  
+  if (streak === 0 && uniqueDays.length > 0) {
+     return 0
+  }
+  if (streak === 1 && uniqueDays.length === 1) {
+     return 1
+  }
+
+
+  for (let i = 0; i < uniqueDays.length - 1; i++) {
+    const currentDay = new Date(uniqueDays[i]);
+    const nextDay = new Date(uniqueDays[i+1]);
+    
+    if (differenceInDays(currentDay, nextDay) === 1) {
+      streak++;
+    } else {
+      break; // Streak is broken
+    }
+  }
+
+  return streak;
+}
+
+    
