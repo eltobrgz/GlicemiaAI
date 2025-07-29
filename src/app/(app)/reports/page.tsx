@@ -18,7 +18,7 @@ export default function ReportsPage() {
         <AlertTitle>Sobre os Relatórios</AlertTitle>
         <AlertDescription>
           Selecione um período para gerar um relatório detalhado com médias, tempo no alvo, variabilidade e mais.
-          A funcionalidade de exportar para PDF será adicionada em uma futura atualização.
+          Use o botão "Exportar para PDF" para criar um documento profissional para compartilhar com sua equipe de saúde.
         </AlertDescription>
       </Alert>
       <ReportGenerator />

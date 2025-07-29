@@ -234,6 +234,7 @@ export default function ReportGenerator() {
         return;
       }
 
+      // Add a class to chart containers to control their size during export
       const charts = reportElement.querySelectorAll('.recharts-responsive-container');
       charts.forEach(chart => chart.classList.add('fixed-chart-size-for-pdf'));
 
@@ -259,6 +260,7 @@ export default function ReportGenerator() {
         }
       });
       
+      // Remove the sizing class after canvas creation
       charts.forEach(chart => chart.classList.remove('fixed-chart-size-for-pdf'));
 
       const imgData = canvas.toDataURL('image/png');
@@ -273,37 +275,39 @@ export default function ReportGenerator() {
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgProps = pdf.getImageProperties(imgData);
-      const imgWidth = imgProps.width;
-      const imgHeight = imgProps.height;
       
-      let effectiveImgWidth = imgWidth;
-      let effectiveImgHeight = imgHeight;
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      
+      const ratio = canvasWidth / pdfWidth;
+      const pdfImageHeight = canvasHeight / ratio;
 
-      if (imgWidth > pdfWidth) {
-        effectiveImgWidth = pdfWidth;
-        effectiveImgHeight = (imgHeight * pdfWidth) / imgWidth;
-      }
+      let position = 0;
+      let page = 1;
+      
+      while (position < pdfImageHeight) {
+        if (page > 1) {
+            pdf.addPage();
+        }
+        // Calculate the portion of the image to add to the current page
+        const sourceY = (position / pdfImageHeight) * canvasHeight;
+        const sourceHeight = Math.min((pdfHeight / pdfImageHeight) * canvasHeight, canvasHeight - sourceY);
+        const destinationHeight = (sourceHeight / canvasHeight) * pdfImageHeight;
 
-      let currentPosition = 0;
-      const pageHeightInPixels = (canvas.width / pdfWidth) * pdfHeight;
-
-      while (currentPosition < canvas.height) {
+        // Create a temporary canvas for the current page's slice
         const sliceCanvas = document.createElement('canvas');
-        sliceCanvas.width = canvas.width;
-        sliceCanvas.height = Math.min(pageHeightInPixels, canvas.height - currentPosition);
+        sliceCanvas.width = canvasWidth;
+        sliceCanvas.height = sourceHeight;
         const sliceCtx = sliceCanvas.getContext('2d');
         
         if (sliceCtx) {
-          sliceCtx.drawImage(canvas, 0, currentPosition, canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
-          const pageImgData = sliceCanvas.toDataURL('image/png', 1.0);
-          
-          if (currentPosition > 0) {
-            pdf.addPage();
-          }
-          pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, (sliceCanvas.height * pdfWidth) / sliceCanvas.width);
+            sliceCtx.drawImage(canvas, 0, sourceY, canvasWidth, sourceHeight, 0, 0, canvasWidth, sourceHeight);
+            const pageImgData = sliceCanvas.toDataURL('image/png', 1.0);
+            pdf.addImage(pageImgData, 'PNG', 0, 0, pdfWidth, destinationHeight);
         }
-        currentPosition += pageHeightInPixels;
+        
+        position += pdfHeight;
+        page++;
       }
 
       pdf.save(`GlicemiaAI_Relatorio_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
