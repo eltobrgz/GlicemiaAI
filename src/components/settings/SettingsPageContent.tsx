@@ -18,7 +18,7 @@ import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { getUserProfile, saveUserProfile } from '@/lib/storage';
 import type { UserProfile } from '@/types';
-import { Form, FormControl, FormField, FormLabel as ShadFormLabel, FormMessage } from '@/components/ui/form'; // Renamed FormLabel
+import { Form, FormControl, FormField, FormItem, FormLabel as ShadFormLabel, FormMessage } from '@/components/ui/form'; // Renamed FormLabel
 
 const THEME_STORAGE_KEY = 'glicemiaai-theme';
 const LANGUAGES = [
