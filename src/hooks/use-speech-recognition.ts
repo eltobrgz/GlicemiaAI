@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
 
@@ -26,57 +27,53 @@ export function useSpeechRecognition() {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
+  const [hasSupport, setHasSupport] = useState<boolean | null>(null); // Use null for initial loading state
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      // API não suportada, não faça nada e não registre erro.
-      // O hook hasRecognitionSupport cuidará de informar a UI.
-      return;
-    }
+    if (SpeechRecognition) {
+      setHasSupport(true);
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'pt-BR';
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = 'pt-BR';
+      recognition.onresult = (event: any) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
 
-    recognition.onresult = (event: any) => {
-      let interimTranscript = '';
-      let finalTranscript = '';
-
-      for (let i = event.resultIndex; i < event.results.length; ++i) {
-        if (event.results[i].isFinal) {
-          finalTranscript += event.results[i][0].transcript;
-        } else {
-          interimTranscript += event.results[i][0].transcript;
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
         }
-      }
-      // Set a single, clean transcript instead of appending
-      setTranscript(finalTranscript + interimTranscript);
-    };
+        setTranscript(finalTranscript + interimTranscript);
+      };
 
-    recognition.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      if (event.error !== 'no-speech') {
-        setError(`Erro no reconhecimento de voz: ${event.error}`);
-      }
-      setIsListening(false);
-    };
-    
-    recognition.onend = () => {
-      // This is called automatically when speech recognition stops.
-      // The state transition logic is handled in the component.
-      setIsListening(false);
-    };
+      recognition.onerror = (event: any) => {
+        console.error('Speech recognition error:', event.error);
+        if (event.error !== 'no-speech') {
+          setError(`Erro no reconhecimento de voz: ${event.error}`);
+        }
+        setIsListening(false);
+      };
+      
+      recognition.onend = () => {
+        setIsListening(false);
+      };
 
-    recognitionRef.current = recognition as ISpeechRecognition;
+      recognitionRef.current = recognition as ISpeechRecognition;
 
-    // Cleanup on unmount
-    return () => {
-      if(recognitionRef.current){
-        recognitionRef.current.stop();
-      }
-    };
+      return () => {
+        if(recognitionRef.current){
+          recognitionRef.current.stop();
+        }
+      };
+    } else {
+      setHasSupport(false);
+    }
   }, []);
 
   const startListening = useCallback(() => {
@@ -107,6 +104,6 @@ export function useSpeechRecognition() {
     error,
     startListening,
     stopListening,
-    hasRecognitionSupport: !!recognitionRef.current,
+    hasRecognitionSupport: hasSupport,
   };
 }

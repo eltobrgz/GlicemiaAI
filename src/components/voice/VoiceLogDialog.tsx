@@ -102,7 +102,16 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     resetState();
   };
 
-  if (!hasRecognitionSupport) {
+  if (hasRecognitionSupport === null) {
+      return (
+        <div className="flex flex-col items-center justify-center p-8 min-h-[200px]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-4 text-muted-foreground">Verificando compatibilidade...</p>
+        </div>
+      )
+  }
+
+  if (hasRecognitionSupport === false) {
      return (
         <Alert variant="destructive">
             <AlertTitle>Funcionalidade Indisponível</AlertTitle>
