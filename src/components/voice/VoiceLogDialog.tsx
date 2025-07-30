@@ -70,7 +70,6 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     }
     setAssistantState('processing');
     try {
-      // FIX: Pass the input as an object matching the schema
       const result = await interpretVoiceLog({ input: text });
       if (result.logType === 'unrecognized') {
         toast({

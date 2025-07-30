@@ -106,21 +106,25 @@ export const WeeklyInsightsOutputSchema = z.object({
 const VoiceGlucoseLogSchema = z.object({
   value: z.number().describe('The blood glucose value in mg/dL.'),
   notes: z.string().optional().describe('Any additional notes or context mentioned by the user.'),
+  timestamp: z.string().describe('The ISO 8601 timestamp for when the log occurred.'),
 });
 
 const VoiceInsulinLogSchema = z.object({
   dose: z.number().describe('The dose of insulin in units.'),
   type: z.string().describe('The type or brand name of the insulin.'),
+  timestamp: z.string().describe('The ISO 8601 timestamp for when the log occurred.'),
 });
 
 const VoiceMedicationLogSchema = z.object({
   medication_name: z.string().describe('The name of the medication.'),
   dosage: z.string().describe('The dosage of the medication (e.g., "500mg", "1 comprimido").'),
+  timestamp: z.string().describe('The ISO 8601 timestamp for when the log occurred.'),
 });
 
 const VoiceActivityLogSchema = z.object({
   activity_type: z.string().describe('The type of physical activity.'),
   duration_minutes: z.number().describe('The duration of the activity in minutes.'),
+  timestamp: z.string().describe('The ISO 8601 timestamp for when the log occurred.'),
 });
 
 export const InterpretedLogSchema = z.discriminatedUnion('logType', [
