@@ -19,7 +19,7 @@ type VoiceAssistantState = 'idle' | 'listening' | 'processing' | 'confirming' | 
 
 interface VoiceLogDialogProps {
   onFormSubmit: () => void;
-  initialData?: any; // Not used, but part of the standard dialog props
+  initialData?: any; 
 }
 
 export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
@@ -69,12 +69,13 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     }
     setAssistantState('processing');
     try {
-      const result = await interpretVoiceLog({ input: text });
+      const now = new Date().toISOString();
+      const result = await interpretVoiceLog({ input: text, now });
 
       if (result.logType === 'unrecognized') {
         toast({
           title: "Não entendi, pode tentar de novo?",
-          description: result.reason || "Não foi possível identificar o que você quis registrar.",
+          description: result.unrecognizedReason || "Não foi possível identificar o que você quis registrar.",
           variant: 'destructive',
         });
         resetState();
@@ -97,7 +98,7 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
       title: 'Registro Salvo!',
       description: 'Seu registro de voz foi salvo com sucesso.',
     });
-    onFormSubmit(); // This will close the dialog via context
+    onFormSubmit(); 
     resetState();
   };
 
@@ -128,20 +129,16 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
       onFormSubmit: handleConfirmationSuccess,
     };
     
-    // Pass the entire confirmationData object as initialData
-    const initialDataForForm = confirmationData;
-
     switch (confirmationData.logType) {
       case 'glucose':
-        return <GlucoseLogForm {...commonProps} initialData={initialDataForForm} />;
+        return <GlucoseLogForm {...commonProps} initialData={{ value: confirmationData.value, notes: confirmationData.notes, timestamp: confirmationData.timestamp }} />;
       case 'insulin':
-        return <InsulinLogForm {...commonProps} initialData={initialDataForForm} />;
+        return <InsulinLogForm {...commonProps} initialData={{ dose: confirmationData.dose, type: confirmationData.insulinType, timestamp: confirmationData.timestamp }} />;
       case 'medication':
-        return <MedicationLogForm {...commonProps} initialData={initialDataForForm} />;
+        return <MedicationLogForm {...commonProps} initialData={{ medication_name: confirmationData.medicationName, dosage: confirmationData.dosage, notes: confirmationData.notes, timestamp: confirmationData.timestamp }} />;
       case 'activity':
-        return <ActivityLogForm {...commonProps} initialData={initialDataForForm} />;
+        return <ActivityLogForm {...commonProps} initialData={{ activity_type: confirmationData.activityType, duration_minutes: confirmationData.durationMinutes, notes: confirmationData.notes, timestamp: confirmationData.timestamp }} />;
       default:
-        // This case should ideally not be reached if the AI is working correctly.
         toast({
             title: "Tipo de Log Desconhecido",
             description: `A IA retornou um tipo de log inesperado: ${confirmationData.logType}`,
