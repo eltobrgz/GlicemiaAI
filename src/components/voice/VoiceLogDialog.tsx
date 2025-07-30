@@ -8,7 +8,6 @@ import { Mic, MicOff, Loader2 } from 'lucide-react';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { interpretVoiceLog } from '@/ai/flows/interpret-voice-log';
-import type { InterpretedLog } from '@/types';
 
 import GlucoseLogForm from '@/components/glucose/GlucoseLogForm';
 import InsulinLogForm from '@/components/insulin/InsulinLogForm';
@@ -129,6 +128,7 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
       onFormSubmit: handleConfirmationSuccess,
     };
     
+    // Pass the entire confirmationData object as initialData
     const initialDataForForm = confirmationData;
 
     switch (confirmationData.logType) {
@@ -141,7 +141,14 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
       case 'activity':
         return <ActivityLogForm {...commonProps} initialData={initialDataForForm} />;
       default:
-        return <p>Tipo de log desconhecido.</p>;
+        // This case should ideally not be reached if the AI is working correctly.
+        toast({
+            title: "Tipo de Log Desconhecido",
+            description: `A IA retornou um tipo de log inesperado: ${confirmationData.logType}`,
+            variant: "destructive",
+        });
+        resetState();
+        return <p>Tipo de log desconhecido: {confirmationData.logType}</p>;
     }
   };
 
