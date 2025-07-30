@@ -131,4 +131,6 @@ export const InterpretedLogSchema = z.discriminatedUnion('logType', [
   z.object({ logType: z.literal('unrecognized'), data: z.object({ reason: z.string().describe('Reason why the input could not be interpreted.') }) }),
 ]);
 
-export const VoiceLogInputSchema = z.string();
+export const VoiceLogInputSchema = z.object({
+  input: z.string().describe("The user's transcribed voice command."),
+});

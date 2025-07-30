@@ -8,10 +8,12 @@
 import {ai} from '@/ai/genkit';
 import type { InterpretedLog } from '@/types';
 import { InterpretedLogSchema, VoiceLogInputSchema } from '@/types/schemas';
+import { z } from 'zod';
 
 
 // The wrapper function to be called from the frontend
-export async function interpretVoiceLog(input: string): Promise<InterpretedLog> {
+// FIX: This now accepts an object matching the VoiceLogInputSchema
+export async function interpretVoiceLog(input: z.infer<typeof VoiceLogInputSchema>): Promise<InterpretedLog> {
   return interpretVoiceLogFlow(input);
 }
 
