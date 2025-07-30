@@ -70,16 +70,23 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     }
     setAssistantState('processing');
     try {
+      // The input is now an object as required by the schema
       const result = await interpretVoiceLog({ input: text });
+
       if (result.logType === 'unrecognized') {
         toast({
           title: "Não entendi, pode tentar de novo?",
-          description: result.data.reason,
+          description: result.reason,
           variant: 'destructive',
         });
         resetState();
       } else {
-        setConfirmationData(result);
+        // Here we construct the discriminated union object on the client side
+        const structuredResult: InterpretedLog = {
+            logType: result.logType,
+            data: result,
+        }
+        setConfirmationData(structuredResult);
         setAssistantState('confirming');
       }
     } catch (error: any) {
@@ -127,16 +134,19 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     const commonProps = {
       onFormSubmit: handleConfirmationSuccess,
     };
+    
+    // The data for the form is now directly in confirmationData.data
+    const initialDataForForm = confirmationData.data;
 
     switch (confirmationData.logType) {
       case 'glucose':
-        return <GlucoseLogForm {...commonProps} initialData={{ ...confirmationData.data }} />;
+        return <GlucoseLogForm {...commonProps} initialData={initialDataForForm} />;
       case 'insulin':
-        return <InsulinLogForm {...commonProps} initialData={{ ...confirmationData.data }} />;
+        return <InsulinLogForm {...commonProps} initialData={initialDataForForm} />;
       case 'medication':
-        return <MedicationLogForm {...commonProps} initialData={{ ...confirmationData.data }} />;
+        return <MedicationLogForm {...commonProps} initialData={initialDataForForm} />;
       case 'activity':
-        return <ActivityLogForm {...commonProps} initialData={{ ...confirmationData.data }} />;
+        return <ActivityLogForm {...commonProps} initialData={initialDataForForm} />;
       default:
         return <p>Tipo de log desconhecido.</p>;
     }
