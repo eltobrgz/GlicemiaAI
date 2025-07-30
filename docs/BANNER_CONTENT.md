@@ -22,7 +22,7 @@ GlicemiaAI é um assistente web inteligente que unifica o registro de saúde e u
 
 
 ## TESTES:
-A robustez do GlicemiaAI é garantida por uma metodologia de testes contínua e pela validação de conceito com o público-alvo, como o professor Heleonardo Dantas (paciente com Diabetes Tipo 2) e Elton Borges (paciente com Diabetes Tipo 1 e usuário de insulina). Cada fluxo de IA foi rigorosamente validado para garantir respostas seguras e precisas, a interface passou por testes de usabilidade e o banco de dados foi submetido a testes de carga para validar as políticas de acesso.
+A robustez do GlicemiaAI é garantida por uma metodologia de testes contínua e pela validação de conceito com o público-alvo. A solução foi validada em um cenário de teste de usabilidade com pessoas que se encaixam perfeitamente no público-alvo, incluindo pacientes com Diabetes Tipo 1 e Tipo 2. Cada fluxo de IA foi rigorosamente validado para garantir respostas seguras e precisas, a interface passou por testes de usabilidade e o banco de dados foi submetido a testes de carga para validar as políticas de acesso.
 
 ## TRABALHOS FUTUROS:
 A visão para o futuro do GlicemiaAI é focada em hiper-personalização e automação. Os próximos passos incluem aprofundar os insights da IA para prever tendências de hipo/hiperglicemia, expandir a gamificação com um sistema de "conquistas" e integrar o app com smartwatches e monitores contínuos de glicose (CGMs) para automatizar os registros e fornecer uma visão em tempo real da saúde do usuário.
@@ -34,3 +34,4 @@ O usuário se cadastra e define suas metas glicêmicas pessoais, cruciais para a
 O projeto foi fundamentado em dados e diretrizes de instituições de saúde de referência:
 *   **Dados Epidemiológicos:** International Diabetes Federation (IDF) e Vigitel (Ministério da Saúde).
 *   **Diretrizes Clínicas:** Sociedade Brasileira de Diabetes (SBD) para metas de tratamento no Brasil e American Diabetes Association (ADA) para conceitos globais como variabilidade glicêmica (CV%) e tempo no alvo (TIR).
+
