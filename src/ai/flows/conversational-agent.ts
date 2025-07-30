@@ -24,7 +24,7 @@ export async function conversationalAgent(history: z.infer<typeof Conversational
   
   const result = await conversationalAgentFlow({
       history,
-      userData: allUserData,
+      userData: JSON.stringify(allUserData, null, 2),
   });
   return result;
 }
@@ -32,7 +32,7 @@ export async function conversationalAgent(history: z.infer<typeof Conversational
 
 const ConversationalAgentFlowInputSchema = z.object({
     history: ConversationalAgentInputSchema,
-    userData: z.any(),
+    userData: z.string(),
 });
 
 
@@ -56,7 +56,7 @@ Aqui está o histórico da conversa até o momento:
 
 Aqui estão TODOS os dados de saúde do usuário:
 \`\`\`json
-{{{jsonStringify userData}}}
+{{{userData}}}
 \`\`\`
 
 Com base em tudo isso, responda à última pergunta do usuário.

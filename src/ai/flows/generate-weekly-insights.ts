@@ -10,16 +10,25 @@
 import {ai} from '@/ai/genkit';
 import type { WeeklyInsightsInput, WeeklyInsightsOutput } from '@/types';
 import { WeeklyInsightsInputSchema, WeeklyInsightsOutputSchema } from '@/types/schemas';
+import { z } from 'zod';
 
 
 // The exported function to be called from the frontend
 export async function generateWeeklyInsights(input: WeeklyInsightsInput): Promise<WeeklyInsightsOutput> {
-  return generateWeeklyInsightsFlow(input);
+  return generateWeeklyInsightsFlow({
+    ...input,
+    userDataString: JSON.stringify(input, null, 2),
+  });
 }
+
+const WeeklyInsightsFlowInputSchema = WeeklyInsightsInputSchema.extend({
+  userDataString: z.string(),
+});
+
 
 const generateWeeklyInsightsPrompt = ai.definePrompt({
   name: 'generateWeeklyInsightsPrompt',
-  input: {schema: WeeklyInsightsInputSchema},
+  input: {schema: WeeklyInsightsFlowInputSchema},
   output: {schema: WeeklyInsightsOutputSchema},
   prompt: `You are an empathetic and intelligent AI health assistant for the GlicemiaAI app, specializing in diabetes management. Your role is to analyze a user's health data from the last 14 days and generate a supportive and insightful summary for their most recent week.
 
@@ -48,7 +57,7 @@ Based on this data, generate a personalized report covering the last 7 days.
 
 **Input Data:**
 \`\`\`json
-{{{jsonStringify .}}}
+{{{userDataString}}}
 \`\`\`
 `,
 });
@@ -56,7 +65,7 @@ Based on this data, generate a personalized report covering the last 7 days.
 const generateWeeklyInsightsFlow = ai.defineFlow(
   {
     name: 'generateWeeklyInsightsFlow',
-    inputSchema: WeeklyInsightsInputSchema,
+    inputSchema: WeeklyInsightsFlowInputSchema,
     outputSchema: WeeklyInsightsOutputSchema,
   },
   async (input) => {
