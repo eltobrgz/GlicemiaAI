@@ -13,7 +13,6 @@ import type { Session, User } from '@supabase/supabase-js';
 import type { ReminderConfig } from '@/types';
 import { getReminders } from '@/lib/storage';
 import { DAYS_OF_WEEK } from '@/config/constants';
-import VoiceAssistant from '@/components/voice/VoiceAssistant';
 import { LogDialogsProvider } from '@/contexts/LogDialogsContext';
 import { LogDialogs } from '@/components/log/LogDialogs';
 import { useToast } from '@/hooks/use-toast';
@@ -195,7 +194,6 @@ export default function AppLayout({
         </SidebarInset>
 
         <BottomNavigationBar />
-        <VoiceAssistant />
         <LogDialogs />
       </div>
     </LogDialogsProvider>

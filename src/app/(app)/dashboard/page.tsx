@@ -21,24 +21,20 @@ export default function DashboardPage() {
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // Manteremos o isLoading para o conteúdo do dashboard
   const { toast } = useToast();
   const { openDialog } = useLogDialog();
 
   useEffect(() => {
-    const fetchProfileAndData = async () => {
-      setIsLoading(true);
+    const fetchInitialData = async () => {
       try {
         const profile = await getUserProfile();
         setUserProfile(profile);
 
         if (profile) {
-          // Se o perfil existe, mas as metas não foram definidas, abra o modal de boas-vindas.
           if (profile.target_glucose_low === undefined || profile.target_glucose_low === null) {
             setIsWelcomeModalOpen(true);
           }
-
-          // Agora, busque os outros dados APÓS ter o perfil
+          
           const glucoseReadings = await getGlucoseReadings(profile);
           setAllGlucose(glucoseReadings);
           if (glucoseReadings.length > 0) {
@@ -51,16 +47,13 @@ export default function DashboardPage() {
           }
         }
       } catch (error: any) {
-        // O layout já trata o erro de autenticação, então podemos focar em outros erros aqui.
         if (error.message !== 'Usuário não autenticado.') {
             toast({ title: "Erro ao buscar dados do dashboard", description: error.message, variant: "destructive" });
         }
-      } finally {
-        setIsLoading(false);
       }
     };
 
-    fetchProfileAndData();
+    fetchInitialData();
   }, [toast]);
 
   const handleModalClose = (goalsUpdated: boolean) => {
@@ -79,6 +72,14 @@ export default function DashboardPage() {
     { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator, iconColor: 'text-indigo-500' },
   ];
 
+  if (!userProfile) {
+    return (
+       <div className="flex items-center justify-center h-64">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+       </div>
+    )
+  }
+
   return (
     <Fragment>
       {userProfile && (
@@ -91,18 +92,12 @@ export default function DashboardPage() {
       <div className="space-y-8">
         <PageHeader title="Dashboard" description="Bem-vindo(a) ao GlicemiaAI! Seu painel de controle para gerenciamento de diabetes." />
 
-        {isLoading ? (
-             <div className="flex items-center justify-center h-64">
-                <Loader2 className="h-10 w-10 animate-spin text-primary" />
-             </div>
-        ) : (
-            userProfile && <DashboardStats 
-              userProfile={userProfile} 
-              glucoseReadings={allGlucose}
-              lastGlucose={lastGlucose}
-              lastInsulin={lastInsulin}
-            />
-        )}
+        <DashboardStats 
+          userProfile={userProfile} 
+          glucoseReadings={allGlucose}
+          lastGlucose={lastGlucose}
+          lastInsulin={lastInsulin}
+        />
         
         <section>
           <h2 className="text-2xl font-semibold mb-4 font-headline">Acesso Rápido</h2>
