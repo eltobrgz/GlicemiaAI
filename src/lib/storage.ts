@@ -6,25 +6,8 @@ import { toast } from '@/hooks/use-toast';
 import { subYears, formatISO } from 'date-fns';
 
 
-// Helper para obter o cliente Supabase correto (servidor ou cliente)
-function getSupabase() {
-    // Se o headers() existir, estamos no contexto do servidor (Server Action, Route Handler, etc.)
-    // A função headers() só funciona em Server Components ou contextos de servidor.
-    try {
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { headers } = require('next/headers');
-        headers();
-        return createServerClient();
-    } catch (e) {
-        // Se headers() der erro, estamos no lado do cliente (browser).
-        return getBrowserClient();
-    }
-}
-
-
 // Helper to get current user ID
-async function getCurrentUserId(): Promise<string> {
-  const supabase = getSupabase();
+async function getCurrentUserId(supabase: any): Promise<string> {
   const { data: { session }, error } = await supabase.auth.getSession();
 
   if (error) {
@@ -44,7 +27,7 @@ async function getCurrentUserId(): Promise<string> {
 
 // Helper function to upload file to Supabase Storage
 async function uploadSupabaseFile(bucketName: string, filePath: string, file: File): Promise<string> {
-  const supabase = getBrowserClient(); // Storage uploads devem usar o browser client
+  const supabase = getBrowserClient(); // Storage uploads are always from the client
   const { data, error } = await supabase.storage
     .from(bucketName)
     .upload(filePath, file, {
@@ -70,9 +53,9 @@ async function uploadSupabaseFile(bucketName: string, filePath: string, file: Fi
 
 // User Profile
 export async function getUserProfile(): Promise<UserProfile | null> {
-  const supabase = getSupabase();
+  const supabase = getBrowserClient(); // Profile info is generally needed on the client
   try {
-    const userId = await getCurrentUserId();
+    const userId = await getCurrentUserId(supabase);
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -133,7 +116,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
 export async function saveUserProfile(profile: UserProfile, avatarFile?: File): Promise<UserProfile> {
   const supabase = getBrowserClient(); // Profile saving is an explicit user action from the client
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   if (userId !== profile.id) {
     throw new Error("Não é possível salvar o perfil de outro usuário.");
   }
@@ -207,8 +190,8 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
 
 // Glucose Readings
 export async function getGlucoseReadings(userProfile?: UserProfile | null): Promise<GlucoseReading[]> {
-  const supabase = getSupabase();
-  const userId = await getCurrentUserId();
+  const supabase = getBrowserClient();
+  const userId = await getCurrentUserId(supabase);
   const { data, error } = await supabase
     .from('glucose_readings')
     .select('*')
@@ -233,7 +216,7 @@ export async function getGlucoseReadings(userProfile?: UserProfile | null): Prom
 
 export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'> & {id?: string}, userProfile?: UserProfile | null): Promise<GlucoseReading> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const level = classifyGlucoseLevel(reading.value, userProfile);
   
   const readingToSave = {
@@ -282,7 +265,7 @@ export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' |
 
 export async function deleteGlucoseReading(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { error } = await supabase
     .from('glucose_readings')
     .delete()
@@ -298,8 +281,8 @@ export async function deleteGlucoseReading(id: string): Promise<void> {
 
 // Insulin Logs
 export async function getInsulinLogs(): Promise<InsulinLog[]> {
-  const supabase = getSupabase();
-  const userId = await getCurrentUserId();
+  const supabase = getBrowserClient();
+  const userId = await getCurrentUserId(supabase);
   const { data, error } = await supabase
     .from('insulin_logs')
     .select('*')
@@ -319,7 +302,7 @@ export async function getInsulinLogs(): Promise<InsulinLog[]> {
 
 export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_at'> & {id?:string}): Promise<InsulinLog> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const logToSave = {
     id: log.id,
     type: log.type,
@@ -354,7 +337,7 @@ export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_
 
 export async function deleteInsulinLog(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { error } = await supabase
     .from('insulin_logs')
     .delete()
@@ -366,8 +349,8 @@ export async function deleteInsulinLog(id: string): Promise<void> {
 
 // Meal Analyses
 export async function getMealAnalyses(): Promise<MealAnalysis[]> {
-  const supabase = getSupabase();
-  const userId = await getCurrentUserId();
+  const supabase = getBrowserClient();
+  const userId = await getCurrentUserId(supabase);
   const { data, error } = await supabase
     .from('meal_analyses')
     .select('*')
@@ -394,7 +377,7 @@ export async function saveMealAnalysis(
   analysis: Omit<MealAnalysis, 'id' | 'imageUrl' | 'user_id' | 'created_at'> & { id?: string; mealPhotoFile?: File }
 ): Promise<MealAnalysis> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   let finalImageUrl: string | undefined = undefined;
 
   if (analysis.mealPhotoFile) {
@@ -464,7 +447,7 @@ export async function saveMealAnalysis(
 
 export async function deleteMealAnalysis(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { data: analysisToDelete, error: fetchError } = await supabase
     .from('meal_analyses')
     .select('image_url')
@@ -503,7 +486,7 @@ export async function deleteMealAnalysis(id: string): Promise<void> {
 // Reminders
 export async function getReminders(): Promise<ReminderConfig[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { data, error } = await supabase
     .from('reminders')
     .select('*')
@@ -530,7 +513,7 @@ export async function getReminders(): Promise<ReminderConfig[]> {
 
 export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'created_at'> & { id?: string }): Promise<ReminderConfig> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const reminderToSave = {
     id: reminder.id,
     user_id: userId,
@@ -589,7 +572,7 @@ export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'c
 
 export async function deleteReminder(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { error } = await supabase
     .from('reminders')
     .delete()
@@ -601,8 +584,8 @@ export async function deleteReminder(id: string): Promise<void> {
 
 // Activity Logs
 export async function getActivityLogs(): Promise<ActivityLog[]> {
-  const supabase = getSupabase();
-  const userId = await getCurrentUserId();
+  const supabase = getBrowserClient();
+  const userId = await getCurrentUserId(supabase);
   const { data, error } = await supabase
     .from('activity_logs')
     .select('*')
@@ -627,7 +610,7 @@ export async function getActivityLogs(): Promise<ActivityLog[]> {
 
 export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'created_at'> & { id?: string }): Promise<ActivityLog> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const logToSave = {
     id: log.id,
     user_id: userId,
@@ -671,7 +654,7 @@ export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'create
 
 export async function deleteActivityLog(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { error } = await supabase
     .from('activity_logs')
     .delete()
@@ -686,8 +669,8 @@ export async function deleteActivityLog(id: string): Promise<void> {
 
 // Medication Logs (Novo)
 export async function getMedicationLogs(): Promise<MedicationLog[]> {
-  const supabase = getSupabase();
-  const userId = await getCurrentUserId();
+  const supabase = getBrowserClient();
+  const userId = await getCurrentUserId(supabase);
   const { data, error } = await supabase
     .from('medication_logs')
     .select('*')
@@ -703,7 +686,7 @@ export async function getMedicationLogs(): Promise<MedicationLog[]> {
 
 export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'created_at'> & { id?: string }): Promise<MedicationLog> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const logToSave = {
     id: log.id,
     user_id: userId,
@@ -742,7 +725,7 @@ export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'cr
 
 export async function deleteMedicationLog(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId();
+  const userId = await getCurrentUserId(supabase);
   const { error } = await supabase
     .from('medication_logs')
     .delete()
@@ -758,10 +741,11 @@ export async function deleteMedicationLog(id: string): Promise<void> {
 
 // New function to get all user data for the conversational AI
 export async function getAllUserDataForAI(): Promise<any> {
-    const supabase = getSupabase(); // Use a server-context client
-    const userId = await getCurrentUserId();
+    const supabase = createServerClient(); // Use a server-context client
+    const userId = await getCurrentUserId(supabase);
     const oneYearAgo = formatISO(subYears(new Date(), 1));
 
+    // Helper to fetch data using the server client
     const fetchTable = async (tableName: string) => {
         const { data, error } = await supabase
             .from(tableName)
@@ -770,22 +754,31 @@ export async function getAllUserDataForAI(): Promise<any> {
             .gte('timestamp', oneYearAgo)
             .order('timestamp', { ascending: false });
         if (error) {
-            console.error(`Error fetching ${tableName}:`, error);
-            throw error;
+            console.error(`Error fetching ${tableName} for AI:`, error);
+            // Don't throw, just return empty so the AI can still try to work
+            return [];
         }
         return data;
     };
+    
+     const { data: profileData, error: profileError } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+        console.error('Error fetching profile for AI:', profileError);
+    }
 
     try {
         const [
-            profile,
             glucoseReadings,
             insulinLogs,
             medicationLogs,
             activityLogs,
             mealAnalyses
         ] = await Promise.all([
-            getUserProfile(),
             fetchTable('glucose_readings'),
             fetchTable('insulin_logs'),
             fetchTable('medication_logs'),
@@ -794,7 +787,7 @@ export async function getAllUserDataForAI(): Promise<any> {
         ]);
 
         return {
-            profile,
+            profile: profileData,
             glucoseReadings,
             insulinLogs,
             medicationLogs,
@@ -811,3 +804,5 @@ export async function getAllUserDataForAI(): Promise<any> {
         return {}; // Return empty object on failure
     }
 }
+
+    

@@ -1,6 +1,6 @@
 
 // src/lib/supabaseClient.ts
-import { createBrowserClient, createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr'
+import { createBrowserClient as createSupabaseBrowserClient, createServerClient as createSupabaseServerClient, type CookieOptions } from '@supabase/ssr'
 import { type SupabaseClient } from '@supabase/supabase-js'
 import { type Database } from '@/types/supabase'
 
@@ -16,28 +16,28 @@ if (!supabaseAnonKey) {
 }
 
 // Cliente Supabase para o LADO DO CLIENTE (Browser)
-// Este é um singleton que pode ser importado em qualquer componente de cliente.
-// Ele gerencia a sessão no navegador.
-let client: SupabaseClient<Database> | undefined
+// Este é um singleton para garantir que não recriamos o cliente desnecessariamente.
+let browserClient: SupabaseClient<Database> | undefined
 
-function getBrowserClient() {
-  if (client) {
-    return client
+export function getBrowserClient() {
+  if (browserClient) {
+    return browserClient
   }
 
-  client = createBrowserClient<Database>(
+  browserClient = createSupabaseBrowserClient<Database>(
     supabaseUrl!,
     supabaseAnonKey!
   )
 
-  return client
+  return browserClient
 }
 
 // Função para criar um cliente Supabase no LADO DO SERVIDOR (Server Actions, Route Handlers)
 // Esta função DEVE ser chamada dentro de cada Server Action ou Route Handler que precisar dela.
 // Ela usa os cookies da requisição para autenticar o usuário.
-function createServerClient() {
+export function createServerClient() {
     // Import 'cookies' here, inside the server-only function
+    // to avoid bundling server-only code on the client.
     const { cookies } = require('next/headers');
     const cookieStore = cookies()
 
@@ -61,8 +61,6 @@ function createServerClient() {
 }
 
 
-export { getBrowserClient, createServerClient }
-
 /*
   GUIA DE CONFIGURAÇÃO DO BANCO DE DADOS SUPABASE:
 
@@ -72,3 +70,5 @@ export { getBrowserClient, createServerClient }
 
   Este guia contém todos os scripts SQL e instruções detalhadas.
 */
+
+    
