@@ -1,4 +1,5 @@
 
+
 'use client'; 
 
 import { useEffect, useState, useCallback } from 'react';
@@ -57,6 +58,7 @@ export default function AppLayout({
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         await fetchUserReminders(session.user.id);
+        setLoading(false);
       } else {
         toast({
           title: 'Sessão não encontrada',
@@ -64,8 +66,9 @@ export default function AppLayout({
           variant: 'destructive'
         });
         router.replace('/login');
+        // We still need to stop loading even on redirect
+        setLoading(false); 
       }
-      setLoading(false);
     });
 
     return () => {

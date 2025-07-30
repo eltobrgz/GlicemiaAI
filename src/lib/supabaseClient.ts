@@ -38,6 +38,7 @@ export function getBrowserClient() {
 export function createServerClient() {
     // Import 'cookies' here, inside the server-only function
     // to avoid bundling server-only code on the client.
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
     const { cookies } = require('next/headers');
     const cookieStore = cookies()
 

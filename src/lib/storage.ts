@@ -1,4 +1,5 @@
 
+
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
 import { getBrowserClient, createServerClient } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
@@ -7,9 +8,10 @@ import { subYears, formatISO } from 'date-fns';
 
 
 // Helper to get current user ID
-async function getCurrentUserId(supabase: any): Promise<string> {
-  // Simplificamos esta função para confiar no estado de autenticação já estabelecido.
-  // A lógica de esperar pela sessão deve estar nos componentes de UI (layout, etc.).
+async function getCurrentUserId(): Promise<string> {
+  // This function should ONLY use the browser client, as it's used by client-side forms and components.
+  // Server-side functions will use their own authenticated client.
+  const supabase = getBrowserClient();
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
   if (sessionError) {
@@ -21,7 +23,7 @@ async function getCurrentUserId(supabase: any): Promise<string> {
     return session.user.id;
   }
   
-  // Se não houver sessão, o usuário não está autenticado.
+  // If no session, the user is not authenticated.
   throw new Error('Usuário não autenticado.');
 }
 
@@ -55,7 +57,7 @@ async function uploadSupabaseFile(bucketName: string, filePath: string, file: Fi
 export async function getUserProfile(): Promise<UserProfile | null> {
   const supabase = getBrowserClient(); // Profile info is generally needed on the client
   try {
-    const userId = await getCurrentUserId(supabase);
+    const userId = await getCurrentUserId();
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -116,7 +118,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 
 export async function saveUserProfile(profile: UserProfile, avatarFile?: File): Promise<UserProfile> {
   const supabase = getBrowserClient(); // Profile saving is an explicit user action from the client
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   if (userId !== profile.id) {
     throw new Error("Não é possível salvar o perfil de outro usuário.");
   }
@@ -191,7 +193,7 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
 // Glucose Readings
 export async function getGlucoseReadings(userProfile?: UserProfile | null): Promise<GlucoseReading[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('glucose_readings')
     .select('*')
@@ -216,7 +218,7 @@ export async function getGlucoseReadings(userProfile?: UserProfile | null): Prom
 
 export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'> & {id?: string}, userProfile?: UserProfile | null): Promise<GlucoseReading> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const level = classifyGlucoseLevel(reading.value, userProfile);
   
   const readingToSave = {
@@ -265,7 +267,7 @@ export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' |
 
 export async function deleteGlucoseReading(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('glucose_readings')
     .delete()
@@ -282,7 +284,7 @@ export async function deleteGlucoseReading(id: string): Promise<void> {
 // Insulin Logs
 export async function getInsulinLogs(): Promise<InsulinLog[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('insulin_logs')
     .select('*')
@@ -302,7 +304,7 @@ export async function getInsulinLogs(): Promise<InsulinLog[]> {
 
 export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_at'> & {id?:string}): Promise<InsulinLog> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const logToSave = {
     id: log.id,
     type: log.type,
@@ -337,7 +339,7 @@ export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_
 
 export async function deleteInsulinLog(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('insulin_logs')
     .delete()
@@ -350,7 +352,7 @@ export async function deleteInsulinLog(id: string): Promise<void> {
 // Meal Analyses
 export async function getMealAnalyses(): Promise<MealAnalysis[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('meal_analyses')
     .select('*')
@@ -377,7 +379,7 @@ export async function saveMealAnalysis(
   analysis: Omit<MealAnalysis, 'id' | 'imageUrl' | 'user_id' | 'created_at'> & { id?: string; mealPhotoFile?: File }
 ): Promise<MealAnalysis> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   let finalImageUrl: string | undefined = undefined;
 
   if (analysis.mealPhotoFile) {
@@ -447,7 +449,7 @@ export async function saveMealAnalysis(
 
 export async function deleteMealAnalysis(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data: analysisToDelete, error: fetchError } = await supabase
     .from('meal_analyses')
     .select('image_url')
@@ -486,7 +488,7 @@ export async function deleteMealAnalysis(id: string): Promise<void> {
 // Reminders
 export async function getReminders(): Promise<ReminderConfig[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('reminders')
     .select('*')
@@ -513,7 +515,7 @@ export async function getReminders(): Promise<ReminderConfig[]> {
 
 export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'created_at'> & { id?: string }): Promise<ReminderConfig> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const reminderToSave = {
     id: reminder.id,
     user_id: userId,
@@ -572,7 +574,7 @@ export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'c
 
 export async function deleteReminder(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('reminders')
     .delete()
@@ -585,7 +587,7 @@ export async function deleteReminder(id: string): Promise<void> {
 // Activity Logs
 export async function getActivityLogs(): Promise<ActivityLog[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('activity_logs')
     .select('*')
@@ -610,7 +612,7 @@ export async function getActivityLogs(): Promise<ActivityLog[]> {
 
 export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'created_at'> & { id?: string }): Promise<ActivityLog> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const logToSave = {
     id: log.id,
     user_id: userId,
@@ -654,7 +656,7 @@ export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'create
 
 export async function deleteActivityLog(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('activity_logs')
     .delete()
@@ -670,7 +672,7 @@ export async function deleteActivityLog(id: string): Promise<void> {
 // Medication Logs (Novo)
 export async function getMedicationLogs(): Promise<MedicationLog[]> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('medication_logs')
     .select('*')
@@ -686,7 +688,7 @@ export async function getMedicationLogs(): Promise<MedicationLog[]> {
 
 export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'created_at'> & { id?: string }): Promise<MedicationLog> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const logToSave = {
     id: log.id,
     user_id: userId,
@@ -725,7 +727,7 @@ export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'cr
 
 export async function deleteMedicationLog(id: string): Promise<void> {
   const supabase = getBrowserClient();
-  const userId = await getCurrentUserId(supabase);
+  const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('medication_logs')
     .delete()
@@ -742,7 +744,14 @@ export async function deleteMedicationLog(id: string): Promise<void> {
 // New function to get all user data for the conversational AI
 export async function getAllUserDataForAI(): Promise<any> {
     const supabase = createServerClient(); // Use a server-context client
-    const userId = await getCurrentUserId(supabase);
+     const { data: { user }, error: userError } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+        console.error('AI could not get authenticated user:', userError?.message);
+        throw new Error("Usuário não autenticado para a consulta da IA.");
+    }
+    const userId = user.id;
+
     const oneYearAgo = formatISO(subYears(new Date(), 1));
 
     // Helper to fetch data using the server client
