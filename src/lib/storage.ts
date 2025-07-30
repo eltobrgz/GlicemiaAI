@@ -3,6 +3,7 @@ import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProf
 import { supabase } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
 import { toast } from '@/hooks/use-toast'; // Import toast
+import { subYears, formatISO } from 'date-fns';
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string> {
@@ -713,4 +714,60 @@ export async function deleteMedicationLog(id: string): Promise<void> {
     console.error('Error deleting medication log:', error);
     throw error;
   }
+}
+
+
+// New function to get all user data for the conversational AI
+export async function getAllUserDataForAI(): Promise<any> {
+    const userId = await getCurrentUserId();
+    const oneYearAgo = formatISO(subYears(new Date(), 1));
+
+    const fetchTable = async (tableName: string) => {
+        const { data, error } = await supabase
+            .from(tableName)
+            .select('*')
+            .eq('user_id', userId)
+            .gte('timestamp', oneYearAgo)
+            .order('timestamp', { ascending: false });
+        if (error) {
+            console.error(`Error fetching ${tableName}:`, error);
+            throw error;
+        }
+        return data;
+    };
+
+    try {
+        const [
+            profile,
+            glucoseReadings,
+            insulinLogs,
+            medicationLogs,
+            activityLogs,
+            mealAnalyses
+        ] = await Promise.all([
+            getUserProfile(),
+            fetchTable('glucose_readings'),
+            fetchTable('insulin_logs'),
+            fetchTable('medication_logs'),
+            fetchTable('activity_logs'),
+            fetchTable('meal_analyses'),
+        ]);
+
+        return {
+            profile,
+            glucoseReadings,
+            insulinLogs,
+            medicationLogs,
+            activityLogs,
+            mealAnalyses,
+        };
+    } catch (error) {
+        console.error("Failed to fetch all user data for AI:", error);
+        toast({
+            title: "Erro ao carregar dados",
+            description: "Não foi possível carregar todos os seus dados para o assistente. As respostas podem ser limitadas.",
+            variant: "destructive"
+        });
+        return {}; // Return empty object on failure
+    }
 }

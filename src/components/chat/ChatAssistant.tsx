@@ -159,7 +159,7 @@ export default function ChatAssistant() {
     scrollToBottom();
 
     try {
-      const responseText = await conversationalAgent(currentMessages);
+      const responseText = await conversationalAgent(currentMessages as any);
       
       if (responseText) {
         const newAiMessage: Message = { role: 'model', text: responseText };
