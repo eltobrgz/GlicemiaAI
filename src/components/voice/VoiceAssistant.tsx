@@ -33,6 +33,7 @@ export default function VoiceAssistant() {
     hasRecognitionSupport
   } = useSpeechRecognition();
   const { toast } = useToast();
+  const finalTranscriptRef = useRef(''); // Use ref to hold the last transcript for processing
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -86,18 +87,22 @@ export default function VoiceAssistant() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // Effect to process transcript only when listening stops
+  useEffect(() => {
+    if (!isListening && assistantState === 'listening' && finalTranscriptRef.current.trim()) {
+      handleProcessTranscript(finalTranscriptRef.current);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening, assistantState]);
+
+
   useEffect(() => {
     if (isListening) {
-      setAssistantState('listening');
-    } else if (assistantState === 'listening') {
-      if (transcript.trim()) {
-        handleProcessTranscript(transcript);
-      } else {
-        setAssistantState('idle');
-      }
+        setAssistantState('listening');
+        finalTranscriptRef.current = transcript; // Continuously update ref while listening
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening]);
+  }, [isListening, transcript]);
+
   
   useEffect(() => {
     if (recognitionError) {
@@ -172,9 +177,14 @@ export default function VoiceAssistant() {
   const resetState = () => {
     setAssistantState('idle');
     setConfirmationData(null);
+    finalTranscriptRef.current = '';
   };
 
   const handleProcessTranscript = async (text: string) => {
+    if (!text.trim()) {
+      setAssistantState('idle');
+      return;
+    }
     setAssistantState('processing');
     try {
       const result = await interpretVoiceLog(text);
@@ -269,7 +279,14 @@ export default function VoiceAssistant() {
                 <Button
                     size="icon"
                     className={`h-24 w-24 rounded-full transition-all duration-300 ${isListening ? 'bg-red-500 hover:bg-red-600 scale-110' : 'bg-primary hover:bg-primary/90'}`}
-                    onClick={isListening ? stopListening : startListening}
+                    onClick={() => {
+                        if (isListening) {
+                          finalTranscriptRef.current = transcript; // Ensure ref is updated before stopping
+                          stopListening();
+                        } else {
+                          startListening();
+                        }
+                    }}
                     disabled={assistantState === 'processing'}
                 >
                     {assistantState === 'processing' 

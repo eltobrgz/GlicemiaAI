@@ -41,27 +41,32 @@ export function useSpeechRecognition() {
     recognition.lang = 'pt-BR';
 
     recognition.onresult = (event: any) => {
+      let interimTranscript = '';
       let finalTranscript = '';
+
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
+        } else {
+          interimTranscript += event.results[i][0].transcript;
         }
       }
-      setTranscript(prev => prev + finalTranscript);
+      // Set a single, clean transcript instead of appending
+      setTranscript(finalTranscript + interimTranscript);
     };
 
     recognition.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
-      setError(`Erro no reconhecimento de voz: ${event.error}`);
+      if (event.error !== 'no-speech') {
+        setError(`Erro no reconhecimento de voz: ${event.error}`);
+      }
       setIsListening(false);
     };
     
     recognition.onend = () => {
       // This is called automatically when speech recognition stops.
-      // We set isListening to false here to ensure state consistency.
-      if (isListening) {
-        setIsListening(false);
-      }
+      // The state transition logic is handled in the component.
+      setIsListening(false);
     };
 
     recognitionRef.current = recognition as ISpeechRecognition;
@@ -72,7 +77,6 @@ export function useSpeechRecognition() {
         recognitionRef.current.stop();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startListening = useCallback(() => {
