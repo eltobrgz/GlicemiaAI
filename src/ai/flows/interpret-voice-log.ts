@@ -28,13 +28,13 @@ Analyze the user's text and determine if they are logging one of the following:
 3.  **Medication:** Look for medication names and dosages. Example: "tomei 500mg de metformina".
 4.  **Physical Activity:** Look for an activity type and a duration in minutes or hours. Example: "fiz 30 minutos de caminhada".
 
--   **CRITICAL RULE:** Always assume the timestamp for the log is the current time. You MUST provide the current timestamp in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ) in the 'timestamp' field for all successful recognitions.
+-   **CRITICAL RULE:** Always assume the timestamp for the log is the current time provided in the input. You MUST provide this timestamp in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ) in the 'timestamp' field for all successful recognitions.
 -   If the user mentions context or feelings (e.g., "...e me senti um pouco tonto"), include this in the 'notes' field for glucose readings.
 -   If the text is ambiguous or does not clearly match any of the log types, return 'unrecognized' with a brief reason.
 -   For insulin and activity, if the type is mentioned, use it. If not, try to infer it (e.g., 'corrida' for "corri por 20 minutos"). If it's still unclear, use a generic term like "Insulina" or "Atividade física".
 
-User's spoken request: "{{{input.input}}}"
-Current ISO Timestamp: "${new Date().toISOString()}"
+User's spoken request: "{{{input}}}"
+Current ISO Timestamp: "{{{now}}}"
 `,
 });
 
@@ -45,7 +45,10 @@ const interpretVoiceLogFlow = ai.defineFlow(
     outputSchema: InterpretedLogSchema,
   },
   async (input) => {
-    const { output } = await prompt({input});
+    const { output } = await prompt({
+      input: input.input,
+      now: new Date().toISOString()
+    });
     if (!output) {
       return { logType: 'unrecognized', data: { reason: 'A IA não conseguiu interpretar o comando.' } };
     }
