@@ -1,4 +1,3 @@
-dush
 # GlicemiaAI - Seu Assistente Inteligente para Controle Glicêmico
 
 Bem-vindo ao GlicemiaAI! Este aplicativo foi desenvolvido para auxiliar no monitoramento e gerenciamento da diabetes, combinando registros manuais, análises com Inteligência Artificial e insights personalizados para uma jornada de saúde mais informada e eficaz.
@@ -121,15 +120,33 @@ Ajuste o GlicemiaAI às suas preferências:
 -   **Instalável:** O GlicemiaAI pode ser "instalado" no seu dispositivo (desktop ou mobile) para uma experiência mais próxima a um aplicativo nativo.
 -   **Ícones e Tela de Splash:** Configurados para uma boa experiência PWA.
 
-## Como Começar a Usar
+## Fluxo Principal do App (Passo a Passo)
 
-1.  **Cadastre-se:** Crie uma nova conta fornecendo seu nome, e-mail e senha. Confirme seu e-mail através do link enviado.
-2.  **Faça Login:** Acesse com suas credenciais.
-3.  **Explore o Dashboard:** Veja um resumo rápido dos seus dados.
-4.  **Registre seus Dados:** Comece a adicionar suas medições de glicemia, doses de insulina e atividades físicas.
-5.  **Analise suas Refeições:** Tire fotos das suas refeições e use a IA para obter insights.
-6.  **Configure Lembretes:** Não perca medições ou doses importantes.
-7.  **Verifique os Relatórios e Insights:** Acompanhe seu progresso e tendências.
-8.  **Personalize seu Perfil e Configurações:** Ajuste o app às suas necessidades.
+1.  **Cadastro e Login:** O usuário cria uma conta segura. Ao fazer login, é recebido pelo Dashboard.
+2.  **Configuração do Perfil:** O usuário acessa seu perfil para definir suas metas glicêmicas pessoais (hipoglicemia, alvo, hiperglicemia), que são cruciais para a personalização de todas as análises.
+3.  **Registro Diário:** No dia a dia, o usuário utiliza os botões de "Acesso Rápido" no Dashboard para registrar:
+    *   **Glicemia:** Insere o valor medido e o contexto (ex: "depois do almoço").
+    *   **Insulina:** Adiciona a dose e o tipo de insulina aplicada.
+    *   **Atividade Física:** Registra a duração e o tipo de exercício.
+4.  **Análise de Refeição:** Antes de uma refeição, o usuário pode tirar uma foto do seu prato. A IA analisa a imagem, estima os carboidratos e o impacto glicêmico, auxiliando na contagem e na decisão da dose de insulina.
+5.  **Acompanhamento e Análise:**
+    *   **Dashboard:** O usuário visualiza de forma rápida sua média glicêmica e seu "Tempo no Alvo" recentes, além da sua sequência de registros diários ("streak").
+    *   **Calendário:** Consulta registros de dias específicos de forma organizada.
+    *   **Insights da IA:** Acessa a página de "Insights" para receber uma análise semanal sobre seus padrões e dicas personalizadas.
+6.  **Geração de Relatórios:** Para uma consulta médica, o usuário gera um relatório completo em PDF, selecionando o período desejado. O relatório inclui gráficos de tendência, métricas de variabilidade (CV) e todos os dados detalhados, prontos para serem compartilhados com a equipe de saúde.
+
+## Referências e Tecnologias
+
+Este projeto foi construído utilizando um conjunto de tecnologias modernas para garantir uma experiência de usuário rápida, segura e inteligente:
+
+-   **Frontend:**
+    -   **Next.js (com App Router):** Framework React para renderização no servidor, otimização de performance e roteamento.
+    -   **React & TypeScript:** Para a construção de componentes de interface robustos e com tipagem segura.
+    -   **Tailwind CSS & ShadCN/UI:** Para estilização e um sistema de design consistente e moderno.
+-   **Backend e Banco de Dados:**
+    -   **Supabase:** Plataforma "Backend-as-a-Service" que fornece banco de dados (PostgreSQL), autenticação, armazenamento de arquivos e APIs em tempo real.
+-   **Inteligência Artificial:**
+    -   **Google AI (Gemini Pro & Gemini Vision):** Modelos de linguagem e visão utilizados para as funcionalidades de análise de refeição, interpretação de voz e geração de insights.
+    -   **Genkit (Framework de IA do Firebase):** Para orquestrar os fluxos de IA, gerenciar prompts e estruturar a comunicação com os modelos do Google AI.
 
 **Lembre-se:** As informações e sugestões fornecidas pelo GlicemiaAI, especialmente as geradas por Inteligência Artificial, não substituem o aconselhamento médico profissional. Sempre consulte seu médico ou profissional de saúde para decisões relacionadas ao seu tratamento.
