@@ -8,33 +8,21 @@ import { subYears, formatISO } from 'date-fns';
 
 // Helper to get current user ID
 async function getCurrentUserId(supabase: any): Promise<string> {
-  const { data: { session } } = await supabase.auth.getSession();
+  // Simplificamos esta função para confiar no estado de autenticação já estabelecido.
+  // A lógica de esperar pela sessão deve estar nos componentes de UI (layout, etc.).
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error('Supabase session error:', sessionError.message);
+    throw new Error('Falha ao obter a sessão do usuário.');
+  }
+  
   if (session?.user?.id) {
     return session.user.id;
   }
   
-  // If no session, wait for a moment for the session to be established.
-  return new Promise((resolve, reject) => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event: string, session: any) => {
-        authListener?.subscription.unsubscribe();
-        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION') {
-          if (session?.user?.id) {
-            resolve(session.user.id);
-          } else {
-            reject(new Error('Usuário não autenticado.'));
-          }
-        } else {
-           reject(new Error('Usuário não autenticado.'));
-        }
-      }
-    );
-     // Timeout to prevent hanging forever if no auth event is fired
-    setTimeout(() => {
-        authListener?.subscription.unsubscribe();
-        reject(new Error('Falha ao verificar a sessão do usuário.'));
-    }, 5000);
-  });
+  // Se não houver sessão, o usuário não está autenticado.
+  throw new Error('Usuário não autenticado.');
 }
 
 // Helper function to upload file to Supabase Storage
