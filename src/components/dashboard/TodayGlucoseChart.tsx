@@ -46,7 +46,7 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
 
   const chartData = useMemo(() => {
     return readings.map(r => ({
-      time: parseISO(r.timestamp),
+      time: parseISO(r.timestamp).getTime(), // Convert Date to number (milliseconds)
       glicemia: r.value,
       level: r.level, // Pass level to chart data
     }));
