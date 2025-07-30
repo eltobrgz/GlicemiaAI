@@ -11,7 +11,7 @@ import { ptBR } from 'date-fns/locale';
 import { getGlucoseLevelColor, formatTime } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, PlusCircle, Loader2, Edit3 } from 'lucide-react';
+import { Trash2, PlusCircle, Loader2, Edit3, Droplet } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useLogDialog } from '@/contexts/LogDialogsContext';
 
@@ -77,17 +77,7 @@ export default function GlucoseHistoryCalendar() {
   const dayHasReadings = (day: Date): boolean => {
     return glucoseReadings.some(r => isSameDay(parseISO(r.timestamp), day));
   };
-
-  const getDayOverallLevel = (day: Date): GlucoseReading['level'] | undefined => {
-    const readingsForDay = glucoseReadings.filter(r => isSameDay(parseISO(r.timestamp), day));
-    if (readingsForDay.length === 0) return undefined;
-    
-    if (readingsForDay.some(r => r.level === 'muito_alta')) return 'muito_alta';
-    if (readingsForDay.some(r => r.level === 'alta')) return 'alta';
-    if (readingsForDay.some(r => r.level === 'baixa')) return 'baixa';
-    return 'normal';
-  };
-
+  
   if (isLoading) {
     return (
       <Card className="shadow-xl">
@@ -104,10 +94,12 @@ export default function GlucoseHistoryCalendar() {
   
   return (
     <>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <Card className="lg:col-span-2 shadow-xl">
           <CardHeader>
-            <CardTitle className="text-2xl font-headline text-primary">Calendário Glicêmico</CardTitle>
+            <CardTitle className="text-2xl font-headline text-primary flex items-center">
+              <Droplet className="mr-2 h-6 w-6" /> Calendário Glicêmico
+              </CardTitle>
             <CardDescription>Selecione um dia para ver os detalhes. Dias com registros são destacados.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
@@ -125,21 +117,14 @@ export default function GlucoseHistoryCalendar() {
               }}
               components={{
                 DayContent: ({ date: dayDate, displayMonth }) => {
-                  const level = getDayOverallLevel(dayDate);
+                  const hasReading = dayHasReadings(dayDate);
                   const baseClasses = "w-full h-full flex items-center justify-center relative";
-                  let indicatorClasses = "";
-                  if (level) {
-                    const colorClass = getGlucoseLevelColor(level, userProfile || undefined);
-                    if (colorClass.includes('blue')) indicatorClasses = 'bg-blue-500';
-                    else if (colorClass.includes('green')) indicatorClasses = 'bg-green-500';
-                    else if (colorClass.includes('yellow')) indicatorClasses = 'bg-yellow-500';
-                    else if (colorClass.includes('red')) indicatorClasses = 'bg-red-500';
-                  }
+                 
                   return (
                     <div className={baseClasses}>
                       {format(dayDate, 'd')}
-                      {level && isSameDay(dayDate, startOfDay(dayDate)) && displayMonth.getMonth() === dayDate.getMonth() && (
-                         <span className={`absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full ${indicatorClasses}`}></span>
+                      {hasReading && isSameDay(dayDate, startOfDay(dayDate)) && displayMonth.getMonth() === dayDate.getMonth() && (
+                         <span className="absolute bottom-1 left-1/2 transform -translate-x-1/2 w-2 h-2 rounded-full bg-primary"></span>
                       )}
                     </div>
                   );
@@ -167,7 +152,7 @@ export default function GlucoseHistoryCalendar() {
                       <p className={`text-2xl font-bold ${getGlucoseLevelColor(reading.level, userProfile || undefined)}`}>
                         {reading.value} <span className="text-sm text-muted-foreground">mg/dL</span>
                       </p>
-                      <p className="text-xs text-muted-foreground">{format(parseISO(reading.timestamp), 'HH:mm')}</p>
+                      <p className="text-xs text-muted-foreground">{formatTime(format(parseISO(reading.timestamp), 'HH:mm'))}</p>
                     </div>
                     <div className="flex space-x-1">
                        <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => handleEdit(reading)}>
@@ -178,12 +163,12 @@ export default function GlucoseHistoryCalendar() {
                       </Button>
                     </div>
                   </div>
-                  {reading.mealContext && <Badge variant="outline" className="mt-1 text-xs">{reading.mealContext.replace('_', ' ')}</Badge>}
+                  {reading.mealContext && <Badge variant="outline" className="mt-1 text-xs capitalize">{reading.mealContext.replace('_', ' ')}</Badge>}
                   {reading.notes && <p className="text-xs mt-1 text-muted-foreground italic">"{reading.notes}"</p>}
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground text-sm">Nenhum registro para este dia.</p>
+              <p className="text-muted-foreground text-sm text-center py-4">Nenhum registro para este dia.</p>
             )}
           </CardContent>
         </Card>

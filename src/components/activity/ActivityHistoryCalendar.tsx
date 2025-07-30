@@ -146,7 +146,7 @@ export default function ActivityHistoryCalendar() {
                   <div className="flex justify-between items-start">
                     <div>
                       <p className="text-lg font-semibold text-orange-600 capitalize">
-                        {log.activity_type.replace('_', ' ')}
+                        {log.activity_type.replace(/_/g, ' ')}
                       </p>
                       <p className="text-xs text-muted-foreground">{formatTime(format(parseISO(log.timestamp), 'HH:mm'))}</p>
                     </div>
@@ -165,7 +165,7 @@ export default function ActivityHistoryCalendar() {
                       </div>
                       {log.intensity && (
                           <div className="flex items-center text-sm capitalize">
-                             <Zap size={14} className="mr-1.5 text-muted-foreground" /> Intensidade: <Badge variant="outline" className="ml-1.5">{log.intensity}</Badge>
+                             <Zap size={14} className="mr-1.5 text-muted-foreground" /> Intensidade: <Badge variant="outline" className="ml-1.5 border-orange-400 text-orange-600">{log.intensity}</Badge>
                           </div>
                       )}
                   </div>
@@ -173,7 +173,7 @@ export default function ActivityHistoryCalendar() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground text-sm">Nenhum registro de atividade para este dia.</p>
+              <p className="text-muted-foreground text-sm text-center py-4">Nenhum registro de atividade para este dia.</p>
             )}
           </CardContent>
         </Card>

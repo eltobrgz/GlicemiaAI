@@ -163,7 +163,7 @@ export default function InsulinHistoryCalendar() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground text-sm">Nenhum registro de insulina para este dia.</p>
+              <p className="text-muted-foreground text-sm text-center py-4">Nenhum registro de insulina para este dia.</p>
             )}
           </CardContent>
         </Card>

@@ -163,7 +163,7 @@ export default function MedicationHistoryCalendar() {
                 </div>
               ))
             ) : (
-              <p className="text-muted-foreground text-sm">Nenhum registro de medicamento para este dia.</p>
+              <p className="text-muted-foreground text-sm text-center py-4">Nenhum registro de medicamento para este dia.</p>
             )}
           </CardContent>
         </Card>
