@@ -4,13 +4,14 @@
 import React, { createContext, useState, useContext, useCallback, ReactNode } from 'react';
 import type { GlucoseReading, InsulinLog, ActivityLog, MedicationLog } from '@/types';
 
-type LogType = 'glucose' | 'insulin' | 'activity' | 'medication';
+type LogType = 'glucose' | 'insulin' | 'activity' | 'medication' | 'voice';
 
 type InitialData = {
   glucose?: Partial<GlucoseReading>;
   insulin?: Partial<InsulinLog>;
   activity?: Partial<ActivityLog>;
   medication?: Partial<MedicationLog>;
+  voice?: undefined; // Voice doesn't need initial data
 };
 
 type SuccessListeners = {
@@ -18,6 +19,7 @@ type SuccessListeners = {
   insulin: (() => void)[];
   activity: (() => void)[];
   medication: (() => void)[];
+  voice: (() => void)[];
 };
 
 interface LogDialogsContextType {
@@ -40,6 +42,7 @@ export const LogDialogsProvider = ({ children }: { children: ReactNode }) => {
     insulin: [],
     activity: [],
     medication: [],
+    voice: [],
   });
 
   const openDialog = useCallback((logType: LogType, data?: Partial<any>) => {

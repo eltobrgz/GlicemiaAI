@@ -7,7 +7,8 @@ import GlucoseLogForm from '@/components/glucose/GlucoseLogForm';
 import InsulinLogForm from '@/components/insulin/InsulinLogForm';
 import ActivityLogForm from '@/components/activity/ActivityLogForm';
 import MedicationLogForm from '@/components/medication/MedicationLogForm';
-import { Droplet, Pill, Bike, ClipboardPlus } from 'lucide-react';
+import VoiceLogDialog from '@/components/voice/VoiceLogDialog';
+import { Droplet, Pill, Bike, ClipboardPlus, Mic } from 'lucide-react';
 
 const dialogConfig = {
   glucose: {
@@ -30,6 +31,11 @@ const dialogConfig = {
     Icon: ClipboardPlus,
     Form: MedicationLogForm,
   },
+  voice: {
+    title: 'Assistente de Voz',
+    Icon: Mic,
+    Form: VoiceLogDialog,
+  },
 };
 
 export function LogDialogs() {
@@ -41,7 +47,10 @@ export function LogDialogs() {
 
   const { title, Icon, Form } = dialogConfig[openLog];
   const currentInitialData = initialData[openLog];
-  const dialogTitle = `${currentInitialData?.id ? 'Editar' : 'Registrar'} ${title.replace('Registrar ', '')}`;
+  const dialogTitle = 
+    openLog === 'voice' 
+      ? title 
+      : `${currentInitialData?.id ? 'Editar' : 'Registrar'} ${title.replace('Registrar ', '')}`;
 
   return (
     <Dialog open={!!openLog} onOpenChange={(isOpen) => !isOpen && closeDialog()}>

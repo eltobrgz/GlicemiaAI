@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus, Calculator } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus, Calculator, Mic } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
@@ -28,6 +28,7 @@ export function SideNavigation() {
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { type: 'voice', label: 'Registrar por Voz', icon: Mic },
     { type: 'glucose', label: 'Registrar Glicemia', icon: Droplet },
     { type: 'insulin', label: 'Registrar Insulina', icon: Pill },
     { type: 'medication', label: 'Registrar Medicamento', icon: ClipboardPlus },
@@ -86,6 +87,11 @@ export function SideNavigation() {
         ),
         tooltip: { children: item.label, side: 'right', align: 'center' },
       };
+      
+      // Special styling for voice registration
+      if ('type' in item && item.type === 'voice') {
+        buttonProps.className = cn(buttonProps.className, "bg-primary/5 text-primary hover:bg-primary/10 font-medium");
+      }
 
       return (
         <SidebarMenuItem key={item.label}>

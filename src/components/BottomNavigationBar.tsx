@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus, Calculator } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus, Calculator, Mic } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 interface NavItemDef {
   href?: string;
-  type?: 'glucose' | 'insulin' | 'medication' | 'activity';
+  type?: 'glucose' | 'insulin' | 'medication' | 'activity' | 'voice';
   label: string;
   icon: LucideIcon;
 }
@@ -25,9 +25,10 @@ export default function BottomNavigationBar() {
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { type: 'glucose', label: 'Glicemia', icon: Droplet },
     { type: 'insulin', label: 'Insulina', icon: Pill },
+    { type: 'voice', label: 'Voz', icon: Mic },
+    { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { type: 'medication', label: 'Medicamento', icon: ClipboardPlus },
     { type: 'activity', label: 'Atividade', icon: Bike },
-    { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
     { href: '/reports', label: 'Relatórios', icon: FileText }, 
     { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator },
@@ -40,14 +41,14 @@ export default function BottomNavigationBar() {
   const directVisibleItems: NavItemDef[] = [
     allNavItems.find(item => item.href === '/dashboard')!,
     allNavItems.find(item => item.type === 'glucose')!,
-    allNavItems.find(item => item.type === 'insulin')!,
+    allNavItems.find(item => item.type === 'voice')!,
     allNavItems.find(item => item.href === '/meal-analysis')!,
   ];
   
   const popoverItems = allNavItems.filter(
     item => !directVisibleItems.some(dItem => dItem.label === item.label)
   ).sort((a, b) => {
-    const order = ['/calendar', '/reports', '/bolus-calculator', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
+    const order = ['/calendar', '/reports', '/bolus-calculator', 'insulin', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
     const aKey = a.href || a.type;
     const bKey = b.href || b.type;
     return order.indexOf(aKey!) - order.indexOf(bKey!);
@@ -61,6 +62,18 @@ export default function BottomNavigationBar() {
       isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary/90',
       'transition-colors duration-150'
     );
+    
+    // Special styling for the central Voice button
+    if (item.type === 'voice') {
+      return (
+         <button onClick={() => openDialog(item.type!)} className="flex flex-col items-center justify-center text-center -mt-6">
+            <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transform transition-transform hover:scale-110">
+              <item.icon className='h-7 w-7' />
+            </div>
+            <span className="text-[11px] font-medium text-primary mt-1">{item.label}</span>
+        </button>
+      )
+    }
 
     if (item.href) {
       return (
