@@ -7,7 +7,7 @@
  */
 import {ai} from '@/ai/genkit';
 import { z } from 'zod';
-import { InterpretedLogSchema, VoiceLogInputSchema } from '@/types/schemas';
+import { VoiceLogInputSchema } from '@/types/schemas';
 
 // The wrapper function to be called from the frontend
 export async function interpretVoiceLog(input: z.infer<typeof VoiceLogInputSchema>): Promise<any> {
@@ -43,29 +43,25 @@ const interpretVoiceLogFlow = ai.defineFlow(
     inputSchema: VoiceLogInputSchema,
     outputSchema: z.any(),
   },
-  async (input) => {
+  async ({ input }) => { // Destructure 'input' from the object
     const llmResponse = await prompt({
-      input: input.input,
+      input: input, // Pass the string to the prompt context
       now: new Date().toISOString()
     });
     
-    // The output from the LLM is expected to be a JSON string, so we parse it.
     try {
         const jsonOutput = JSON.parse(llmResponse.text);
         
-        // Basic validation to ensure it's a plausible object.
         if (typeof jsonOutput !== 'object' || jsonOutput === null) {
           throw new Error('LLM did not return a valid JSON object.');
         }
 
-        // We'll rely on client-side validation for the specific structure.
         return jsonOutput;
 
     } catch (e) {
         console.error("Failed to parse LLM JSON response:", e);
         console.error("Raw LLM response was:", llmResponse.text);
-        // Return a structured error object
-        return { logType: 'unrecognized', data: { reason: 'A IA retornou uma resposta em formato inválido.' } };
+        return { logType: 'unrecognized', reason: 'A IA retornou uma resposta em formato inválido.' };
     }
   }
 );

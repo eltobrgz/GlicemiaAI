@@ -25,7 +25,7 @@ interface VoiceLogDialogProps {
 
 export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
   const [assistantState, setAssistantState] = useState<VoiceAssistantState>('idle');
-  const [confirmationData, setConfirmationData] = useState<InterpretedLog | null>(null);
+  const [confirmationData, setConfirmationData] = useState<any | null>(null);
   const {
     transcript,
     isListening,
@@ -70,23 +70,17 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     }
     setAssistantState('processing');
     try {
-      // The input is now an object as required by the schema
       const result = await interpretVoiceLog({ input: text });
 
       if (result.logType === 'unrecognized') {
         toast({
           title: "Não entendi, pode tentar de novo?",
-          description: result.reason,
+          description: result.reason || "Não foi possível identificar o que você quis registrar.",
           variant: 'destructive',
         });
         resetState();
       } else {
-        // Here we construct the discriminated union object on the client side
-        const structuredResult: InterpretedLog = {
-            logType: result.logType,
-            data: result,
-        }
-        setConfirmationData(structuredResult);
+        setConfirmationData(result);
         setAssistantState('confirming');
       }
     } catch (error: any) {
@@ -135,8 +129,7 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
       onFormSubmit: handleConfirmationSuccess,
     };
     
-    // The data for the form is now directly in confirmationData.data
-    const initialDataForForm = confirmationData.data;
+    const initialDataForForm = confirmationData;
 
     switch (confirmationData.logType) {
       case 'glucose':
