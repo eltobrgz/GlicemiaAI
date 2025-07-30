@@ -16,7 +16,7 @@ import {
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabaseClient';
+import { getBrowserClient } from '@/lib/supabaseClient';
 import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 export function SideNavigation() {
@@ -24,6 +24,7 @@ export function SideNavigation() {
   const router = useRouter();
   const { toast } = useToast();
   const { openDialog } = useLogDialog();
+  const supabase = getBrowserClient();
 
   const navItems = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },

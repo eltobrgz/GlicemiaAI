@@ -2,13 +2,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { getBrowserClient } from '@/lib/supabaseClient';
 import { Loader2 } from 'lucide-react';
 import AppLogo from '@/components/AppLogo'; // Added import
 
 export default function HomePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
+  const supabase = getBrowserClient();
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -18,16 +19,15 @@ export default function HomePage() {
       } else {
         router.replace('/login');
       }
-      setLoading(false);
+      // Do not set loading false here, let the listener handle it
     };
 
     checkAuth();
 
-    // Optional: Listen for auth changes if the user might log in/out on another tab
     const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
+      if (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session)) {
         router.replace('/dashboard');
-      } else if (event === 'SIGNED_OUT') {
+      } else if (event === 'SIGNED_OUT' || (event === 'INITIAL_SESSION' && !session)) {
         router.replace('/login');
       }
       setLoading(false);
@@ -36,7 +36,7 @@ export default function HomePage() {
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, supabase]);
 
   if (loading) {
     return (

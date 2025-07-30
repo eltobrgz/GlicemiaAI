@@ -12,7 +12,7 @@ import type { UserProfile } from '@/types';
 import { getUserProfile, saveUserProfile } from '@/lib/storage'; 
 import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { supabase } from '@/lib/supabaseClient';
+import { getBrowserClient } from '@/lib/supabaseClient';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '../ui/separator';
@@ -27,6 +27,7 @@ export default function UserProfileCard() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const supabase = getBrowserClient();
 
   useEffect(() => {
     const fetchProfile = async () => {

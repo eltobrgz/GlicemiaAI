@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, LogIn, Loader2, MailQuestion } from 'lucide-react';
 import { useState } from 'react';
-import { supabase } from '@/lib/supabaseClient';
+import { getBrowserClient } from '@/lib/supabaseClient';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +46,7 @@ export default function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
   const [forgotPasswordDialogOpen, setForgotPasswordDialogOpen] = useState(false);
+  const supabase = getBrowserClient();
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),

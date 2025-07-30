@@ -15,7 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { LogOut, Palette, Bell, Shield, Languages, FileText, Moon, Sun, Loader2, Mail, KeyRound, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabaseClient';
+import { getBrowserClient } from '@/lib/supabaseClient';
 import { getUserProfile, saveUserProfile } from '@/lib/storage';
 import type { UserProfile } from '@/types';
 import { Form, FormControl, FormField, FormItem, FormLabel as ShadFormLabel, FormMessage } from '@/components/ui/form'; // Renamed FormLabel
@@ -49,6 +49,7 @@ export default function SettingsPageContent() {
   const [isSavingLanguage, setIsSavingLanguage] = useState(false);
   const [isSendingResetEmail, setIsSendingResetEmail] = useState(false);
   const [isUpdatingEmail, setIsUpdatingEmail] = useState(false);
+  const supabase = getBrowserClient();
 
   const changeEmailForm = useForm<ChangeEmailFormData>({
     resolver: zodResolver(changeEmailSchema),
