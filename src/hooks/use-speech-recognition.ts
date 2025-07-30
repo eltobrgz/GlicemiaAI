@@ -30,8 +30,8 @@ export function useSpeechRecognition() {
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) {
-      console.warn('Speech Recognition not supported by this browser.');
-      // setError('O reconhecimento de voz não é suportado por este navegador.');
+      // API não suportada, não faça nada e não registre erro.
+      // O hook hasRecognitionSupport cuidará de informar a UI.
       return;
     }
 
