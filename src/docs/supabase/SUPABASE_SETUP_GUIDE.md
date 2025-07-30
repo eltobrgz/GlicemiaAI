@@ -175,15 +175,16 @@ CREATE POLICY "Users can delete their own meal photos" ON storage.objects FOR DE
 
 **DIAGNÓSTICO CRÍTICO:** Se você tentar acessar uma URL como `https://[SEU_ID_DE_PROJETO].supabase.co/storage/v1/object/public/[NOME_DO_BUCKET]/caminho/para/imagem.jpg` diretamente no seu navegador e receber `{"statusCode":"404","error":"Bucket not found","message":"Bucket not found"}`, a causa mais provável é que o bucket em si não está marcado como "Public" nas configurações do bucket na UI do Supabase. **Marcar o bucket como "Public" na UI do Supabase geralmente resolve isso.** As políticas RLS acima ainda são importantes para controlar o acesso aos objetos dentro do bucket.
 
-## Passo 6: Script SQL para Povoamento de Dados (Opcional)
+## Passo 6: Povoar Banco de Dados com Dados de Teste (Opcional)
 
-Se desejar povoar seu banco de dados com dados de exemplo para testar a aplicação, você pode usar o script SQL fornecido no arquivo `supabase_seed_data.sql`.
+Se desejar povoar seu banco de dados com dados de exemplo para testar a aplicação, você pode usar o script SQL fornecido no arquivo `docs/supabase/supabase_seed_data.sql`.
 Para executar:
-1.  Abra o arquivo `supabase_seed_data.sql` no seu editor de código.
-2.  Copie todo o conteúdo do script.
-3.  Cole o script no **SQL Editor** do Supabase (após ter criado as tabelas com `supabase_schema_create.sql`).
-4.  Clique em "**RUN**".
-5.  Verifique a saída "Messages" para as credenciais de login dos usuários de exemplo.
+1.  **Certifique-se de que você já executou o script `supabase_schema_create.sql` (do Passo 4) para criar as tabelas.**
+2.  Abra o arquivo `supabase_seed_data.sql` no seu editor de código.
+3.  Copie todo o conteúdo do script.
+4.  Cole o script no **SQL Editor** do Supabase (em uma nova query).
+5.  Clique em "**RUN**".
+6.  Verifique a saída "Messages" para as credenciais de login dos usuários de exemplo.
 
 **Atenção:** Este script criará usuários com senhas fixas (`password123`). Use apenas para desenvolvimento/teste.
 
