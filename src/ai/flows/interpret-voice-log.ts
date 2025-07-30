@@ -21,17 +21,18 @@ const prompt = ai.definePrompt({
   prompt: `You are an expert AI assistant for the GlicemiaAI app. Your task is to interpret a user's spoken request and structure it into a specific JSON object. The user's request will be in Brazilian Portuguese.
 
 Analyze the user's text and determine if they are logging one of the following:
-1.  **Glucose Reading:** Look for a number and keywords like "glicemia", "glicose", "deu", "agora é". Example: "minha glicemia agora é 110".
-2.  **Insulin Dose:** Look for a number and keywords like "unidades", "insulina", or common insulin names (e.g., "Lantus", "Novorapid", "Tresiba"). Example: "apliquei 10 unidades de Lantus".
-3.  **Medication:** Look for medication names and dosages. Example: "tomei 500mg de metformina".
-4.  **Physical Activity:** Look for an activity type and a duration in minutes or hours. Example: "fiz 30 minutos de caminhada".
+1.  **Glucose Reading:** Look for a number and keywords like "glicemia", "glicose", "deu", "agora é". Example: "minha glicemia agora é 110". If so, the JSON response MUST use "logType": "glucose".
+2.  **Insulin Dose:** Look for a number and keywords like "unidades", "insulina", or common insulin names (e.g., "Lantus", "Novorapid", "Tresiba"). Example: "apliquei 10 unidades de Lantus". If so, the JSON response MUST use "logType": "insulin".
+3.  **Medication:** Look for medication names and dosages. Example: "tomei 500mg de metformina". If so, the JSON response MUST use "logType": "medication".
+4.  **Physical Activity:** Look for an activity type and a duration in minutes or hours. Example: "fiz 30 minutos de caminhada". If so, the JSON response MUST use "logType": "activity".
 
+-   **CRITICAL RULE:** You MUST return a JSON with a "logType" field. The value of "logType" must be one of the following exact strings: 'glucose', 'insulin', 'medication', 'activity', or 'unrecognized'.
 -   **CRITICAL RULE:** Always assume the timestamp for the log is the current time provided in the input. You MUST provide this timestamp in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.sssZ) in the 'timestamp' field for all successful recognitions.
 -   If the text is ambiguous or does not clearly match any of the log types, return a JSON with { logType: 'unrecognized', reason: '...' }.
 -   For insulin and activity, if the type is mentioned, use it. If not, try to infer it (e.g., 'corrida' for "corri por 20 minutos"). If it's still unclear, use a generic term like "Insulina" or "Atividade física".
 
-User's spoken request: "{{{input}}}"
-Current ISO Timestamp: "{{{now}}}"
+User's spoken request: "{{{input.input}}}"
+Current ISO Timestamp: "{{{input.now}}}"
 
 Return ONLY the JSON object.
 `,
@@ -40,14 +41,14 @@ Return ONLY the JSON object.
 const interpretVoiceLogFlow = ai.defineFlow(
   {
     name: 'interpretVoiceLogFlow',
-    inputSchema: VoiceLogInputSchema,
+    inputSchema: z.object({
+        input: z.string(),
+        now: z.string(),
+    }),
     outputSchema: z.any(),
   },
-  async ({ input }) => { // Destructure 'input' from the object
-    const llmResponse = await prompt({
-      input: input, // Pass the string to the prompt context
-      now: new Date().toISOString()
-    });
+  async (input) => { 
+    const llmResponse = await prompt({ input });
     
     try {
         const jsonOutput = JSON.parse(llmResponse.text);
