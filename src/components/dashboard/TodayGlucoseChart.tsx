@@ -115,7 +115,12 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
                                     <span className="text-muted-foreground ml-1.5">mg/dL</span>
                                 </div>
                             )}
-                            labelFormatter={(label) => format(new Date(label), "dd/MM HH:mm", {locale: ptBR})}
+                            labelFormatter={(label, payload) => {
+                                if (payload && payload.length > 0 && payload[0].payload.time) {
+                                  return format(new Date(payload[0].payload.time), "dd/MM HH:mm", {locale: ptBR});
+                                }
+                                return label;
+                            }}
                             cursor={{ stroke: 'hsl(var(--primary))', strokeWidth: 1, strokeDasharray: '3 3' }}
                         />
                     }
@@ -142,3 +147,4 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
     </div>
   );
 }
+
