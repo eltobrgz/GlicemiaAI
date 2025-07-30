@@ -1,4 +1,3 @@
-
 'use client';
 
 import type { GlucoseReading, UserProfile } from '@/types';
@@ -52,15 +51,8 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
     }));
   }, [readings]);
 
-  if (readings.length < 2) {
-    return (
-      <div className="flex items-center justify-center h-[350px] text-center text-muted-foreground p-4">
-        <p>São necessários pelo menos 2 registros nas últimas 24h para exibir o gráfico de tendência.</p>
-      </div>
-    );
-  }
-
   const yDomain = useMemo(() => {
+    if (readings.length === 0) return [0, 200]; // Default domain if no readings
     const values = readings.map(r => r.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
@@ -68,6 +60,14 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
     return [Math.max(0, min - buffer), max + buffer];
   }, [readings]);
 
+
+  if (readings.length < 2) {
+    return (
+      <div className="flex items-center justify-center h-[350px] text-center text-muted-foreground p-4">
+        <p>São necessários pelo menos 2 registros nas últimas 24h para exibir o gráfico de tendência.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[350px]">
@@ -147,4 +147,3 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
     </div>
   );
 }
-
