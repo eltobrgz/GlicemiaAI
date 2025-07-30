@@ -2,7 +2,7 @@
 'use client';
 
 import type { GlucoseReading, UserProfile } from '@/types';
-import { useMemo }_from_'react';
+import { useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, DotProps } from 'recharts';
