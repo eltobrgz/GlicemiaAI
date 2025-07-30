@@ -2,14 +2,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { getBrowserClient } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabaseClient';
 import { Loader2 } from 'lucide-react';
 import AppLogo from '@/components/AppLogo'; // Added import
 
 export default function HomePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const supabase = getBrowserClient();
+  const supabase = createClient();
 
   useEffect(() => {
     const checkAuth = async () => {

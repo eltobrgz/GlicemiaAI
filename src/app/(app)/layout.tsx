@@ -1,10 +1,9 @@
 
-
 'use client'; 
 
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { getBrowserClient } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabaseClient';
 import { SideNavigation } from '@/components/SideNavigation';
 import BottomNavigationBar from '@/components/BottomNavigationBar';
 import { SidebarInset, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
@@ -35,7 +34,7 @@ export default function AppLayout({
   const [reminders, setReminders] = useState<ReminderConfig[]>([]);
   const [lastCheckedMinute, setLastCheckedMinute] = useState<number>(-1);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
-  const supabase = getBrowserClient();
+  const supabase = createClient();
 
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) {

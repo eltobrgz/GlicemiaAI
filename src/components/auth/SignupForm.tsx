@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { UserPlus, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useState } from 'react';
-import { getBrowserClient } from '@/lib/supabaseClient';
+import { createClient } from '@/lib/supabaseClient';
 
 const signupSchema = z.object({
   name: z.string().min(2, 'Nome deve ter pelo menos 2 caracteres.'),
@@ -34,7 +34,7 @@ export default function SignupForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = getBrowserClient();
+  const supabase = createClient();
 
   const form = useForm<SignupFormData>({
     resolver: zodResolver(signupSchema),
