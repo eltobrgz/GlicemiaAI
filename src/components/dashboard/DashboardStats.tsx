@@ -10,7 +10,7 @@ import { Target, Activity, Droplet, Flame, Pill, PlusCircle } from 'lucide-react
 import TodayGlucoseChart from './TodayGlucoseChart';
 import { subHours, parseISO } from 'date-fns';
 import { Button } from '../ui/button';
-import Link from 'next/link';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 interface DashboardStatsProps {
   userProfile: UserProfile;
@@ -20,6 +20,8 @@ interface DashboardStatsProps {
 }
 
 export default function DashboardStats({ userProfile, glucoseReadings, lastGlucose, lastInsulin }: DashboardStatsProps) {
+  const { openDialog } = useLogDialog();
+  
   const metrics = useMemo(
     () => calculateDashboardMetrics(glucoseReadings, userProfile),
     [glucoseReadings, userProfile]
@@ -120,11 +122,9 @@ export default function DashboardStats({ userProfile, glucoseReadings, lastGluco
                         ) : (
                             <p className="text-muted-foreground">Nenhum registro de glicemia.</p>
                         )}
-                         <Link href="/log/glucose">
-                            <Button variant="outline" size="sm" className="mt-4 w-full">
+                         <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => openDialog('glucose')}>
                             <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
-                            </Button>
-                        </Link>
+                         </Button>
                     </CardContent>
                 </Card>
                  <Card className="shadow-lg">
@@ -146,11 +146,9 @@ export default function DashboardStats({ userProfile, glucoseReadings, lastGluco
                         ) : (
                             <p className="text-muted-foreground">Nenhum registro de insulina.</p>
                         )}
-                        <Link href="/log/insulin">
-                            <Button variant="outline" size="sm" className="mt-4 w-full">
-                            <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
-                            </Button>
-                        </Link>
+                        <Button variant="outline" size="sm" className="mt-4 w-full" onClick={() => openDialog('insulin')}>
+                           <PlusCircle className="mr-2 h-4 w-4" /> Adicionar
+                        </Button>
                     </CardContent>
                 </Card>
             </div>
@@ -158,5 +156,3 @@ export default function DashboardStats({ userProfile, glucoseReadings, lastGluco
     </div>
   );
 }
-
-    
