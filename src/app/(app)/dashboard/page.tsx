@@ -1,4 +1,3 @@
-
 'use client';
 
 import Link from 'next/link';
@@ -20,43 +19,48 @@ export default function DashboardPage() {
   const [lastGlucose, setLastGlucose] = useState<GlucoseReading | null>(null);
   const [allGlucose, setAllGlucose] = useState<GlucoseReading[]>([]);
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // Manteremos o isLoading para o conteúdo do dashboard
   const { toast } = useToast();
   const { openDialog } = useLogDialog();
 
   useEffect(() => {
-    const fetchInitialData = async () => {
+    const fetchProfileAndData = async () => {
       setIsLoading(true);
       try {
         const profile = await getUserProfile();
         setUserProfile(profile);
 
-        // Se o perfil existe, mas as metas não foram definidas, abra o modal de boas-vindas.
-        if (profile && (profile.target_glucose_low === undefined || profile.target_glucose_low === null)) {
-          setIsWelcomeModalOpen(true);
-        }
+        if (profile) {
+          // Se o perfil existe, mas as metas não foram definidas, abra o modal de boas-vindas.
+          if (profile.target_glucose_low === undefined || profile.target_glucose_low === null) {
+            setIsWelcomeModalOpen(true);
+          }
 
-        const glucoseReadings = await getGlucoseReadings(profile);
-        setAllGlucose(glucoseReadings);
-        if (glucoseReadings.length > 0) {
-          setLastGlucose(glucoseReadings[0]);
+          // Agora, busque os outros dados APÓS ter o perfil
+          const glucoseReadings = await getGlucoseReadings(profile);
+          setAllGlucose(glucoseReadings);
+          if (glucoseReadings.length > 0) {
+            setLastGlucose(glucoseReadings[0]);
+          }
+          
+          const insulinLogs = await getInsulinLogs();
+          if (insulinLogs.length > 0) {
+            setLastInsulin(insulinLogs[0]);
+          }
         }
-        
-        const insulinLogs = await getInsulinLogs();
-        if (insulinLogs.length > 0) {
-          setLastInsulin(insulinLogs[0]);
-        }
-
       } catch (error: any) {
-        toast({ title: "Erro ao buscar dados", description: error.message, variant: "destructive" });
+        // O layout já trata o erro de autenticação, então podemos focar em outros erros aqui.
+        if (error.message !== 'Usuário não autenticado.') {
+            toast({ title: "Erro ao buscar dados do dashboard", description: error.message, variant: "destructive" });
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchInitialData();
+    fetchProfileAndData();
   }, [toast]);
 
   const handleModalClose = (goalsUpdated: boolean) => {
@@ -155,4 +159,3 @@ export default function DashboardPage() {
     </Fragment>
   );
 }
-
