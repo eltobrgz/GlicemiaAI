@@ -26,15 +26,13 @@ export default function RootLayout({
         {/* PWA Manifest and Theme Color */}
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#A050BE" />
-        <link rel="icon" href="https://placehold.co/32x32.png" sizes="32x32" type="image/png" />
+        <link rel="icon" href="/favicon.ico" sizes="any" />
 
         {/* Apple PWA Meta Tags */}
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="GlicemiaAI" />
-        <link rel="apple-touch-icon" href="https://placehold.co/180x180.png" data-ai-hint="logo appicon" /> 
-        {/* Você pode adicionar mais tamanhos de apple-touch-icon se desejar */}
-        {/* Ex: <link rel="apple-touch-icon" sizes="152x152" href="https://placehold.co/152x152.png" /> */}
+        <link rel="apple-touch-icon" href="/placeholders/192x192.png" data-ai-hint="logo appicon" /> 
 
 
         <script
