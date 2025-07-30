@@ -1,17 +1,14 @@
 
 
 import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
-import { getBrowserClient, createServerClient } from './supabaseClient';
+import { createClient } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
 import { toast } from '@/hooks/use-toast'; 
-import { subYears, formatISO } from 'date-fns';
 
+const supabase = createClient();
 
 // Helper to get current user ID
 async function getCurrentUserId(): Promise<string> {
-  // This function should ONLY use the browser client, as it's used by client-side forms and components.
-  // Server-side functions will use their own authenticated client.
-  const supabase = getBrowserClient();
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
   if (sessionError) {
@@ -29,7 +26,6 @@ async function getCurrentUserId(): Promise<string> {
 
 // Helper function to upload file to Supabase Storage
 async function uploadSupabaseFile(bucketName: string, filePath: string, file: File): Promise<string> {
-  const supabase = getBrowserClient(); // Storage uploads are always from the client
   const { data, error } = await supabase.storage
     .from(bucketName)
     .upload(filePath, file, {
@@ -55,7 +51,6 @@ async function uploadSupabaseFile(bucketName: string, filePath: string, file: Fi
 
 // User Profile
 export async function getUserProfile(): Promise<UserProfile | null> {
-  const supabase = getBrowserClient(); // Profile info is generally needed on the client
   try {
     const userId = await getCurrentUserId();
     const { data, error } = await supabase
@@ -117,7 +112,6 @@ export async function getUserProfile(): Promise<UserProfile | null> {
 }
 
 export async function saveUserProfile(profile: UserProfile, avatarFile?: File): Promise<UserProfile> {
-  const supabase = getBrowserClient(); // Profile saving is an explicit user action from the client
   const userId = await getCurrentUserId();
   if (userId !== profile.id) {
     throw new Error("Não é possível salvar o perfil de outro usuário.");
@@ -192,7 +186,6 @@ export async function saveUserProfile(profile: UserProfile, avatarFile?: File): 
 
 // Glucose Readings
 export async function getGlucoseReadings(userProfile?: UserProfile | null): Promise<GlucoseReading[]> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('glucose_readings')
@@ -217,7 +210,6 @@ export async function getGlucoseReadings(userProfile?: UserProfile | null): Prom
 }
 
 export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' | 'user_id' | 'created_at'> & {id?: string}, userProfile?: UserProfile | null): Promise<GlucoseReading> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const level = classifyGlucoseLevel(reading.value, userProfile);
   
@@ -266,7 +258,6 @@ export async function saveGlucoseReading(reading: Omit<GlucoseReading, 'level' |
 }
 
 export async function deleteGlucoseReading(id: string): Promise<void> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('glucose_readings')
@@ -283,7 +274,6 @@ export async function deleteGlucoseReading(id: string): Promise<void> {
 
 // Insulin Logs
 export async function getInsulinLogs(): Promise<InsulinLog[]> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('insulin_logs')
@@ -303,7 +293,6 @@ export async function getInsulinLogs(): Promise<InsulinLog[]> {
 }
 
 export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_at'> & {id?:string}): Promise<InsulinLog> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const logToSave = {
     id: log.id,
@@ -338,7 +327,6 @@ export async function saveInsulinLog(log: Omit<InsulinLog, 'user_id' | 'created_
 }
 
 export async function deleteInsulinLog(id: string): Promise<void> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('insulin_logs')
@@ -351,7 +339,6 @@ export async function deleteInsulinLog(id: string): Promise<void> {
 
 // Meal Analyses
 export async function getMealAnalyses(): Promise<MealAnalysis[]> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('meal_analyses')
@@ -378,7 +365,6 @@ export async function getMealAnalyses(): Promise<MealAnalysis[]> {
 export async function saveMealAnalysis(
   analysis: Omit<MealAnalysis, 'id' | 'imageUrl' | 'user_id' | 'created_at'> & { id?: string; mealPhotoFile?: File }
 ): Promise<MealAnalysis> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   let finalImageUrl: string | undefined = undefined;
 
@@ -448,7 +434,6 @@ export async function saveMealAnalysis(
 }
 
 export async function deleteMealAnalysis(id: string): Promise<void> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data: analysisToDelete, error: fetchError } = await supabase
     .from('meal_analyses')
@@ -487,7 +472,6 @@ export async function deleteMealAnalysis(id: string): Promise<void> {
 
 // Reminders
 export async function getReminders(): Promise<ReminderConfig[]> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('reminders')
@@ -514,7 +498,6 @@ export async function getReminders(): Promise<ReminderConfig[]> {
 }
 
 export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'created_at'> & { id?: string }): Promise<ReminderConfig> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const reminderToSave = {
     id: reminder.id,
@@ -573,7 +556,6 @@ export async function saveReminder(reminder: Omit<ReminderConfig, 'user_id' | 'c
 }
 
 export async function deleteReminder(id: string): Promise<void> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('reminders')
@@ -586,7 +568,6 @@ export async function deleteReminder(id: string): Promise<void> {
 
 // Activity Logs
 export async function getActivityLogs(): Promise<ActivityLog[]> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('activity_logs')
@@ -611,7 +592,6 @@ export async function getActivityLogs(): Promise<ActivityLog[]> {
 }
 
 export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'created_at'> & { id?: string }): Promise<ActivityLog> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const logToSave = {
     id: log.id,
@@ -655,7 +635,6 @@ export async function saveActivityLog(log: Omit<ActivityLog, 'user_id' | 'create
 }
 
 export async function deleteActivityLog(id: string): Promise<void> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('activity_logs')
@@ -671,7 +650,6 @@ export async function deleteActivityLog(id: string): Promise<void> {
 
 // Medication Logs (Novo)
 export async function getMedicationLogs(): Promise<MedicationLog[]> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { data, error } = await supabase
     .from('medication_logs')
@@ -687,7 +665,6 @@ export async function getMedicationLogs(): Promise<MedicationLog[]> {
 }
 
 export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'created_at'> & { id?: string }): Promise<MedicationLog> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const logToSave = {
     id: log.id,
@@ -726,7 +703,6 @@ export async function saveMedicationLog(log: Omit<MedicationLog, 'user_id' | 'cr
 }
 
 export async function deleteMedicationLog(id: string): Promise<void> {
-  const supabase = getBrowserClient();
   const userId = await getCurrentUserId();
   const { error } = await supabase
     .from('medication_logs')
@@ -738,78 +714,4 @@ export async function deleteMedicationLog(id: string): Promise<void> {
     console.error('Error deleting medication log:', error);
     throw error;
   }
-}
-
-
-// New function to get all user data for the conversational AI
-export async function getAllUserDataForAI(): Promise<any> {
-    const supabase = createServerClient(); // Use a server-context client
-     const { data: { user }, error: userError } = await supabase.auth.getUser();
-
-    if (userError || !user) {
-        console.error('AI could not get authenticated user:', userError?.message);
-        throw new Error("Usuário não autenticado para a consulta da IA.");
-    }
-    const userId = user.id;
-
-    const oneYearAgo = formatISO(subYears(new Date(), 1));
-
-    // Helper to fetch data using the server client
-    const fetchTable = async (tableName: string) => {
-        const { data, error } = await supabase
-            .from(tableName)
-            .select('*')
-            .eq('user_id', userId)
-            .gte('timestamp', oneYearAgo)
-            .order('timestamp', { ascending: false });
-        if (error) {
-            console.error(`Error fetching ${tableName} for AI:`, error);
-            // Don't throw, just return empty so the AI can still try to work
-            return [];
-        }
-        return data;
-    };
-    
-     const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-        console.error('Error fetching profile for AI:', profileError);
-    }
-
-    try {
-        const [
-            glucoseReadings,
-            insulinLogs,
-            medicationLogs,
-            activityLogs,
-            mealAnalyses
-        ] = await Promise.all([
-            fetchTable('glucose_readings'),
-            fetchTable('insulin_logs'),
-            fetchTable('medication_logs'),
-            fetchTable('activity_logs'),
-            fetchTable('meal_analyses'),
-        ]);
-
-        return {
-            profile: profileData,
-            glucoseReadings,
-            insulinLogs,
-            medicationLogs,
-            activityLogs,
-            mealAnalyses,
-        };
-    } catch (error) {
-        console.error("Failed to fetch all user data for AI:", error);
-        toast({
-            title: "Erro ao carregar dados",
-            description: "Não foi possível carregar todos os seus dados para o assistente. As respostas podem ser limitadas.",
-            variant: "destructive"
-        });
-        return {}; // Return empty object on failure
-    }
 }
