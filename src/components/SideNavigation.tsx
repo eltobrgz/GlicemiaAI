@@ -17,30 +17,33 @@ import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/lib/supabaseClient';
-
-const navItems = [
-  { href: '/dashboard', label: 'Dashboard', icon: Home },
-  { href: '/log/glucose', label: 'Registrar Glicemia', icon: Droplet },
-  { href: '/log/insulin', label: 'Registrar Insulina', icon: Pill },
-  { href: '/log/medication', label: 'Registrar Medicamento', icon: ClipboardPlus },
-  { href: '/log/activity', label: 'Registrar Atividade', icon: Bike },
-  { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
-  { href: '/bolus-calculator', label: 'Calculadora de Bolus', icon: Calculator },
-  { href: '/calendar', label: 'Calendário', icon: CalendarDays },
-  { href: '/reports', label: 'Relatórios', icon: FileText }, 
-  { href: '/insights', label: 'Insights IA', icon: BarChart3 },
-];
-
-const userNavItems = [
-  { href: '/profile', label: 'Meu Perfil', icon: User },
-  { href: '/reminders', label: 'Lembretes', icon: BellRing },
-  { href: '/settings', label: 'Configurações', icon: Settings },
-];
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 export function SideNavigation() {
   const pathname = usePathname();
   const router = useRouter();
   const { toast } = useToast();
+  const { openDialog } = useLogDialog();
+
+  const navItems = [
+    { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { type: 'glucose', label: 'Registrar Glicemia', icon: Droplet },
+    { type: 'insulin', label: 'Registrar Insulina', icon: Pill },
+    { type: 'medication', label: 'Registrar Medicamento', icon: ClipboardPlus },
+    { type: 'activity', label: 'Registrar Atividade', icon: Bike },
+    { href: '/meal-analysis', label: 'Analisar Refeição', icon: Camera },
+    { href: '/bolus-calculator', label: 'Calculadora de Bolus', icon: Calculator },
+    { href: '/calendar', label: 'Calendário', icon: CalendarDays },
+    { href: '/reports', label: 'Relatórios', icon: FileText }, 
+    { href: '/insights', label: 'Insights IA', icon: BarChart3 },
+  ];
+
+  const userNavItems = [
+    { href: '/profile', label: 'Meu Perfil', icon: User },
+    { href: '/reminders', label: 'Lembretes', icon: BellRing },
+    { href: '/settings', label: 'Configurações', icon: Settings },
+  ];
+
 
   const handleLogout = async () => {
     const { error } = await supabase.auth.signOut();
@@ -61,28 +64,43 @@ export function SideNavigation() {
   };
 
   const renderMenuItems = (items: typeof navItems) => {
-    return items.map((item) => (
-      <SidebarMenuItem key={item.href}>
-        <SidebarMenuButton
-          asChild
-          isActive={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))}
-          className={cn(
-            "justify-start w-full",
-            (pathname === item.href || (item.href !== '/dashboard' && item.href !== '/' && pathname.startsWith(item.href))) 
-              ? "bg-primary/10 text-primary hover:bg-primary/20" 
-              : "hover:bg-accent/10 hover:text-accent-foreground"
-          )}
-          tooltip={{ children: item.label, side: 'right', align: 'center' }}
-        >
-          <Link href={item.href}>
-            <item.icon className="h-5 w-5" />
-            <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
-          </Link>
-        </SidebarMenuButton>
-      </SidebarMenuItem>
-    ));
-  };
+    return items.map((item) => {
+      const isLink = 'href' in item;
+      const isActive = isLink && (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href)));
 
+      const buttonContent = (
+        <>
+          <item.icon className="h-5 w-5" />
+          <span className="group-data-[collapsible=icon]:hidden">{item.label}</span>
+        </>
+      );
+       
+      const buttonProps = {
+        isActive,
+        className: cn(
+          "justify-start w-full",
+          isActive
+            ? "bg-primary/10 text-primary hover:bg-primary/20" 
+            : "hover:bg-accent/10 hover:text-accent-foreground"
+        ),
+        tooltip: { children: item.label, side: 'right', align: 'center' },
+      };
+
+      return (
+        <SidebarMenuItem key={item.label}>
+          {isLink ? (
+            <SidebarMenuButton {...buttonProps} asChild>
+              <Link href={item.href!}>{buttonContent}</Link>
+            </SidebarMenuButton>
+          ) : (
+            <SidebarMenuButton {...buttonProps} onClick={() => openDialog(item.type as any)}>
+              {buttonContent}
+            </SidebarMenuButton>
+          )}
+        </SidebarMenuItem>
+      );
+    });
+  };
 
   return (
     <Sidebar collapsible="icon" side="left" variant="sidebar">
@@ -101,7 +119,7 @@ export function SideNavigation() {
 
       <SidebarFooter className="p-2">
          <SidebarMenu>
-          {renderMenuItems(userNavItems)}
+          {renderMenuItems(userNavItems as any)}
         </SidebarMenu>
         <Separator className="my-2" />
         <SidebarMenu>

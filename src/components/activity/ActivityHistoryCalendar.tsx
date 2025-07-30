@@ -11,20 +11,17 @@ import { ptBR } from 'date-fns/locale';
 import { formatTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Trash2, PlusCircle, Loader2, Bike, Zap, Clock, Edit3 } from 'lucide-react';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
-import ActivityLogForm from './ActivityLogForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 export default function ActivityHistoryCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [selectedDayLogs, setSelectedDayLogs] = useState<ActivityLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingLog, setEditingLog] = useState<ActivityLog | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
+  const { openDialog, setInitialData, addSuccessListener } = useLogDialog();
 
   const fetchLogs = async () => {
     setIsLoading(true);
@@ -40,6 +37,8 @@ export default function ActivityHistoryCalendar() {
 
   useEffect(() => {
     fetchLogs();
+    const unsubscribe = addSuccessListener('activity', fetchLogs);
+    return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -63,14 +62,13 @@ export default function ActivityHistoryCalendar() {
   };
 
   const handleEdit = (log: ActivityLog) => {
-    setEditingLog(log);
-    setIsFormOpen(true);
+    setInitialData('activity', log);
+    openDialog('activity');
   };
-  
-  const handleFormSubmit = () => {
-    setIsFormOpen(false);
-    setEditingLog(null);
-    fetchLogs();
+
+  const handleAddNew = () => {
+    setInitialData('activity', undefined);
+    openDialog('activity');
   };
 
   const dayHasLogs = (day: Date): boolean => {
@@ -93,15 +91,6 @@ export default function ActivityHistoryCalendar() {
 
   return (
     <>
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Registro de Atividade</DialogTitle>
-          </DialogHeader>
-          <ActivityLogForm onFormSubmit={handleFormSubmit} initialData={editingLog || undefined} />
-        </DialogContent>
-      </Dialog>
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <Card className="lg:col-span-2 shadow-xl">
           <CardHeader>
@@ -146,11 +135,9 @@ export default function ActivityHistoryCalendar() {
             <CardTitle className="text-xl font-headline text-orange-500">
               Registros de {date ? format(date, 'dd MMMM yyyy', { locale: ptBR }) : 'Hoje'}
             </CardTitle>
-            <Link href="/log/activity" passHref>
-              <Button variant="outline" size="sm" className="mt-2 w-full border-orange-500 text-orange-500 hover:bg-orange-500/10">
+            <Button onClick={handleAddNew} variant="outline" size="sm" className="mt-2 w-full border-orange-500 text-orange-500 hover:bg-orange-500/10">
                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Registro de Atividade
-              </Button>
-            </Link>
+            </Button>
           </CardHeader>
           <CardContent className="max-h-[400px] overflow-y-auto space-y-3">
             {selectedDayLogs.length > 0 ? (

@@ -11,19 +11,16 @@ import { ptBR } from 'date-fns/locale';
 import { formatTime } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Trash2, PlusCircle, Loader2, ClipboardPlus, Edit3 } from 'lucide-react';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import MedicationLogForm from './MedicationLogForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 export default function MedicationHistoryCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [medicationLogs, setMedicationLogs] = useState<MedicationLog[]>([]);
   const [selectedDayLogs, setSelectedDayLogs] = useState<MedicationLog[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingLog, setEditingLog] = useState<MedicationLog | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
   const { toast } = useToast();
+  const { openDialog, setInitialData, addSuccessListener } = useLogDialog();
 
   const fetchLogs = async () => {
     setIsLoading(true);
@@ -39,6 +36,8 @@ export default function MedicationHistoryCalendar() {
 
   useEffect(() => {
     fetchLogs();
+    const unsubscribe = addSuccessListener('medication', fetchLogs);
+    return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -62,14 +61,13 @@ export default function MedicationHistoryCalendar() {
   };
   
   const handleEdit = (log: MedicationLog) => {
-    setEditingLog(log);
-    setIsFormOpen(true);
+    setInitialData('medication', log);
+    openDialog('medication');
   };
   
-  const handleFormSubmit = () => {
-    setIsFormOpen(false);
-    setEditingLog(null);
-    fetchLogs();
+  const handleAddNew = () => {
+    setInitialData('medication', undefined);
+    openDialog('medication');
   };
 
   const dayHasLogs = (day: Date): boolean => {
@@ -92,15 +90,6 @@ export default function MedicationHistoryCalendar() {
 
   return (
     <>
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Registro de Medicamento</DialogTitle>
-          </DialogHeader>
-          <MedicationLogForm onFormSubmit={handleFormSubmit} initialData={editingLog || undefined} />
-        </DialogContent>
-      </Dialog>
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
         <Card className="lg:col-span-2 shadow-xl">
           <CardHeader>
@@ -145,11 +134,9 @@ export default function MedicationHistoryCalendar() {
             <CardTitle className="text-xl font-headline text-purple-600">
               Registros de {date ? format(date, 'dd MMMM yyyy', { locale: ptBR }) : 'Hoje'}
             </CardTitle>
-            <Link href="/log/medication" passHref>
-              <Button variant="outline" size="sm" className="mt-2 w-full border-purple-500 text-purple-500 hover:bg-purple-500/10">
-                <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Medicamento
-              </Button>
-            </Link>
+            <Button onClick={handleAddNew} variant="outline" size="sm" className="mt-2 w-full border-purple-500 text-purple-500 hover:bg-purple-500/10">
+              <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Medicamento
+            </Button>
           </CardHeader>
           <CardContent className="max-h-[400px] overflow-y-auto space-y-3">
             {selectedDayLogs.length > 0 ? (

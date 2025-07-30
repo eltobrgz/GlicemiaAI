@@ -8,15 +8,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { ActivityLog } from '@/types';
 import { saveActivityLog } from '@/lib/storage';
-import { ACTIVITY_TYPES_OPTIONS, ACTIVITY_INTENSITY_OPTIONS } from '@/config/constants'; // Usar de types
-import { useRouter } from 'next/navigation';
-import { Loader2, Bike } from 'lucide-react';
-import { useState } from 'react';
+import { ACTIVITY_TYPES_OPTIONS, ACTIVITY_INTENSITY_OPTIONS } from '@/config/constants';
+import { Loader2 } from 'lucide-react';
+import { useState, useEffect } from 'react';
 
 const activitySchema = z.object({
   activity_type: z.string().min(1, 'Tipo de atividade é obrigatório.'),
@@ -31,25 +29,34 @@ const activitySchema = z.object({
 type ActivityFormData = z.infer<typeof activitySchema>;
 
 interface ActivityLogFormProps {
-  onFormSubmit?: () => void;
+  onFormSubmit: () => void;
   initialData?: Partial<ActivityLog>;
 }
 
 export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityLogFormProps) {
   const { toast } = useToast();
-  const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
 
   const form = useForm<ActivityFormData>({
     resolver: zodResolver(activitySchema),
     defaultValues: {
+      activity_type: '',
+      duration_minutes: '' as any,
+      timestamp: new Date().toISOString().substring(0, 16),
+      intensity: '',
+      notes: '',
+    },
+  });
+
+  useEffect(() => {
+    form.reset({
       activity_type: initialData?.activity_type || '',
       duration_minutes: initialData?.duration_minutes ?? ('' as any),
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
       intensity: initialData?.intensity || '',
       notes: initialData?.notes || '',
-    },
-  });
+    });
+  }, [initialData, form]);
 
   const onSubmit = async (data: ActivityFormData) => {
     setIsSaving(true);
@@ -68,18 +75,7 @@ export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityL
         title: 'Sucesso!',
         description: `Registro de atividade ${initialData?.id ? 'atualizado' : 'salvo'}.`,
       });
-      form.reset({
-          activity_type: '',
-          duration_minutes: '' as any,
-          timestamp: new Date().toISOString().substring(0, 16),
-          intensity: '',
-          notes: ''
-      });
-      if (onFormSubmit) {
-        onFormSubmit();
-      }
-      router.push('/calendar?tab=activity'); 
-      router.refresh();
+      onFormSubmit();
     } catch (error: any) {
       toast({
         title: 'Erro ao Salvar',
@@ -92,16 +88,8 @@ export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityL
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline text-primary flex items-center">
-          <Bike className="mr-2 h-6 w-6" />
-          {initialData?.id ? 'Editar Registro de Atividade' : 'Registrar Atividade Física'}
-        </CardTitle>
-      </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="activity_type"
@@ -198,15 +186,13 @@ export default function ActivityLogForm({ onFormSubmit, initialData }: ActivityL
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter>
+          <div className="flex justify-end pt-4">
             <Button type="submit" className="w-full" disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Atividade' : 'Salvar Atividade')}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
-    </Card>
   );
 }

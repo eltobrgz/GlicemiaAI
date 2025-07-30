@@ -8,13 +8,11 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { InsulinLog } from '@/types';
 import { saveInsulinLog } from '@/lib/storage';
 import { INSULIN_TYPES } from '@/config/constants';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 
 const insulinSchema = z.object({
@@ -28,14 +26,12 @@ const insulinSchema = z.object({
 type InsulinFormData = z.infer<typeof insulinSchema>;
 
 interface InsulinLogFormProps {
-  onFormSubmit?: () => void;
+  onFormSubmit: () => void;
   initialData?: Partial<InsulinLog>;
 }
 
 export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLogFormProps) {
   const { toast } = useToast();
-  const router = useRouter();
-  const searchParams = useSearchParams();
   const [isSaving, setIsSaving] = useState(false);
 
   const defaultTimestamp = new Date().toISOString().substring(0, 16);
@@ -43,25 +39,19 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
   const form = useForm<InsulinFormData>({
     resolver: zodResolver(insulinSchema),
     defaultValues: {
-      type: initialData?.type || searchParams.get('type') || '',
-      dose: initialData?.dose ?? (searchParams.get('dose') ? parseFloat(searchParams.get('dose')!) : ('' as any)),
-      timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : defaultTimestamp,
+      type: '',
+      dose: '' as any,
+      timestamp: defaultTimestamp,
     },
   });
 
   useEffect(() => {
-    const prefillType = searchParams.get('type');
-    const prefillDose = searchParams.get('dose');
-
-    if (prefillType) {
-      form.setValue('type', prefillType);
-    }
-    if (prefillDose) {
-      form.setValue('dose', parseFloat(prefillDose));
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, form.setValue]);
-
+     form.reset({
+      type: initialData?.type || '',
+      dose: initialData?.dose ?? ('' as any),
+      timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : defaultTimestamp,
+    });
+  }, [initialData, form]);
 
   const onSubmit = async (data: InsulinFormData) => {
     setIsSaving(true);
@@ -78,17 +68,7 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
         title: 'Sucesso!',
         description: `Registro de insulina ${initialData?.id ? 'atualizado' : 'salvo'}.`,
       });
-      form.reset({
-          timestamp: defaultTimestamp,
-          type: '',
-          dose: '' as any
-      });
-      if (onFormSubmit) {
-        onFormSubmit();
-      }
-      // Redirect to calendar page, insulin tab after saving
-      router.push('/calendar?tab=insulin'); 
-      router.refresh();
+      onFormSubmit();
     } catch (error: any) {
       toast({
         title: 'Erro ao Salvar',
@@ -101,15 +81,8 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline text-primary">
-          {initialData?.id ? 'Editar Registro de Insulina' : 'Registrar Insulina'}
-        </CardTitle>
-      </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="type"
@@ -162,15 +135,13 @@ export default function InsulinLogForm({ onFormSubmit, initialData }: InsulinLog
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter>
+          <div className="flex justify-end pt-4">
             <Button type="submit" className="w-full" disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Registro' : 'Salvar Registro de Insulina')}
+              {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Registro' : 'Salvar Registro')}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
-    </Card>
   );
 }

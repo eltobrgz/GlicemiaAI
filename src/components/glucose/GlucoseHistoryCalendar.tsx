@@ -12,10 +12,8 @@ import { getGlucoseLevelColor, formatTime } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Trash2, PlusCircle, Loader2, Edit3 } from 'lucide-react';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
-import GlucoseLogForm from './GlucoseLogForm';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 export default function GlucoseHistoryCalendar() {
   const [date, setDate] = useState<Date | undefined>(new Date());
@@ -24,8 +22,7 @@ export default function GlucoseHistoryCalendar() {
   const [isLoading, setIsLoading] = useState(true);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
-  const [editingReading, setEditingReading] = useState<GlucoseReading | null>(null);
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const { openDialog, setInitialData, addSuccessListener } = useLogDialog();
 
   const fetchReadingsAndProfile = async () => {
     setIsLoading(true);
@@ -43,6 +40,8 @@ export default function GlucoseHistoryCalendar() {
 
   useEffect(() => {
     fetchReadingsAndProfile();
+    const unsubscribe = addSuccessListener('glucose', fetchReadingsAndProfile);
+    return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -66,14 +65,13 @@ export default function GlucoseHistoryCalendar() {
   };
   
   const handleEdit = (reading: GlucoseReading) => {
-    setEditingReading(reading);
-    setIsFormOpen(true);
+    setInitialData('glucose', reading);
+    openDialog('glucose');
   };
   
-  const handleFormSubmit = () => {
-    setIsFormOpen(false);
-    setEditingReading(null);
-    fetchReadingsAndProfile();
+  const handleAddNew = () => {
+    setInitialData('glucose', undefined);
+    openDialog('glucose');
   };
 
   const dayHasReadings = (day: Date): boolean => {
@@ -106,15 +104,6 @@ export default function GlucoseHistoryCalendar() {
   
   return (
     <>
-      <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar Registro de Glicemia</DialogTitle>
-          </DialogHeader>
-          <GlucoseLogForm onFormSubmit={handleFormSubmit} initialData={editingReading || undefined} />
-        </DialogContent>
-      </Dialog>
-      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 shadow-xl">
           <CardHeader>
@@ -165,11 +154,9 @@ export default function GlucoseHistoryCalendar() {
             <CardTitle className="text-xl font-headline text-primary">
               Registros de {date ? format(date, 'dd MMMM yyyy', { locale: ptBR }) : 'Hoje'}
             </CardTitle>
-             <Link href="/log/glucose" passHref>
-              <Button variant="outline" size="sm" className="mt-2 w-full">
+             <Button onClick={handleAddNew} variant="outline" size="sm" className="mt-2 w-full">
                 <PlusCircle className="mr-2 h-4 w-4" /> Adicionar Registro de Glicemia
               </Button>
-            </Link>
           </CardHeader>
           <CardContent className="max-h-[400px] overflow-y-auto space-y-3">
             {selectedDayReadings.length > 0 ? (

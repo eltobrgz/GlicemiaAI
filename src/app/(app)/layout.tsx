@@ -14,6 +14,8 @@ import type { ReminderConfig } from '@/types';
 import { getReminders } from '@/lib/storage';
 import { DAYS_OF_WEEK } from '@/config/constants';
 import VoiceAssistant from '@/components/voice/VoiceAssistant';
+import { LogDialogsProvider } from '@/contexts/LogDialogsContext';
+import { LogDialogs } from '@/components/log/LogDialogs';
 
 const DAY_MAP: Record<number, typeof DAYS_OF_WEEK[number]['key']> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
@@ -130,23 +132,12 @@ export default function AppLayout({
       event.preventDefault(); // Prevent the browser from focusing the Notification's tab
       window.focus(); // Focus the main window
       const clickedNotificationData = (event.currentTarget as Notification)?.data;
+      
+      // Since pages are now modals, we can't navigate directly.
+      // This part would need a more complex implementation to open the correct modal,
+      // potentially via the LogDialogsContext. For now, we'll log it.
+      console.log("Notification clicked. Modal opening logic would be needed here.", clickedNotificationData);
 
-      if (clickedNotificationData?.reminderType === 'insulina') {
-        let url = '/log/insulin';
-        const queryParams = new URLSearchParams();
-        if (clickedNotificationData.insulinType) {
-          queryParams.append('type', clickedNotificationData.insulinType);
-        }
-        if (clickedNotificationData.insulinDose !== undefined) {
-          queryParams.append('dose', clickedNotificationData.insulinDose.toString());
-        }
-        if (queryParams.toString()) {
-          url += `?${queryParams.toString()}`;
-        }
-        router.push(url);
-      } else if (clickedNotificationData?.reminderType === 'glicemia') {
-        router.push('/log/glucose');
-      }
       notification.close();
     };
   };
@@ -196,27 +187,30 @@ export default function AppLayout({
   }
   
   return (
-    <div className="flex min-h-screen bg-background">
-      <SideNavigation />
-      
-      <SidebarInset>
-        <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
-          <SidebarTrigger className="h-8 w-8" />
-          { (state === 'collapsed' || isMobile) && (
-            <div className="flex items-center gap-2">
-              <AppLogo className="h-6 w-6 text-primary" />
-              <span className="text-lg font-semibold text-primary font-headline">GlicemiaAI</span>
-            </div>
-          )}
-        </div>
+    <LogDialogsProvider>
+      <div className="flex min-h-screen bg-background">
+        <SideNavigation />
+        
+        <SidebarInset>
+          <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6">
+            <SidebarTrigger className="h-8 w-8" />
+            { (state === 'collapsed' || isMobile) && (
+              <div className="flex items-center gap-2">
+                <AppLogo className="h-6 w-6 text-primary" />
+                <span className="text-lg font-semibold text-primary font-headline">GlicemiaAI</span>
+              </div>
+            )}
+          </div>
 
-        <div className="p-4 md:p-6 lg:p-8 pb-20 md:pb-6 lg:pb-8"> 
-          {children}
-        </div>
-      </SidebarInset>
+          <div className="p-4 md:p-6 lg:p-8 pb-20 md:pb-6 lg:pb-8"> 
+            {children}
+          </div>
+        </SidebarInset>
 
-      <BottomNavigationBar />
-      <VoiceAssistant />
-    </div>
+        <BottomNavigationBar />
+        <VoiceAssistant />
+        <LogDialogs />
+      </div>
+    </LogDialogsProvider>
   );
 }

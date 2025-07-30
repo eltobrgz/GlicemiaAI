@@ -8,13 +8,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useToast } from '@/hooks/use-toast';
 import type { GlucoseReading, UserProfile } from '@/types';
 import { saveGlucoseReading, getUserProfile } from '@/lib/storage'; 
 import { MEAL_CONTEXT_OPTIONS } from '@/config/constants';
-import { useRouter } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
@@ -30,16 +28,25 @@ const glucoseSchema = z.object({
 type GlucoseFormData = z.infer<typeof glucoseSchema>;
 
 interface GlucoseLogFormProps {
-  onFormSubmit?: () => void;
+  onFormSubmit: () => void;
   initialData?: Partial<GlucoseReading>;
 }
 
 export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLogFormProps) {
   const { toast } = useToast();
-  const router = useRouter();
   const [isSaving, setIsSaving] = useState(false);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
+  const form = useForm<GlucoseFormData>({
+    resolver: zodResolver(glucoseSchema),
+    defaultValues: {
+      value: '', 
+      timestamp: new Date().toISOString().substring(0, 16),
+      mealContext: '',
+      notes: '',
+    },
+  });
+  
   useEffect(() => {
     const fetchProfile = async () => {
       const profile = await getUserProfile();
@@ -48,15 +55,15 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
     fetchProfile();
   }, []);
 
-  const form = useForm<GlucoseFormData>({
-    resolver: zodResolver(glucoseSchema),
-    defaultValues: {
+  useEffect(() => {
+     form.reset({
       value: initialData?.value ?? '', 
       timestamp: initialData?.timestamp ? new Date(initialData.timestamp).toISOString().substring(0, 16) : new Date().toISOString().substring(0, 16),
       mealContext: initialData?.mealContext || '',
       notes: initialData?.notes || '',
-    },
-  });
+    });
+  }, [initialData, form]);
+
 
   const onSubmit = async (data: GlucoseFormData) => {
     setIsSaving(true);
@@ -75,17 +82,7 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
         description: `Registro de glicemia ${initialData?.id ? 'atualizado' : 'salvo'}.`,
         variant: 'default',
       });
-      form.reset({
-          timestamp: new Date().toISOString().substring(0, 16),
-          value: '', 
-          mealContext: '',
-          notes: ''
-      });
-      if (onFormSubmit) {
-        onFormSubmit();
-      }
-      router.push('/calendar');
-      router.refresh(); 
+      onFormSubmit();
     } catch (error: any) {
       toast({
         title: 'Erro ao Salvar',
@@ -98,15 +95,8 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
   };
 
   return (
-    <Card className="w-full max-w-lg mx-auto shadow-xl">
-      <CardHeader>
-        <CardTitle className="text-2xl font-headline text-primary">
-          {initialData?.id ? 'Editar Registro de Glicemia' : 'Registrar Glicemia'}
-        </CardTitle>
-      </CardHeader>
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <CardContent className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField
               control={form.control}
               name="value"
@@ -181,15 +171,13 @@ export default function GlucoseLogForm({ onFormSubmit, initialData }: GlucoseLog
                 </FormItem>
               )}
             />
-          </CardContent>
-          <CardFooter>
+          <div className="flex justify-end pt-4">
             <Button type="submit" className="w-full" disabled={isSaving}>
               {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               {isSaving ? 'Salvando...' : (initialData?.id ? 'Atualizar Registro' : 'Salvar Registro')}
             </Button>
-          </CardFooter>
+          </div>
         </form>
       </Form>
-    </Card>
   );
 }
