@@ -14,7 +14,12 @@ O gerenciamento eficaz do diabetes é uma tarefa complexa e incessante. Paciente
 GlicemiaAI é um assistente web inteligente que unifica o registro de saúde e utiliza Inteligência Artificial para revelar padrões ocultos nos dados. A plataforma traduz números brutos em insights visuais e práticos, permitindo que o usuário entenda o impacto de cada variável no seu corpo. A solução capacita o paciente com relatórios detalhados e análises de IA, promovendo decisões mais informadas e conversas mais produtivas com os médicos.
 
 ## FUNCIONALIDADES:
-O app oferece um dashboard inteligente com métricas visuais como Tempo no Alvo e tendências de 24h. A funcionalidade de **Análise de Refeição com IA** permite que o usuário tire uma foto de um prato e receba estimativas precisas de macronutrientes e impacto glicêmico. Além disso, a plataforma gera **Relatórios Avançados** que compilam dados de glicemia, insulina e atividades, com gráficos de tendência e métricas cruciais como o Coeficiente de Variação, tudo exportável para PDF. Outras funcionalidades incluem registro por voz e um sistema de "streaks" para gamificação.
+1. **Dashboard Inteligente:** Permite a visualização de métricas cruciais como Tempo no Alvo, média glicêmica e tendências de 24h em um painel interativo.
+2. **Análise de Refeição com IA:** Permite ao usuário tirar uma foto de um prato e receber estimativas precisas de macronutrientes e impacto glicêmico.
+3. **Relatórios Avançados:** Permite a geração de relatórios que compilam dados de glicemia, insulina e atividades, com gráficos de tendência e métricas como o Coeficiente de Variação, tudo exportável para PDF.
+4. **Registro por Voz:** Permite que o usuário registre seus dados de saúde, como glicemia ou insulina, usando apenas a voz.
+5. **Gamificação:** Permite motivar o usuário através de um sistema de "streaks" (sequências) que recompensa registros diários consecutivos.
+
 
 ## TESTES:
 A robustez do GlicemiaAI é garantida por uma metodologia de testes contínua e pela validação de conceito com o público-alvo, como o professor Heleonardo Dantas (paciente com Diabetes Tipo 2) e Elton Borges (paciente com Diabetes Tipo 1 e usuário de insulina). Cada fluxo de IA foi rigorosamente validado para garantir respostas seguras e precisas, a interface passou por testes de usabilidade e o banco de dados foi submetido a testes de carga para validar as políticas de acesso.
