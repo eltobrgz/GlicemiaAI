@@ -70,7 +70,8 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     }
     setAssistantState('processing');
     try {
-      const result = await interpretVoiceLog(text);
+      // FIX: Pass the input as an object matching the schema
+      const result = await interpretVoiceLog({ input: text });
       if (result.logType === 'unrecognized') {
         toast({
           title: "Não entendi, pode tentar de novo?",
@@ -85,7 +86,7 @@ export default function VoiceLogDialog({ onFormSubmit }: VoiceLogDialogProps) {
     } catch (error: any) {
       toast({
         title: "Erro ao processar o comando",
-        description: error.message,
+        description: error.message || 'Ocorreu um erro desconhecido.',
         variant: 'destructive',
       });
       setAssistantState('error');
