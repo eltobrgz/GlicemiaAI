@@ -12,7 +12,6 @@ import { z } from 'zod';
 
 
 // The wrapper function to be called from the frontend
-// FIX: This now accepts an object matching the VoiceLogInputSchema
 export async function interpretVoiceLog(input: z.infer<typeof VoiceLogInputSchema>): Promise<InterpretedLog> {
   return interpretVoiceLogFlow(input);
 }
@@ -34,7 +33,7 @@ Analyze the user's text and determine if they are logging one of the following:
 -   If the text is ambiguous or does not clearly match any of the log types, return 'unrecognized' with a brief reason.
 -   For insulin and activity, if the type is mentioned, use it. If not, try to infer it (e.g., 'corrida' for "corri por 20 minutos"). If it's still unclear, use a generic term like "Insulina" or "Atividade física".
 
-User's spoken request: "{{{input}}}"
+User's spoken request: "{{{input.input}}}"
 `,
 });
 
