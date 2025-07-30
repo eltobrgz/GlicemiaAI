@@ -32,6 +32,7 @@ O usuário se cadastra e define suas metas glicêmicas pessoais, cruciais para a
 
 ## Referências:
 O projeto foi fundamentado em dados e diretrizes de instituições de saúde de referência:
-*   **Dados Epidemiológicos:** International Diabetes Federation (IDF) e Vigitel (Ministério da Saúde).
-*   **Diretrizes Clínicas:** Sociedade Brasileira de Diabetes (SBD) para metas de tratamento no Brasil e American Diabetes Association (ADA) para conceitos globais como variabilidade glicêmica (CV%) e tempo no alvo (TIR).
-
+*   INTERNATIONAL DIABETES FEDERATION. **IDF Diabetes Atlas**, 10th edn. Brussels, Belgium: 2021. Disponível em: <https://diabetesatlas.org/>
+*   MINISTÉRIO DA SAÚDE (Brasil). **Vigilância de Fatores de Risco e Proteção para Doenças Crônicas por Inquérito Telefônico (Vigitel)**. Disponível em: <https://www.gov.br/saude/pt-br/assuntos/vigilancia-em-saude/inqueritos/vigitel>
+*   SOCIEDADE BRASILEIRA DE DIABETES (SBD). **Diretrizes da Sociedade Brasileira de Diabetes**. 2023. Disponível em: <https://diretriz.diabetes.org.br/>
+*   AMERICAN DIABETES ASSOCIATION (ADA). **Standards of Care in Diabetes**. Diabetes Care, 2024. Disponível em: <https://diabetes.org/professionals/standards-of-care>
