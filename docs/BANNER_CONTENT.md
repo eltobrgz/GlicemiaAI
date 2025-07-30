@@ -21,3 +21,11 @@ A robustez do GlicemiaAI é garantida por uma metodologia de testes contínua e 
 
 ## TRABALHOS FUTUROS:
 A visão para o futuro do GlicemiaAI é focada em hiper-personalização e automação. Os próximos passos incluem aprofundar os insights da IA para prever tendências de hipo/hiperglicemia, expandir a gamificação com um sistema de "conquistas" e integrar o app com smartwatches e monitores contínuos de glicose (CGMs) para automatizar os registros e fornecer uma visão em tempo real da saúde do usuário.
+
+## Fluxo Principal:
+O usuário se cadastra e define suas metas glicêmicas pessoais, cruciais para a personalização. No dia a dia, ele registra glicemia, insulina e atividades, podendo usar a câmera para analisar uma refeição com IA e estimar os carboidratos. O dashboard oferece uma visão rápida do seu progresso, enquanto a página de Insights e os relatórios detalhados permitem uma análise aprofundada para compartilhar com sua equipe de saúde.
+
+## Referências:
+O projeto foi fundamentado em dados e diretrizes de instituições de saúde de referência:
+*   **Dados Epidemiológicos:** International Diabetes Federation (IDF) e Vigitel (Ministério da Saúde).
+*   **Diretrizes Clínicas:** Sociedade Brasileira de Diabetes (SBD) para metas de tratamento no Brasil e American Diabetes Association (ADA) para conceitos globais como variabilidade glicêmica (CV%) e tempo no alvo (TIR).
