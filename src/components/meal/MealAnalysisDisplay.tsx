@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import Link from 'next/link';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 interface MealAnalysisDisplayProps {
   analysis: MealAnalysis;
@@ -42,6 +43,7 @@ const SectionCard: React.FC<{ title: string; icon: React.ElementType; children: 
 export default function MealAnalysisDisplay({ analysis, userProfile }: MealAnalysisDisplayProps) {
   const { toast } = useToast();
   const [calculation, setCalculation] = useState<BolusCalculationResult | null>(null);
+  const { openDialog } = useLogDialog();
   
   const canCalculate = userProfile?.carb_ratio && userProfile?.correction_factor && userProfile?.target_glucose;
 
@@ -69,6 +71,12 @@ export default function MealAnalysisDisplay({ analysis, userProfile }: MealAnaly
       correctionDose: parseFloat(correctionDose.toFixed(2)),
       totalDose: parseFloat(totalDose.toFixed(1)),
     });
+  };
+
+  const handleRegisterDose = () => {
+    if (calculation) {
+      openDialog('insulin', { dose: calculation.totalDose });
+    }
   };
 
   return (
@@ -201,11 +209,9 @@ export default function MealAnalysisDisplay({ analysis, userProfile }: MealAnaly
                 </Alert>
             </CardContent>
              <CardContent className="flex justify-end">
-                <Link href="/log/insulin">
-                    <Button variant="outline">
-                        Registrar Dose de Insulina <ChevronsRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </Link>
+                <Button variant="outline" onClick={handleRegisterDose}>
+                    Registrar Dose de Insulina <ChevronsRight className="ml-2 h-4 w-4" />
+                </Button>
             </CardContent>
         </Card>
       )}

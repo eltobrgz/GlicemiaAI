@@ -15,6 +15,7 @@ import type { UserProfile } from '@/types';
 import { Loader2, Calculator, Info, Utensils, Droplet, Plus, ChevronsRight, Equal, Syringe } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import Link from 'next/link';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 const calculatorSchema = z.object({
   carbs: z.coerce.number().min(0, 'Carboidratos não podem ser negativos.'),
@@ -34,6 +35,7 @@ export default function BolusCalculatorForm() {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [calculation, setCalculation] = useState<CalculationResult | null>(null);
+  const { openDialog } = useLogDialog();
 
   const form = useForm<CalculatorFormData>({
     resolver: zodResolver(calculatorSchema),
@@ -84,6 +86,12 @@ export default function BolusCalculatorForm() {
       correctionDose: parseFloat(correctionDose.toFixed(2)),
       totalDose: parseFloat(totalDose.toFixed(1)), // Final dose often rounded to .5 or .0
     });
+  };
+
+  const handleRegisterDose = () => {
+    if (calculation) {
+      openDialog('insulin', { dose: calculation.totalDose });
+    }
   };
 
   if (isLoadingProfile) {
@@ -204,11 +212,9 @@ export default function BolusCalculatorForm() {
                 </Alert>
             </CardContent>
              <CardFooter className="flex justify-end">
-                <Link href="/log/insulin">
-                    <Button variant="outline">
-                        Registrar Dose de Insulina <ChevronsRight className="ml-2 h-4 w-4" />
-                    </Button>
-                </Link>
+                <Button variant="outline" onClick={handleRegisterDose}>
+                    Registrar Dose de Insulina <ChevronsRight className="ml-2 h-4 w-4" />
+                </Button>
             </CardFooter>
         </Card>
     )}
