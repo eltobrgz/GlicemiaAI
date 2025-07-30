@@ -16,6 +16,7 @@ import { DAYS_OF_WEEK } from '@/config/constants';
 import VoiceAssistant from '@/components/voice/VoiceAssistant';
 import { LogDialogsProvider } from '@/contexts/LogDialogsContext';
 import { LogDialogs } from '@/components/log/LogDialogs';
+import { useToast } from '@/hooks/use-toast';
 
 const DAY_MAP: Record<number, typeof DAYS_OF_WEEK[number]['key']> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
@@ -28,9 +29,8 @@ export default function AppLayout({
 }) {
   const { state, isMobile } = useSidebar();
   const router = useRouter();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [session, setSession] = useState<Session | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [reminders, setReminders] = useState<ReminderConfig[]>([]);
   const [lastCheckedMinute, setLastCheckedMinute] = useState<number>(-1);
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
@@ -52,32 +52,16 @@ export default function AppLayout({
   }, []);
 
   useEffect(() => {
-    const getSessionAndUser = async () => {
-      const { data: { session: currentSession } } = await supabase.auth.getSession();
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
-
-      if (!currentSession) {
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session?.user) {
+        await fetchUserReminders(session.user.id);
+      } else {
+        toast({
+          title: 'Sessão não encontrada',
+          description: 'Por favor, faça o login novamente para continuar.',
+          variant: 'destructive'
+        });
         router.replace('/login');
-        setLoading(false);
-        return;
-      }
-      
-      await fetchUserReminders(currentSession.user.id);
-      setLoading(false);
-    };
-
-    getSessionAndUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      setSession(newSession);
-      setUser(newSession?.user ?? null);
-      
-      if (event === 'SIGNED_OUT' || (!newSession && event !== 'INITIAL_SESSION')) {
-        router.replace('/login');
-        setReminders([]); 
-      } else if (newSession?.user) {
-        await fetchUserReminders(newSession.user.id);
       }
       setLoading(false);
     });
@@ -85,7 +69,7 @@ export default function AppLayout({
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  }, [router, fetchUserReminders]);
+  }, [router, fetchUserReminders, toast]);
 
 
   const showNotification = (reminder: ReminderConfig) => {
@@ -144,7 +128,7 @@ export default function AppLayout({
 
   useEffect(() => {
     const intervalId = setInterval(() => {
-      if (!user || reminders.length === 0 || notificationPermission !== 'granted') {
+      if (reminders.length === 0 || notificationPermission !== 'granted') {
         return;
       }
 
@@ -172,7 +156,7 @@ export default function AppLayout({
 
     return () => clearInterval(intervalId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reminders, user, lastCheckedMinute, notificationPermission, router]);
+  }, [reminders, lastCheckedMinute, notificationPermission]);
 
 
   if (loading) {
