@@ -96,7 +96,6 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
         foodIdentification: aiResult.foodIdentification,
         macronutrientEstimates: aiResult.macronutrientEstimates,
         estimatedGlucoseImpact: aiResult.estimatedGlucoseImpact,
-        suggestedInsulinDose: aiResult.suggestedInsulinDose,
         improvementTips: aiResult.improvementTips,
         mealPhotoFile: data.mealPhoto, 
       };
@@ -133,7 +132,7 @@ export default function MealImageForm({ onAnalysisComplete }: MealImageFormProps
               <Camera className="mr-2 h-7 w-7" /> Analisar Refeição com IA
             </CardTitle>
             <CardDescription>
-              Tire uma foto da sua refeição e nossa IA fornecerá uma estimativa de macronutrientes, impacto glicêmico e mais. A foto será salva no seu histórico.
+              Tire uma foto da sua refeição e nossa IA fornecerá uma estimativa de macronutrientes e impacto glicêmico. A foto será salva no seu histórico.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">

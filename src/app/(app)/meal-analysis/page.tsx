@@ -5,8 +5,8 @@ import { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
 import MealImageForm from '@/components/meal/MealImageForm';
 import MealAnalysisDisplay from '@/components/meal/MealAnalysisDisplay';
-import type { MealAnalysis } from '@/types';
-import { getMealAnalyses, deleteMealAnalysis } from '@/lib/storage';
+import type { MealAnalysis, UserProfile } from '@/types';
+import { getMealAnalyses, deleteMealAnalysis, getUserProfile } from '@/lib/storage';
 import { Button } from '@/components/ui/button';
 import { Trash2, RotateCcw, Loader2, Album } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,35 +19,33 @@ export default function MealAnalysisPage() {
   const [pastAnalyses, setPastAnalyses] = useState<MealAnalysis[]>([]);
   const [showForm, setShowForm] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const { toast } = useToast();
 
-  const fetchAnalyses = useCallback(async () => {
+  const fetchAnalysesAndProfile = useCallback(async () => {
     setIsLoading(true);
     try {
-      const analyses = await getMealAnalyses();
+      const [analyses, profile] = await Promise.all([
+        getMealAnalyses(),
+        getUserProfile(),
+      ]);
       setPastAnalyses(analyses);
+      setUserProfile(profile);
     } catch (error: any) {
-      toast({ title: "Erro ao buscar histórico de análises", description: error.message, variant: "destructive" });
+      toast({ title: "Erro ao buscar dados", description: error.message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchAnalyses();
-  }, [fetchAnalyses]);
+    fetchAnalysesAndProfile();
+  }, [fetchAnalysesAndProfile]);
 
   const handleAnalysisComplete = useCallback(async (analysisResult: MealAnalysis) => {
-    // MealImageForm now handles saving to Supabase (including image upload) via saveMealAnalysis from storage.ts
-    // and returns the complete MealAnalysis object with the Supabase Storage URL.
     setCurrentAnalysis(analysisResult);
-    // Prepend to local state for immediate UI update.
-    // fetchAnalyses will be called again if needed or to ensure consistency.
     setPastAnalyses(prev => [analysisResult, ...prev.filter(p => p.id !== analysisResult.id)]);
     setShowForm(false);
-    // Optionally, call fetchAnalyses() again if you want to ensure the list is exactly from DB
-    // but for UX, prepend and then rely on next full fetch is often good.
-    // await fetchAnalyses(); // This would re-fetch everything
   }, []);
 
   const handleShowNewAnalysisForm = () => {
@@ -56,8 +54,6 @@ export default function MealAnalysisPage() {
   };
 
   const handleDeleteAnalysis = async (id: string) => {
-    // Consider also deleting the image from Supabase Storage if needed
-    // This logic would be in deleteMealAnalysis in storage.ts or here.
     try {
       await deleteMealAnalysis(id);
       toast({ title: "Análise apagada" });
@@ -93,7 +89,7 @@ export default function MealAnalysisPage() {
       
       {currentAnalysis && !showForm && (
         <>
-          <MealAnalysisDisplay analysis={currentAnalysis} />
+          <MealAnalysisDisplay analysis={currentAnalysis} userProfile={userProfile} />
           <div className="text-center mt-4">
             <Button onClick={() => handleDeleteAnalysis(currentAnalysis.id)} variant="destructive" size="sm">
               <Trash2 className="mr-2 h-4 w-4" /> Apagar esta Análise
@@ -159,4 +155,3 @@ export default function MealAnalysisPage() {
     </div>
   );
 }
-

@@ -125,3 +125,10 @@ export const ACTIVITY_INTENSITIES = [
 export type WeeklyInsightsInput = z.infer<typeof WeeklyInsightsInputSchema>;
 export type WeeklyInsightsOutput = z.infer<typeof WeeklyInsightsOutputSchema>;
 export type InterpretedLog = z.infer<typeof InterpretedLogSchema>;
+
+// Tipo para o resultado do cálculo de bolus
+export interface BolusCalculationResult {
+  coverageDose: number;
+  correctionDose: number;
+  totalDose: number;
+}

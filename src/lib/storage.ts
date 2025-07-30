@@ -356,7 +356,6 @@ export async function getMealAnalyses(): Promise<MealAnalysis[]> {
     foodIdentification: a.food_identification,
     macronutrientEstimates: a.macronutrient_estimates as MealAnalysis['macronutrientEstimates'],
     estimatedGlucoseImpact: a.estimated_glucose_impact,
-    suggestedInsulinDose: a.suggested_insulin_dose,
     improvementTips: a.improvement_tips,
     created_at: a.created_at,
   }));
@@ -393,7 +392,6 @@ export async function saveMealAnalysis(
     food_identification: analysis.foodIdentification,
     macronutrient_estimates: analysis.macronutrientEstimates,
     estimated_glucose_impact: analysis.estimatedGlucoseImpact,
-    suggested_insulin_dose: analysis.suggestedInsulinDose,
     improvement_tips: analysis.improvementTips,
   };
   
@@ -427,7 +425,6 @@ export async function saveMealAnalysis(
     foodIdentification: savedData.food_identification,
     macronutrientEstimates: savedData.macronutrient_estimates as MealAnalysis['macronutrientEstimates'],
     estimatedGlucoseImpact: savedData.estimated_glucose_impact,
-    suggestedInsulinDose: savedData.suggested_insulin_dose,
     improvementTips: savedData.improvement_tips,
     created_at: savedData.created_at,
   };
@@ -714,4 +711,54 @@ export async function deleteMedicationLog(id: string): Promise<void> {
     console.error('Error deleting medication log:', error);
     throw error;
   }
+}
+
+
+// Function to fetch all user data for conversational AI context
+export async function getAllUserDataForAI(): Promise<any> {
+    const userId = await getCurrentUserId();
+    const profile = await getUserProfile();
+
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const isoDate = thirtyDaysAgo.toISOString();
+
+    const [
+        { data: glucoseReadings, error: glucoseError },
+        { data: insulinLogs, error: insulinError },
+        { data: medicationLogs, error: medicationError },
+        { data: activityLogs, error: activityError },
+        { data: mealAnalyses, error: mealError }
+    ] = await Promise.all([
+        supabase.from('glucose_readings').select('value, timestamp, meal_context, notes, level').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
+        supabase.from('insulin_logs').select('type, dose, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
+        supabase.from('medication_logs').select('medication_name, dosage, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
+        supabase.from('activity_logs').select('activity_type, duration_minutes, intensity, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
+        supabase.from('meal_analyses').select('food_identification, macronutrient_estimates, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false })
+    ]);
+
+    if (glucoseError || insulinError || medicationError || activityError || mealError) {
+        console.error({ glucoseError, insulinError, medicationError, activityError, mealError });
+        throw new Error("Erro ao buscar dados de saúde para o assistente de IA.");
+    }
+    
+    return {
+        userProfile: profile ? {
+            name: profile.name,
+            diabetesType: profile.diabetesType,
+            glucoseTargets: {
+                hypo: profile.hypo_glucose_threshold,
+                low: profile.target_glucose_low,
+                high: profile.target_glucose_high,
+                hyper: profile.hyper_glucose_threshold
+            }
+        } : {},
+        recentHealthData: {
+            glucoseReadings,
+            insulinLogs,
+            medicationLogs,
+            activityLogs,
+            mealAnalyses
+        }
+    };
 }
