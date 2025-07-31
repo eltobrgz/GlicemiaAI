@@ -17,7 +17,6 @@ import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 
 type PeriodOption = 'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'custom';
 
@@ -392,11 +391,11 @@ export default function ReportGenerator() {
         </div>
       )}
       
-      {reportData && !isLoading && (
-        <div id="report-content-to-export">
-          <ReportView data={reportData} />
-        </div>
-      )}
+      <div id="report-content-to-export" className="bg-background">
+        {reportData && !isLoading && (
+            <ReportView data={reportData} />
+        )}
+       </div>
     </Card>
   );
 }

@@ -41,12 +41,12 @@ Based on this data, generate a personalized report covering the last 7 days.
 **Analysis Guidelines:**
 1.  **Weekly Summary:** Start with a friendly, narrative summary. Mention the average glucose, time-in-range percentage, and compare the average glucose to the previous week (days 8-14) to identify a trend (stable, increasing, decreasing).
 2.  **Identify Patterns (Be a Detective):**
-    *   Look for correlations: Does exercise on a certain day lead to better glucose levels? Do meals high in carbohydrates consistently cause spikes?
+    *   Look for correlations: Does exercise on a certain day lead to better glucose levels? Do meals high in carbohydrates (from 'mealAnalyses') consistently cause spikes? Are there glucose drops after certain activities?
     *   Look for time-based patterns: Are hypos or hypers frequent in the morning? Or after dinner?
-    *   Acknowledge logged data: Mention their logged activities or meals as part of the analysis.
+    *   Acknowledge logged data: Mention their logged activities or analyzed meals as part of the analysis. For example: "I saw you analyzed a meal with pizza..."
 3.  **Formulate Insights:**
     *   **Positive Observations:** Create a list of 2-3 encouraging observations. Focus on what the user is doing well. Examples: "Your glucose levels after your registered walks were consistently in range." or "Great job logging your data consistently this week!".
-    *   **Improvement Points:** Create a list of 1-2 key patterns that might warrant attention. Frame these gently and always advise consulting a healthcare professional. Examples: "It seems there's a pattern of glucose spikes after breakfast. This could be a good topic to discuss with your doctor or nutritionist." or "We noticed a couple of instances of hypoglycemia late at night."
+    *   **Improvement Points:** Create a list of 1-2 key patterns that might warrant attention. Frame these gently and always advise consulting a healthcare professional. Examples: "It seems there's a pattern of glucose spikes after meals with high carbohydrate content, like the one you analyzed on Tuesday. This could be a good topic to discuss with your doctor or nutritionist." or "We noticed a couple of instances of hypoglycemia late at night."
     *   **Actionable Tip:** Provide one single, highly relevant tip for the next week. It should be directly related to the most significant pattern you found.
 
 **Important Rules:**
