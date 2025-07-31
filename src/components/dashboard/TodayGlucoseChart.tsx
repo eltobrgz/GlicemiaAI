@@ -1,37 +1,40 @@
+
 'use client';
 
 import type { GlucoseReading, UserProfile } from '@/types';
 import { useMemo } from 'react';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, AreaChart, Area, DotProps } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
-import { getGlucoseLevelColor } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-
+import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 
 interface TodayGlucoseChartProps {
   readings: GlucoseReading[];
   userProfile: UserProfile;
 }
 
-// Custom Dot component
-const CustomizedDot = (props: any) => {
+// Custom Dot component refatorado para ser mais robusto
+const GlucoseLevelDot = (props: any) => {
   const { cx, cy, payload, userProfile } = props;
-  
+
   if (!payload || typeof payload.glicemia !== 'number') {
     return null;
   }
-
-  const level = payload.level;
-  const colorClass = getGlucoseLevelColor(level, userProfile);
   
-  // Extracting the raw color from the class for the SVG fill
-  let fillColor = 'hsl(var(--primary))'; // Default
-  if (colorClass.includes('blue')) fillColor = '#3b82f6';
-  if (colorClass.includes('green')) fillColor = '#22c55e';
-  if (colorClass.includes('yellow')) fillColor = '#eab308';
-  if (colorClass.includes('red')) fillColor = '#ef4444';
+  // Mapeia o nível diretamente para uma cor HSL, mais confiável que classes CSS.
+  const getColorForLevel = (level?: GlucoseReading['level']): string => {
+    switch (level) {
+      case 'baixa':       return 'hsl(var(--chart-2))'; // Azul/Teal
+      case 'normal':      return 'hsl(var(--chart-5))'; // Verde
+      case 'alta':        return 'hsl(var(--chart-4))'; // Amarelo/Laranja
+      case 'muito_alta':  return 'hsl(var(--destructive))'; // Vermelho
+      default:            return 'hsl(var(--primary))';
+    }
+  };
+
+  const fillColor = getColorForLevel(payload.level);
 
   return (
     <svg x={cx - 8} y={cy - 8} width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -45,18 +48,19 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
 
   const chartData = useMemo(() => {
     return readings.map(r => ({
-      time: parseISO(r.timestamp).getTime(), // Convert Date to number (milliseconds)
+      time: parseISO(r.timestamp).getTime(),
       glicemia: r.value,
-      level: r.level, // Pass level to chart data
+      level: r.level, 
     }));
   }, [readings]);
 
   const yDomain = useMemo(() => {
-    if (readings.length === 0) return [0, 200]; // Default domain if no readings
+    if (readings.length === 0) return [40, 200]; // Domínio padrão se não houver dados
     const values = readings.map(r => r.value);
     const min = Math.min(...values);
     const max = Math.max(...values);
     const buffer = 20;
+    // Garante que o eixo Y comece um pouco abaixo do mínimo e vá um pouco acima do máximo.
     return [Math.max(0, min - buffer), max + buffer];
   }, [readings]);
 
@@ -68,6 +72,9 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
       </div>
     );
   }
+  
+  const targetHigh = userProfile.target_glucose_high ?? GLUCOSE_THRESHOLDS.normalIdealMax;
+  const targetLow = userProfile.target_glucose_low ?? GLUCOSE_THRESHOLDS.low;
 
   return (
     <div className="h-[350px]">
@@ -76,7 +83,7 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
                 <AreaChart
                 data={chartData}
                 margin={{
-                    top: 5,
+                    top: 10,
                     right: 10,
                     left: -10,
                     bottom: 5,
@@ -111,7 +118,7 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
                         <ChartTooltipContent 
                             formatter={(value, name, props) => (
                                 <div className="flex items-center">
-                                    <span className={cn("font-bold text-lg", getGlucoseLevelColor(props.payload.level, userProfile))}>{value}</span>
+                                    <span className={cn("font-bold text-lg")}>{value}</span>
                                     <span className="text-muted-foreground ml-1.5">mg/dL</span>
                                 </div>
                             )}
@@ -125,25 +132,23 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
                         />
                     }
                 />
-                {userProfile.target_glucose_high && (
-                    <ReferenceLine y={userProfile.target_glucose_high} label={{ value: `Hiper (${userProfile.target_glucose_high})`, position: 'insideTopRight', fill: 'hsl(var(--destructive) / 0.8)', fontSize: 12 }} stroke="hsl(var(--destructive))" strokeDasharray="4 4" />
-                )}
-                 {userProfile.target_glucose_low && (
-                    <ReferenceLine y={userProfile.target_glucose_low} label={{ value: `Hipo (${userProfile.target_glucose_low})`, position: 'insideBottomRight', fill: 'hsl(var(--chart-2) / 0.9)', fontSize: 12 }} stroke="hsl(var(--chart-2))" strokeDasharray="4 4" />
-                )}
+                <ReferenceLine y={targetHigh} label={{ value: `Hiper (${targetHigh})`, position: 'insideTopRight', fill: 'hsl(var(--destructive) / 0.8)', fontSize: 12 }} stroke="hsl(var(--destructive))" strokeDasharray="4 4" />
+                <ReferenceLine y={targetLow} label={{ value: `Hipo (${targetLow})`, position: 'insideBottomRight', fill: 'hsl(var(--chart-2) / 0.9)', fontSize: 12 }} stroke="hsl(var(--chart-2))" strokeDasharray="4 4" />
                 
-                <Area type="monotone" dataKey="glicemia" stroke="hsl(var(--primary))" strokeWidth={2.5} fill="url(#colorGlicemia)" />
-
-                <Line
-                    type="monotone"
-                    dataKey="glicemia"
-                    stroke="transparent" // A linha em si é invisível, só queremos os pontos
-                    dot={<CustomizedDot userProfile={userProfile} />}
-                    activeDot={false}
+                <Area 
+                    type="monotone" 
+                    dataKey="glicemia" 
+                    stroke="hsl(var(--primary))" 
+                    strokeWidth={2.5} 
+                    fill="url(#colorGlicemia)" 
+                    dot={<GlucoseLevelDot userProfile={userProfile} />} 
+                    activeDot={{ r: 8, strokeWidth: 2 }}
                 />
+
                 </AreaChart>
             </ResponsiveContainer>
       </ChartContainer>
     </div>
   );
 }
+
