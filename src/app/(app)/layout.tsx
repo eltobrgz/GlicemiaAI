@@ -16,7 +16,6 @@ import { DAYS_OF_WEEK } from '@/config/constants';
 import { LogDialogsProvider } from '@/contexts/LogDialogsContext';
 import { LogDialogs } from '@/components/log/LogDialogs';
 import { useToast } from '@/hooks/use-toast';
-import ChatAssistant from '@/components/chat/ChatAssistant'; // Importar o ChatAssistant
 
 const DAY_MAP: Record<number, typeof DAYS_OF_WEEK[number]['key']> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
@@ -195,7 +194,6 @@ export default function AppLayout({
 
         <BottomNavigationBar />
         <LogDialogs />
-        <ChatAssistant />
       </div>
     </LogDialogsProvider>
   );
