@@ -1,3 +1,4 @@
+
 // src/ai/flows/generate-weekly-insights.ts
 'use server';
 
@@ -48,8 +49,8 @@ Your response MUST be in the language specified by the 'language' input (default
 
 3.  **Be a Health Data Detective (Cause & Effect Analysis):**
     *   **Go beyond simple observation. Your primary goal is to find *correlations* and *causal links*.**
-    *   **Analyze Meal Impact:** Look at `mealAnalyses`. Did meals with high carbohydrates (e.g., >50g) consistently lead to glucose spikes 2-3 hours later? Mention a specific meal analysis if possible. *Example: "I noticed that after you analyzed the pizza on Tuesday, which had an estimated 75g of carbs, there was a significant glucose spike."*
-    *   **Analyze Exercise Impact:** Look at `activityLogs`. Did glucose levels stabilize or decrease after specific activities? *Example: "Your 30-minute walk on Thursday seems to have been very effective; your glucose levels remained stable for the next 3 hours."*
+    *   **Analyze Meal Impact:** Look at \`mealAnalyses\`. Did meals with high carbohydrates (e.g., >50g) consistently lead to glucose spikes 2-3 hours later? Mention a specific meal analysis if possible. *Example: "I noticed that after you analyzed the pizza on Tuesday, which had an estimated 75g of carbs, there was a significant glucose spike."*
+    *   **Analyze Exercise Impact:** Look at \`activityLogs\`. Did glucose levels stabilize or decrease after specific activities? *Example: "Your 30-minute walk on Thursday seems to have been very effective; your glucose levels remained stable for the next 3 hours."*
     *   **Analyze Time-of-Day Patterns:** Are there specific times (mornings, late nights) when hypoglycemia or hyperglycemia are more frequent? *Example: "There seems to be a recurring pattern of morning hyperglycemia between 8 AM and 10 AM."*
     *   **Connect to Insulin/Medication:** Are there any visible patterns related to insulin or medication logs? (Be careful not to give medical advice). *Example: "The data shows consistent logging of your long-acting insulin, which is a great foundation for control."*
 
