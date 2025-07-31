@@ -91,8 +91,8 @@ const pieChartConfig = {
   },
 } satisfies ChartConfig
 
-const SummaryMetric: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; }> = ({ title, value, unit, description }) => (
-  <div className="space-y-1">
+const SummaryMetric: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; className?: string }> = ({ title, value, unit, description, className }) => (
+  <div className={className}>
     <p className="text-sm text-muted-foreground">{title}</p>
     <div className="text-2xl font-bold">
       {value !== null && value !== undefined ? value : 'N/A'}
@@ -201,12 +201,12 @@ export default function ReportView({ data }: ReportViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" />Resumo Glicêmico</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-              <SummaryMetric title="Glicemia Média" value={summary.averageGlucose?.toFixed(1)} unit="mg/dL" />
-              <SummaryMetric title="Glicemia Mínima" value={summary.minGlucose?.value} unit="mg/dL" description={summary.minGlucose ? `Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm')}` : ''} />
-              <SummaryMetric title="Glicemia Máxima" value={summary.maxGlucose?.value} unit="mg/dL" description={summary.maxGlucose ? `Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm')}` : ''} />
-              <SummaryMetric title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1)} unit="mg/dL" description="Variabilidade" />
-              <SummaryMetric title="CV (Variabilidade)" value={summary.glucoseCV?.toFixed(1)} unit="%" description="Ideal < 36%" />
+            <CardContent className="flex flex-wrap gap-x-6 gap-y-4">
+                <SummaryMetric title="Glicemia Média" value={summary.averageGlucose?.toFixed(1)} unit="mg/dL" className="min-w-[150px]"/>
+                <SummaryMetric title="Glicemia Mínima" value={summary.minGlucose?.value} unit="mg/dL" description={summary.minGlucose ? `Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm')}` : ''} className="min-w-[150px]"/>
+                <SummaryMetric title="Glicemia Máxima" value={summary.maxGlucose?.value} unit="mg/dL" description={summary.maxGlucose ? `Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm')}` : ''} className="min-w-[150px]"/>
+                <SummaryMetric title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1)} unit="mg/dL" description="Variabilidade" className="min-w-[150px]"/>
+                <SummaryMetric title="CV (Variabilidade)" value={summary.glucoseCV?.toFixed(1)} unit="%" description="Ideal < 36%" className="min-w-[150px]"/>
             </CardContent>
           </Card>
         )}
@@ -280,7 +280,7 @@ export default function ReportView({ data }: ReportViewProps) {
             )}
             {(activityLogs.length > 0 || mealAnalyses.length > 0) && (
             <Card className="shadow-md">
-                <CardHeader><CardTitle className="flex items-center"><Bike className="mr-2 h-5 w-5 text-orange-500"/><Utensils className="mr-2 h-5 w-5 text-lime-600"/>Resumo de Atividades e Refeições</CardTitle></CardHeader>
+                <CardHeader><CardTitle className="flex items-center"><Bike className="mr-2 h-5 w-5 text-orange-500"/><Utensils className="ml-2 mr-2 h-5 w-5 text-lime-600"/>Atividades e Refeições</CardTitle></CardHeader>
                 <CardContent className="grid grid-cols-2 gap-4">
                     <SummaryMetric title="Atividades" value={summary.totalActivities}/>
                     <SummaryMetric title="Duração Total Ativ." value={summary.totalActivityDuration} unit="min"/>
@@ -313,7 +313,7 @@ export default function ReportView({ data }: ReportViewProps) {
             </CardContent>
             </Card>
         )}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-1 lg:grid-cols-2 gap-6">
             {insulinLogs.length > 0 && (
                 <Card className="shadow-lg">
                 <CardHeader>
@@ -362,7 +362,7 @@ export default function ReportView({ data }: ReportViewProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="glucose">
-                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-wrap lg:w-auto lg:grid-cols-none">
                     <TabsTrigger value="glucose" disabled={glucoseReadings.length === 0}>Glicemia</TabsTrigger>
                     <TabsTrigger value="insulin" disabled={insulinLogs.length === 0}>Insulina</TabsTrigger>
                     <TabsTrigger value="medication" disabled={medicationLogs.length === 0}>Medicamentos</TabsTrigger>
