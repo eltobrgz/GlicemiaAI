@@ -16,6 +16,7 @@ import { DAYS_OF_WEEK } from '@/config/constants';
 import { LogDialogsProvider } from '@/contexts/LogDialogsContext';
 import { LogDialogs } from '@/components/log/LogDialogs';
 import { useToast } from '@/hooks/use-toast';
+import ChatAssistant from '@/components/chat/ChatAssistant'; // Importar o ChatAssistant
 
 const DAY_MAP: Record<number, typeof DAYS_OF_WEEK[number]['key']> = {
   0: 'Dom', 1: 'Seg', 2: 'Ter', 3: 'Qua', 4: 'Qui', 5: 'Sex', 6: 'Sab'
@@ -52,25 +53,41 @@ export default function AppLayout({
   }, []);
 
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const checkSessionAndSetup = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
       if (session?.user) {
         await fetchUserReminders(session.user.id);
         setLoading(false);
       } else {
+        router.replace('/login');
+        // setLoading will be handled by the listener or page redirection
+      }
+    };
+    
+    checkSessionAndSetup();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
         toast({
-          title: 'Sessão não encontrada',
+          title: 'Sessão Encerrada',
           description: 'Por favor, faça o login novamente para continuar.',
           variant: 'destructive'
         });
         router.replace('/login');
-        // We still need to stop loading even on redirect
-        setLoading(false); 
+      } else {
+        // This handles cases like password recovery, token refresh, etc.
+        // Re-fetch reminders if user context might have changed
+        await fetchUserReminders(session.user.id);
+        // Ensure loading is false if it was somehow still true
+        if(loading) setLoading(false);
       }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, fetchUserReminders, toast, supabase.auth]);
 
 
@@ -195,6 +212,7 @@ export default function AppLayout({
 
         <BottomNavigationBar />
         <LogDialogs />
+        <ChatAssistant />
       </div>
     </LogDialogsProvider>
   );
