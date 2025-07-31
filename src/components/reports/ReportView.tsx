@@ -9,7 +9,7 @@ import { format, parseISO, eachDayOfInterval, isSameDay } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import { ArrowDownToDot, ArrowUpFromDot, TrendingUp, Activity, Syringe, Percent, BarChartBig, PieChartIcon, Info, Bike, Utensils, Calculator, FileSpreadsheet, ClipboardPlus } from 'lucide-react';
-import { getGlucoseLevelColor, formatDateTime } from '@/lib/utils';
+import { getGlucoseLevelColor, formatDateTime, cn } from '@/lib/utils';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 import { useMemo } from 'react';
 import {
