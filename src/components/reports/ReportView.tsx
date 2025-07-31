@@ -92,7 +92,7 @@ const pieChartConfig = {
 } satisfies ChartConfig
 
 const SummaryMetric: React.FC<{ title: string; value: string | number | null; unit?: string; description?: string; className?: string }> = ({ title, value, unit, description, className }) => (
-  <div className={className}>
+  <div className={cn("min-w-[150px] flex-shrink-0", className)}>
     <p className="text-sm text-muted-foreground">{title}</p>
     <div className="text-2xl font-bold">
       {value !== null && value !== undefined ? value : 'N/A'}
@@ -201,12 +201,12 @@ export default function ReportView({ data }: ReportViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" />Resumo Glicêmico</CardTitle>
             </CardHeader>
-            <CardContent className="flex flex-wrap gap-x-6 gap-y-4">
-                <SummaryMetric title="Glicemia Média" value={summary.averageGlucose?.toFixed(1)} unit="mg/dL" className="min-w-[150px]"/>
-                <SummaryMetric title="Glicemia Mínima" value={summary.minGlucose?.value} unit="mg/dL" description={summary.minGlucose ? `Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm')}` : ''} className="min-w-[150px]"/>
-                <SummaryMetric title="Glicemia Máxima" value={summary.maxGlucose?.value} unit="mg/dL" description={summary.maxGlucose ? `Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm')}` : ''} className="min-w-[150px]"/>
-                <SummaryMetric title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1)} unit="mg/dL" description="Variabilidade" className="min-w-[150px]"/>
-                <SummaryMetric title="CV (Variabilidade)" value={summary.glucoseCV?.toFixed(1)} unit="%" description="Ideal < 36%" className="min-w-[150px]"/>
+            <CardContent className="flex flex-row flex-wrap gap-x-6 gap-y-4">
+                <SummaryMetric title="Glicemia Média" value={summary.averageGlucose?.toFixed(1)} unit="mg/dL" />
+                <SummaryMetric title="Glicemia Mínima" value={summary.minGlucose?.value} unit="mg/dL" description={summary.minGlucose ? `Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm')}` : ''} />
+                <SummaryMetric title="Glicemia Máxima" value={summary.maxGlucose?.value} unit="mg/dL" description={summary.maxGlucose ? `Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm')}` : ''} />
+                <SummaryMetric title="Desvio Padrão" value={summary.stdDevGlucose?.toFixed(1)} unit="mg/dL" description="Variabilidade" />
+                <SummaryMetric title="CV (Variabilidade)" value={summary.glucoseCV?.toFixed(1)} unit="%" description="Ideal < 36%" />
             </CardContent>
           </Card>
         )}
@@ -259,11 +259,11 @@ export default function ReportView({ data }: ReportViewProps) {
         )}
         
         {/* Other Summaries */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="flex flex-row flex-wrap gap-6">
             {insulinLogs.length > 0 && (
-            <Card className="shadow-md">
+            <Card className="shadow-md flex-grow min-w-[300px]">
                 <CardHeader><CardTitle className="flex items-center"><Syringe className="mr-2 h-5 w-5 text-accent"/>Resumo de Insulina</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
+                <CardContent className="flex flex-row flex-wrap gap-x-6 gap-y-4">
                     <SummaryMetric title="Total Administrado" value={summary.totalInsulin?.toFixed(1)} unit="U"/>
                     <SummaryMetric title="Aplicações" value={summary.insulinApplications}/>
                     <SummaryMetric title="Média Diária" value={summary.averageDailyInsulin?.toFixed(1)} unit="U/dia" />
@@ -271,17 +271,17 @@ export default function ReportView({ data }: ReportViewProps) {
             </Card>
             )}
             {medicationLogs.length > 0 && (
-            <Card className="shadow-md">
+            <Card className="shadow-md flex-grow min-w-[300px]">
                 <CardHeader><CardTitle className="flex items-center"><ClipboardPlus className="mr-2 h-5 w-5 text-purple-600"/>Resumo de Medicamentos</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-1 gap-4">
+                <CardContent className="flex flex-row flex-wrap gap-x-6 gap-y-4">
                     <SummaryMetric title="Total de Registros" value={summary.totalMedications} />
                 </CardContent>
             </Card>
             )}
             {(activityLogs.length > 0 || mealAnalyses.length > 0) && (
-            <Card className="shadow-md">
+            <Card className="shadow-md flex-grow min-w-[300px]">
                 <CardHeader><CardTitle className="flex items-center"><Bike className="mr-2 h-5 w-5 text-orange-500"/><Utensils className="ml-2 mr-2 h-5 w-5 text-lime-600"/>Atividades e Refeições</CardTitle></CardHeader>
-                <CardContent className="grid grid-cols-2 gap-4">
+                <CardContent className="flex flex-row flex-wrap gap-x-6 gap-y-4">
                     <SummaryMetric title="Atividades" value={summary.totalActivities}/>
                     <SummaryMetric title="Duração Total Ativ." value={summary.totalActivityDuration} unit="min"/>
                     <SummaryMetric title="Refeições Analisadas" value={summary.totalMealAnalyses}/>
