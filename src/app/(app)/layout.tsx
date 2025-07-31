@@ -35,12 +35,6 @@ export default function AppLayout({
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>('default');
   const supabase = createClient();
 
-  useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setNotificationPermission(Notification.permission);
-    }
-  }, []);
-
   const fetchUserReminders = useCallback(async (currentUserId?: string) => {
     if (!currentUserId) return;
     try {
@@ -50,20 +44,27 @@ export default function AppLayout({
       console.error("Error fetching reminders:", error);
     }
   }, []);
-
+  
   useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast({
-          title: 'Sessão Encerrada',
-          description: 'Por favor, faça o login novamente para continuar.',
-          variant: 'destructive'
-        });
-        setLoading(false);
         router.replace('/login');
       } else {
         await fetchUserReminders(session.user.id);
         setLoading(false);
+      }
+    };
+    checkSession();
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+         toast({
+          title: 'Sessão Encerrada',
+          description: 'Por favor, faça o login novamente para continuar.',
+          variant: 'destructive'
+        });
+        router.replace('/login');
       }
     });
 
@@ -72,6 +73,12 @@ export default function AppLayout({
     };
   }, [router, fetchUserReminders, toast, supabase.auth]);
 
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, []);
 
   const showNotification = (reminder: ReminderConfig) => {
     if (notificationPermission !== 'granted') {
