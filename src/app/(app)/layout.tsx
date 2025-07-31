@@ -53,20 +53,6 @@ export default function AppLayout({
   }, []);
 
   useEffect(() => {
-    const checkSessionAndSetup = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (session?.user) {
-        await fetchUserReminders(session.user.id);
-        setLoading(false);
-      } else {
-        router.replace('/login');
-        // setLoading will be handled by the listener or page redirection
-      }
-    };
-    
-    checkSessionAndSetup();
-
     const { data: authListener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (!session) {
         toast({
@@ -74,20 +60,17 @@ export default function AppLayout({
           description: 'Por favor, faça o login novamente para continuar.',
           variant: 'destructive'
         });
+        setLoading(false);
         router.replace('/login');
       } else {
-        // This handles cases like password recovery, token refresh, etc.
-        // Re-fetch reminders if user context might have changed
         await fetchUserReminders(session.user.id);
-        // Ensure loading is false if it was somehow still true
-        if(loading) setLoading(false);
+        setLoading(false);
       }
     });
 
     return () => {
       authListener?.subscription.unsubscribe();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, fetchUserReminders, toast, supabase.auth]);
 
 
