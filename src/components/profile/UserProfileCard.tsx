@@ -7,17 +7,19 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import type { UserProfile } from '@/types';
-import { getUserProfile, saveUserProfile } from '@/lib/storage'; 
-import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info, Calculator } from 'lucide-react';
+import type { UserProfile, UserAchievement } from '@/types';
+import { getUserProfile, saveUserProfile, getUserAchievements } from '@/lib/storage'; 
+import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info, Calculator, Award } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabaseClient';
-import { GLUCOSE_THRESHOLDS } from '@/config/constants';
+import { GLUCOSE_THRESHOLDS, ALL_ACHIEVEMENTS } from '@/config/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '../ui/separator';
+import Link from 'next/link';
 
 export default function UserProfileCard() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [achievements, setAchievements] = useState<UserAchievement[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState<Partial<UserProfile>>({});
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -29,10 +31,16 @@ export default function UserProfileCard() {
   const supabase = createClient();
 
   useEffect(() => {
-    const fetchProfile = async () => {
+    const fetchProfileData = async () => {
       setIsLoading(true);
       try {
-        const profile = await getUserProfile();
+        const [profile, userAchievements] = await Promise.all([
+          getUserProfile(),
+          getUserAchievements()
+        ]);
+
+        setAchievements(userAchievements);
+        
         if (profile) {
           setUser(profile);
           setEditForm(profile); // Initialize form with full profile data
@@ -64,7 +72,7 @@ export default function UserProfileCard() {
         setIsLoading(false);
       }
     };
-    fetchProfile();
+    fetchProfileData();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -180,6 +188,16 @@ export default function UserProfileCard() {
       ]
     },
   ];
+  
+  const latestAchievements = achievements
+    .sort((a, b) => new Date(b.unlocked_at).getTime() - new Date(a.unlocked_at).getTime())
+    .slice(0, 3)
+    .map(userAch => {
+      const achDef = ALL_ACHIEVEMENTS.find(a => a.key === userAch.achievement_key);
+      return achDef ? { ...achDef, unlockedAt: userAch.unlocked_at } : null;
+    })
+    .filter(Boolean);
+
 
   return (
     <>
@@ -266,6 +284,34 @@ export default function UserProfileCard() {
                 </div>
               </div>
           ))}
+          
+           <Separator />
+
+            <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center">
+                        <Award className="h-6 w-6 text-primary mr-2" />
+                        <h3 className="text-lg font-semibold">Conquistas</h3>
+                    </div>
+                    <Link href="/achievements">
+                        <Button variant="link" size="sm">Ver Todas</Button>
+                    </Link>
+                </div>
+                <p className="text-sm text-muted-foreground">Você desbloqueou {achievements.length} de {ALL_ACHIEVEMENTS.length} conquistas.</p>
+                <div className="flex flex-wrap gap-4 pt-2">
+                    {latestAchievements.length > 0 ? (
+                        latestAchievements.map(ach => (
+                          ach && <div key={ach.key} className="flex flex-col items-center text-center p-2 rounded-lg bg-primary/10 w-24">
+                              <ach.icon className="h-8 w-8 text-primary" />
+                              <span className="text-xs font-medium mt-1">{ach.name}</span>
+                          </div>
+                        ))
+                    ) : (
+                        <p className="text-sm text-muted-foreground italic">Continue registrando para desbloquear sua primeira conquista!</p>
+                    )}
+                </div>
+            </div>
+
         </CardContent>
         {isEditing ? null : (
             <CardFooter className="border-t pt-6">

@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -5,24 +6,71 @@ import { useEffect, useState, Fragment } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator } from 'lucide-react';
-import type { GlucoseReading, InsulinLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs } from '@/lib/storage'; 
+import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator, Award, Star } from 'lucide-react';
+import type { GlucoseReading, InsulinLog, MealAnalysis, ActivityLog } from '@/types';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getMealAnalyses, getActivityLogs, unlockAchievement, getUserAchievements } from '@/lib/storage'; 
 import { useToast } from '@/hooks/use-toast';
-import { getUserProfile } from '@/lib/storage';
-import type { UserProfile } from '@/types';
+import type { UserProfile, UserAchievement } from '@/types';
 import WelcomeGoalsModal from '@/components/profile/WelcomeGoalsModal';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import { useLogDialog } from '@/contexts/LogDialogsContext';
+import { calculateConsecutiveDaysStreak } from '@/lib/utils';
+import { ALL_ACHIEVEMENTS } from '@/config/constants';
+
 
 export default function DashboardPage() {
   const [lastGlucose, setLastGlucose] = useState<GlucoseReading | null>(null);
   const [allGlucose, setAllGlucose] = useState<GlucoseReading[]>([]);
+  const [allMeals, setAllMeals] = useState<MealAnalysis[]>([]);
+  const [allActivities, setAllActivities] = useState<ActivityLog[]>([]);
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const { toast } = useToast();
-  const { openDialog } = useLogDialog();
+  const { openDialog, addSuccessListener } = useLogDialog();
+
+  const checkAndUnlockNewAchievements = async (
+    allData: {
+      glucose: GlucoseReading[],
+      meals: MealAnalysis[],
+      activities: ActivityLog[]
+    },
+    unlockedAchievements: UserAchievement[]
+  ) => {
+    const { glucose, meals, activities } = allData;
+    const unlockedKeys = new Set(unlockedAchievements.map(a => a.achievement_key));
+
+    const checkAndUnlock = async (key: string, condition: boolean) => {
+      if (condition && !unlockedKeys.has(key)) {
+        await unlockAchievement(key);
+        const achievement = ALL_ACHIEVEMENTS.find(a => a.key === key);
+        if (achievement) {
+          toast({
+            title: "🏆 Conquista Desbloqueada!",
+            description: achievement.name,
+          });
+        }
+        return true; // Indicates an achievement was unlocked
+      }
+      return false;
+    };
+
+    let newAchievements = false;
+    newAchievements = (await checkAndUnlock('FIRST_GLUCOSE_LOG', glucose.length > 0)) || newAchievements;
+    newAchievements = (await checkAndUnlock('FIRST_MEAL_ANALYSIS', meals.length > 0)) || newAchievements;
+    newAchievements = (await checkAndUnlock('MEAL_ANALYSIS_MASTER_10', meals.length >= 10)) || newAchievements;
+    newAchievements = (await checkAndUnlock('ACTIVITY_LOG_10', activities.length >= 10)) || newAchievements;
+
+    const streak = calculateConsecutiveDaysStreak(glucose);
+    newAchievements = (await checkAndUnlock('CONSISTENT_LOGGING_STREAK_7_DAYS', streak >= 7)) || newAchievements;
+    newAchievements = (await checkAndUnlock('CONSISTENT_LOGGING_STREAK_30_DAYS', streak >= 30)) || newAchievements;
+  
+    // TODO: Implement logic for TIME_IN_TARGET and FIRST_REPORT_EXPORTED
+    
+    // Potentially re-fetch achievements if new ones were unlocked
+    // This is optional and depends on whether the UI needs immediate update
+  };
+  
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -35,16 +83,26 @@ export default function DashboardPage() {
             setIsWelcomeModalOpen(true);
           }
           
-          const glucoseReadings = await getGlucoseReadings(profile);
+          const [glucoseReadings, insulinLogs, mealAnalyses, activityLogs, userAchievements] = await Promise.all([
+            getGlucoseReadings(profile),
+            getInsulinLogs(),
+            getMealAnalyses(),
+            getActivityLogs(),
+            getUserAchievements()
+          ]);
+          
           setAllGlucose(glucoseReadings);
+          setAllMeals(mealAnalyses);
+          setAllActivities(activityLogs);
           if (glucoseReadings.length > 0) {
             setLastGlucose(glucoseReadings[0]);
           }
-          
-          const insulinLogs = await getInsulinLogs();
           if (insulinLogs.length > 0) {
             setLastInsulin(insulinLogs[0]);
           }
+
+          // Check for achievements
+          await checkAndUnlockNewAchievements({ glucose: glucoseReadings, meals: mealAnalyses, activities: activityLogs }, userAchievements);
         }
       } catch (error: any) {
         if (error.message !== 'Usuário não autenticado.') {
@@ -54,6 +112,21 @@ export default function DashboardPage() {
     };
 
     fetchInitialData();
+
+    // Re-fetch data and check achievements after new log entries
+    const unsubscribeGlucose = addSuccessListener('glucose', fetchInitialData);
+    const unsubscribeInsulin = addSuccessListener('insulin', fetchInitialData);
+    const unsubscribeMedication = addSuccessListener('medication', fetchInitialData);
+    const unsubscribeActivity = addSuccessListener('activity', fetchInitialData);
+    
+    return () => {
+      unsubscribeGlucose();
+      unsubscribeInsulin();
+      unsubscribeMedication();
+      unsubscribeActivity();
+    };
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   const handleModalClose = (goalsUpdated: boolean) => {
@@ -133,22 +206,41 @@ export default function DashboardPage() {
           </div>
         </section>
         
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <BarChart3 className="mr-2 h-6 w-6 text-primary" />
-              Insights da IA
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground">
-              Descubra padrões e receba dicas personalizadas geradas por IA com base nos seus dados da última semana.
-            </p>
-            <Link href="/insights">
-              <Button variant="link" className="mt-2 p-0">Ver minha análise semanal</Button>
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <BarChart3 className="mr-2 h-6 w-6 text-primary" />
+                Insights da IA
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Descubra padrões e receba dicas personalizadas geradas por IA com base nos seus dados da última semana.
+              </p>
+              <Link href="/insights">
+                <Button variant="link" className="mt-2 p-0">Ver minha análise semanal</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+           <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Award className="mr-2 h-6 w-6 text-yellow-500" />
+                Minhas Conquistas
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">
+                Veja suas medalhas e acompanhe seu progresso na jornada de gerenciamento.
+              </p>
+              <Link href="/achievements">
+                <Button variant="link" className="mt-2 p-0">Ver minhas conquistas</Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
 
       </div>
     </Fragment>

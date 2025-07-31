@@ -1,6 +1,6 @@
 
 
-import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
+import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog, UserAchievement } from '@/types';
 import { createClient } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
 import { toast } from '@/hooks/use-toast'; 
@@ -761,4 +761,41 @@ export async function getAllUserDataForAI(): Promise<any> {
             mealAnalyses
         }
     };
+}
+
+
+// Gamification / Achievements
+export async function getUserAchievements(): Promise<UserAchievement[]> {
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('user_achievements')
+    .select('*')
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Error fetching user achievements:', error);
+    throw error;
+  }
+  return data as UserAchievement[];
+}
+
+export async function unlockAchievement(achievementKey: string, metadata?: any): Promise<void> {
+  const userId = await getCurrentUserId();
+  const { data, error } = await supabase
+    .from('user_achievements')
+    .insert({
+      user_id: userId,
+      achievement_key: achievementKey,
+      metadata: metadata || null,
+    });
+
+  if (error) {
+    // Code '23505' is for unique constraint violation, meaning achievement already unlocked.
+    if (error.code === '23505') {
+        // It's not an error if it's already unlocked, so we can ignore it.
+        return;
+    }
+    console.error(`Error unlocking achievement ${achievementKey}:`, error);
+    throw error;
+  }
 }
