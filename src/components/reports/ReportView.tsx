@@ -182,7 +182,7 @@ export default function ReportView({ data }: ReportViewProps) {
 
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 bg-background text-foreground">
+    <div className="space-y-6 p-2 sm:p-4 md:p-6 bg-background text-foreground">
       <Card>
         <CardHeader>
           <CardTitle className="text-xl font-headline text-primary">
@@ -201,7 +201,7 @@ export default function ReportView({ data }: ReportViewProps) {
             <CardHeader>
               <CardTitle className="flex items-center"><Activity className="mr-2 h-5 w-5 text-primary" />Resumo Glicêmico</CardTitle>
             </CardHeader>
-            <CardContent className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+            <CardContent className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
               <SummaryMetric title="Glicemia Média" value={summary.averageGlucose?.toFixed(1)} unit="mg/dL" />
               <SummaryMetric title="Glicemia Mínima" value={summary.minGlucose?.value} unit="mg/dL" description={summary.minGlucose ? `Em ${format(parseISO(summary.minGlucose.timestamp), 'dd/MM HH:mm')}` : ''} />
               <SummaryMetric title="Glicemia Máxima" value={summary.maxGlucose?.value} unit="mg/dL" description={summary.maxGlucose ? `Em ${format(parseISO(summary.maxGlucose.timestamp), 'dd/MM HH:mm')}` : ''} />
@@ -259,7 +259,7 @@ export default function ReportView({ data }: ReportViewProps) {
         )}
         
         {/* Other Summaries */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {insulinLogs.length > 0 && (
             <Card className="shadow-md">
                 <CardHeader><CardTitle className="flex items-center"><Syringe className="mr-2 h-5 w-5 text-accent"/>Resumo de Insulina</CardTitle></CardHeader>
@@ -362,7 +362,7 @@ export default function ReportView({ data }: ReportViewProps) {
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="glucose">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
                     <TabsTrigger value="glucose" disabled={glucoseReadings.length === 0}>Glicemia</TabsTrigger>
                     <TabsTrigger value="insulin" disabled={insulinLogs.length === 0}>Insulina</TabsTrigger>
                     <TabsTrigger value="medication" disabled={medicationLogs.length === 0}>Medicamentos</TabsTrigger>
@@ -370,81 +370,91 @@ export default function ReportView({ data }: ReportViewProps) {
                     <TabsTrigger value="meals" disabled={mealAnalyses.length === 0}>Refeições</TabsTrigger>
                 </TabsList>
                 <TabsContent value="glucose">
-                    <Table>
-                        <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Valor (mg/dL)</TableHead><TableHead>Contexto</TableHead><TableHead>Nível</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {glucoseReadings.map(r => (
-                                <TableRow key={r.id}>
-                                    <TableCell>{formatDateTime(r.timestamp)}</TableCell>
-                                    <TableCell className="font-bold">{r.value}</TableCell>
-                                    <TableCell>{r.mealContext?.replace('_',' ') || '-'}</TableCell>
-                                    <TableCell><Badge variant="outline" className={getGlucoseLevelColor(r.level, userProfile)}>{r.level || '-'}</Badge></TableCell>
-                                    <TableCell>{r.notes || '-'}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Valor (mg/dL)</TableHead><TableHead>Contexto</TableHead><TableHead>Nível</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {glucoseReadings.map(r => (
+                                    <TableRow key={r.id}>
+                                        <TableCell>{formatDateTime(r.timestamp)}</TableCell>
+                                        <TableCell className="font-bold">{r.value}</TableCell>
+                                        <TableCell>{r.mealContext?.replace('_',' ') || '-'}</TableCell>
+                                        <TableCell><Badge variant="outline" className={getGlucoseLevelColor(r.level, userProfile)}>{r.level || '-'}</Badge></TableCell>
+                                        <TableCell>{r.notes || '-'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
                 <TabsContent value="insulin">
-                     <Table>
-                        <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Tipo</TableHead><TableHead>Dose (U)</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {insulinLogs.map(log => (
-                                <TableRow key={log.id}>
-                                    <TableCell>{formatDateTime(log.timestamp)}</TableCell>
-                                    <TableCell>{log.type}</TableCell>
-                                    <TableCell className="font-bold">{log.dose}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Tipo</TableHead><TableHead>Dose (U)</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {insulinLogs.map(log => (
+                                    <TableRow key={log.id}>
+                                        <TableCell>{formatDateTime(log.timestamp)}</TableCell>
+                                        <TableCell>{log.type}</TableCell>
+                                        <TableCell className="font-bold">{log.dose}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
                 <TabsContent value="medication">
-                     <Table>
-                        <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Medicamento</TableHead><TableHead>Dosagem</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {medicationLogs.map(log => (
-                                <TableRow key={log.id}>
-                                    <TableCell>{formatDateTime(log.timestamp)}</TableCell>
-                                    <TableCell>{log.medication_name}</TableCell>
-                                    <TableCell>{log.dosage}</TableCell>
-                                    <TableCell>{log.notes || '-'}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Medicamento</TableHead><TableHead>Dosagem</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {medicationLogs.map(log => (
+                                    <TableRow key={log.id}>
+                                        <TableCell>{formatDateTime(log.timestamp)}</TableCell>
+                                        <TableCell>{log.medication_name}</TableCell>
+                                        <TableCell>{log.dosage}</TableCell>
+                                        <TableCell>{log.notes || '-'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
                 <TabsContent value="activity">
-                     <Table>
-                        <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Tipo</TableHead><TableHead>Duração (min)</TableHead><TableHead>Intensidade</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {activityLogs.map(log => (
-                                <TableRow key={log.id}>
-                                    <TableCell>{formatDateTime(log.timestamp)}</TableCell>
-                                    <TableCell>{log.activity_type.replace('_',' ')}</TableCell>
-                                    <TableCell>{log.duration_minutes}</TableCell>
-                                    <TableCell>{log.intensity || '-'}</TableCell>
-                                    <TableCell>{log.notes || '-'}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Tipo</TableHead><TableHead>Duração (min)</TableHead><TableHead>Intensidade</TableHead><TableHead>Notas</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {activityLogs.map(log => (
+                                    <TableRow key={log.id}>
+                                        <TableCell>{formatDateTime(log.timestamp)}</TableCell>
+                                        <TableCell>{log.activity_type.replace('_',' ')}</TableCell>
+                                        <TableCell>{log.duration_minutes}</TableCell>
+                                        <TableCell>{log.intensity || '-'}</TableCell>
+                                        <TableCell>{log.notes || '-'}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
                 <TabsContent value="meals">
-                      <Table>
-                        <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Identificação</TableHead><TableHead>Carbs (g)</TableHead><TableHead>Prot (g)</TableHead><TableHead>Gord (g)</TableHead></TableRow></TableHeader>
-                        <TableBody>
-                            {mealAnalyses.map(meal => (
-                                <TableRow key={meal.id}>
-                                    <TableCell>{formatDateTime(meal.timestamp)}</TableCell>
-                                    <TableCell>{meal.foodIdentification}</TableCell>
-                                    <TableCell>{meal.macronutrientEstimates.carbohydrates.toFixed(1)}</TableCell>
-                                    <TableCell>{meal.macronutrientEstimates.protein.toFixed(1)}</TableCell>
-                                    <TableCell>{meal.macronutrientEstimates.fat.toFixed(1)}</TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader><TableRow><TableHead>Horário</TableHead><TableHead>Identificação</TableHead><TableHead>Carbs (g)</TableHead><TableHead>Prot (g)</TableHead><TableHead>Gord (g)</TableHead></TableRow></TableHeader>
+                            <TableBody>
+                                {mealAnalyses.map(meal => (
+                                    <TableRow key={meal.id}>
+                                        <TableCell>{formatDateTime(meal.timestamp)}</TableCell>
+                                        <TableCell>{meal.foodIdentification}</TableCell>
+                                        <TableCell>{meal.macronutrientEstimates.carbohydrates.toFixed(1)}</TableCell>
+                                        <TableCell>{meal.macronutrientEstimates.protein.toFixed(1)}</TableCell>
+                                        <TableCell>{meal.macronutrientEstimates.fat.toFixed(1)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </TabsContent>
             </Tabs>
           </CardContent>
