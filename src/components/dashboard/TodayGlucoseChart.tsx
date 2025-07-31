@@ -47,12 +47,22 @@ const GlucoseLevelDot = (props: any) => {
 export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucoseChartProps) {
 
   const chartData = useMemo(() => {
-    return readings.map(r => ({
-      time: parseISO(r.timestamp).getTime(),
-      glicemia: r.value,
-      level: r.level, 
-    }));
+    const dataMap = new Map<number, { time: number; glicemia: number; level: GlucoseReading['level'] }>();
+    
+    readings.forEach(r => {
+      const time = parseISO(r.timestamp).getTime();
+      // If a reading with the same timestamp already exists, this will overwrite it.
+      // Since the data is sorted, this is acceptable for this chart's purpose.
+      dataMap.set(time, {
+        time: time,
+        glicemia: r.value,
+        level: r.level,
+      });
+    });
+
+    return Array.from(dataMap.values());
   }, [readings]);
+
 
   const yDomain = useMemo(() => {
     if (readings.length === 0) return [40, 200]; // Domínio padrão se não houver dados
@@ -65,7 +75,7 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
   }, [readings]);
 
 
-  if (readings.length < 2) {
+  if (chartData.length < 2) {
     return (
       <div className="flex items-center justify-center h-[350px] text-center text-muted-foreground p-4">
         <p>São necessários pelo menos 2 registros nas últimas 24h para exibir o gráfico de tendência.</p>
@@ -151,4 +161,3 @@ export default function TodayGlucoseChart({ readings, userProfile }: TodayGlucos
     </div>
   );
 }
-
