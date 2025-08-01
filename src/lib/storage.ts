@@ -725,24 +725,22 @@ export async function getAllUserDataForAI(): Promise<any> {
         const isoDate = ninetyDaysAgo.toISOString();
 
         const [
-            { data: glucoseReadings, error: glucoseError },
-            { data: insulinLogs, error: insulinError },
-            { data: medicationLogs, error: medicationError },
-            { data: activityLogs, error: activityError },
-            { data: mealAnalyses, error: mealError }
+            glucoseReadings,
+            insulinLogs,
+            medicationLogs,
+            activityLogs,
+            mealAnalyses
         ] = await Promise.all([
-            supabase.from('glucose_readings').select('value, timestamp, meal_context, notes, level').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
-            supabase.from('insulin_logs').select('type, dose, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
-            supabase.from('medication_logs').select('medication_name, dosage, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
-            supabase.from('activity_logs').select('activity_type, duration_minutes, intensity, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false }),
-            supabase.from('meal_analyses').select('food_identification, macronutrient_estimates, timestamp').eq('user_id', userId).gte('timestamp', isoDate).order('timestamp', { ascending: false })
+            getGlucoseReadings(profile), // Pass profile to get classified levels
+            getInsulinLogs(),
+            getMedicationLogs(),
+            getActivityLogs(),
+            getMealAnalyses()
         ]);
-
-        if (glucoseError || insulinError || medicationError || activityError || mealError) {
-            console.error({ glucoseError, insulinError, medicationError, activityError, mealError });
-            throw new Error("Erro ao buscar dados de saúde para o assistente de IA.");
-        }
         
+        // Filter by date client-side to ensure consistency
+        const filterByDate = (items: any[]) => items.filter(item => new Date(item.timestamp) >= ninetyDaysAgo);
+
         return {
             userProfile: profile ? {
                 name: profile.name,
@@ -759,27 +757,26 @@ export async function getAllUserDataForAI(): Promise<any> {
                     targetGlucose: profile.target_glucose,
                 },
             } : {},
-            recentHealthData: {
-                glucoseReadings,
-                insulinLogs,
-                medicationLogs,
-                activityLogs,
-                mealAnalyses
+            healthData: {
+                glucoseReadings: filterByDate(glucoseReadings).map(r => ({ value: r.value, timestamp: r.timestamp, mealContext: r.mealContext, notes: r.notes, level: r.level })),
+                insulinLogs: filterByDate(insulinLogs).map(l => ({ type: l.type, dose: l.dose, timestamp: l.timestamp })),
+                medicationLogs: filterByDate(medicationLogs).map(m => ({ medicationName: m.medication_name, dosage: m.dosage, timestamp: m.timestamp })),
+                activityLogs: filterByDate(activityLogs).map(a => ({ activityType: a.activity_type, duration: a.duration_minutes, intensity: a.intensity, timestamp: a.timestamp })),
+                mealAnalyses: filterByDate(mealAnalyses).map(m => ({ food: m.foodIdentification, carbs: m.macronutrientEstimates.carbohydrates, timestamp: m.timestamp }))
             }
         };
+
     } catch (error) {
-        // This will catch the 'Usuário não autenticado' error as well.
         console.error("Failed to get all user data for AI:", error);
-        // Return an empty/default structure so the caller doesn't crash
         return {
             userProfile: {},
-            recentHealthData: {
+            healthData: {
                 glucoseReadings: [],
                 insulinLogs: [],
                 medicationLogs: [],
                 activityLogs: [],
                 mealAnalyses: []
             }
-        }
+        };
     }
 }
