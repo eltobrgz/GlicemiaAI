@@ -39,18 +39,18 @@ export default function BottomNavigationBar() {
     { type: 'voice', label: 'Voz', icon: Mic },
   ];
 
-  const directVisibleItems: NavItemDef[] = [
+  const mainItems: NavItemDef[] = [
     allNavItems.find(item => item.href === '/dashboard')!,
     allNavItems.find(item => item.type === 'glucose')!,
-    allNavItems.find(item => item.type === 'voice')!, // Central button is now voice
+    allNavItems.find(item => item.type === 'voice')!,
     allNavItems.find(item => item.type === 'insulin')!,
+    allNavItems.find(item => item.href === '/chat')!,
   ];
-  
+
   const popoverItems = allNavItems.filter(
-    item => !directVisibleItems.some(dItem => dItem.label === item.label)
+    item => !mainItems.some(dItem => dItem.label === item.label)
   ).sort((a, b) => {
-    // Put Chat first in the popover
-    const order = ['/chat', '/calendar', '/reports', '/bolus-calculator', '/meal-analysis', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
+    const order = ['/calendar', '/reports', '/bolus-calculator', '/meal-analysis', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
     const aKey = a.href || a.type;
     const bKey = b.href || b.type;
     return order.indexOf(aKey!) - order.indexOf(bKey!);
@@ -74,7 +74,7 @@ export default function BottomNavigationBar() {
     }
 
     const sharedClasses = cn(
-      'flex flex-col items-center justify-center text-center p-1 rounded-md w-1/5 group',
+      'flex flex-col items-center justify-center text-center p-1 rounded-md w-full group',
       isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary/90',
       'transition-colors duration-150'
     );
@@ -120,41 +120,27 @@ export default function BottomNavigationBar() {
       )
   }
 
+  const directVisibleItems = [
+    mainItems.find(i => i.label === 'Dashboard')!,
+    mainItems.find(i => i.label === 'Glicemia')!,
+    mainItems.find(i => i.label === 'Voz')!,
+    mainItems.find(i => i.label === 'Insulina')!,
+    mainItems.find(i => i.label === 'Assistente')!,
+  ];
+
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
-      <div className="flex justify-around items-center h-16">
+      <div className="flex justify-around items-center h-16 px-1">
+        
+        {/* Render the 5 main items */}
         {directVisibleItems.map((item) => (
-          <NavItem key={item.label} item={item} />
+          <div key={item.label} className="w-1/5 flex justify-center">
+            <NavItem item={item} />
+          </div>
         ))}
+        
+        {/* The Popover for "More" button will be removed, as we now have 5 main items */}
 
-        {popoverItems.length > 0 && (
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="ghost"
-                className={cn(
-                  'flex flex-col items-center justify-center text-center p-1 rounded-md w-1/5 group h-full',
-                  popoverItems.some(pItem => pItem.href && (pathname === pItem.href || pathname.startsWith(pItem.href)))
-                    ? 'text-primary'
-                    : 'text-muted-foreground hover:text-primary/90',
-                  'transition-colors duration-150'
-                )}
-              >
-                <MoreHorizontal className={cn('h-5 w-5 mb-0.5 transition-transform group-hover:scale-110',
-                  popoverItems.some(pItem => pItem.href && (pathname === pItem.href || pathname.startsWith(pItem.href))) ? 'text-primary' : ''
-                )} />
-                <span className="text-[11px] font-medium truncate">Mais</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent side="top" align="end" className="w-56 p-2 mb-2 rounded-xl shadow-xl">
-              <div className="space-y-1">
-                {popoverItems.map((item) => (
-                   <PopoverNavItem key={item.label} item={item} />
-                ))}
-              </div>
-            </PopoverContent>
-          </Popover>
-        )}
       </div>
     </nav>
   );
