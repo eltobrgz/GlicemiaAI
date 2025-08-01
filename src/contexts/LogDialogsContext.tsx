@@ -63,7 +63,7 @@ export const LogDialogsProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const notifySuccess = useCallback((logType: LogType) => {
-    // Run the achievement check after a successful log
+    // Run the achievement check after a successful log. This is a central point for all data entries.
     checkAndUnlockAchievements();
     listeners[logType].forEach(listener => listener());
     closeDialog();

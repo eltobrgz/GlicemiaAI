@@ -50,7 +50,7 @@ export default function DashboardPage() {
             setLastInsulin(insulinLogs[0]);
           }
 
-          // Check for achievements on dashboard load
+          // Check for achievements on dashboard load as a fallback/general check
           await checkAndUnlockAchievements();
         }
       } catch (error: any) {

@@ -310,10 +310,11 @@ export default function ReportGenerator() {
       }
 
       pdf.save(`GlicemiaAI_Relatorio_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
-      toast({ title: 'PDF Exportado', description: 'Seu relatório foi exportado com sucesso.' });
-
-      // Check for the "FIRST_REPORT_EXPORTED" achievement
+      
+      // Check for the "FIRST_REPORT_EXPORTED" achievement after successful export
       await checkAndUnlockAchievements();
+
+      toast({ title: 'PDF Exportado', description: 'Seu relatório foi exportado com sucesso.' });
 
     } catch (error) {
       console.error("Error exporting PDF:", error);
