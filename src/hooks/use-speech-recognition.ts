@@ -28,6 +28,7 @@ export function useSpeechRecognition() {
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<ISpeechRecognition | null>(null);
   const [hasSupport, setHasSupport] = useState<boolean | null>(null); // Use null for initial loading state
+  const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -39,6 +40,12 @@ export function useSpeechRecognition() {
       recognition.lang = 'pt-BR';
 
       recognition.onresult = (event: any) => {
+        // Clear any existing silence timer as soon as new results come in
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+            silenceTimerRef.current = null;
+        }
+
         let interimTranscript = '';
         let finalTranscript = '';
 
@@ -61,7 +68,14 @@ export function useSpeechRecognition() {
       };
       
       recognition.onend = () => {
-        setIsListening(false);
+        // This onend can be triggered by silence or by calling stop().
+        // We use a small delay to allow for natural pauses in speech.
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
+        }
+        silenceTimerRef.current = setTimeout(() => {
+            setIsListening(false);
+        }, 1000); // Wait 1 second before actually stopping.
       };
 
       recognitionRef.current = recognition as ISpeechRecognition;
@@ -69,6 +83,9 @@ export function useSpeechRecognition() {
       return () => {
         if(recognitionRef.current){
           recognitionRef.current.stop();
+        }
+        if (silenceTimerRef.current) {
+            clearTimeout(silenceTimerRef.current);
         }
       };
     } else {
@@ -78,6 +95,10 @@ export function useSpeechRecognition() {
 
   const startListening = useCallback(() => {
     if (recognitionRef.current && !isListening) {
+      if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       setTranscript('');
       setError(null);
       try {
@@ -93,6 +114,10 @@ export function useSpeechRecognition() {
 
   const stopListening = useCallback(() => {
     if (recognitionRef.current && isListening) {
+       if (silenceTimerRef.current) {
+        clearTimeout(silenceTimerRef.current);
+        silenceTimerRef.current = null;
+      }
       recognitionRef.current.stop();
       setIsListening(false);
     }
