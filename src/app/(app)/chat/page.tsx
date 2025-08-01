@@ -9,13 +9,11 @@ import { Input } from '@/components/ui/input';
 import { MessageSquare, Send, Loader2, Bot, User, Info, Mic, MicOff, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { conversationalAgent } from '@/ai/flows/conversational-agent';
-import { interpretVoiceLog } from '@/ai/flows/interpret-voice-log';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getAllUserDataForAI } from '@/lib/storage';
-import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 interface Message {
   id: string;
@@ -31,7 +29,6 @@ export default function ChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
-  const { openDialog } = useLogDialog();
 
   const {
     transcript,
@@ -111,47 +108,14 @@ export default function ChatPage() {
     }
   };
   
-  const handleDataLogCommand = async (command: string) => {
-    setIsLoading(true);
-     try {
-      const now = new Date().toISOString();
-      const result = await interpretVoiceLog({ input: command, now });
-
-      if (result.logType !== 'unrecognized') {
-         toast({ title: "Comando Reconhecido!", description: `Prepare-se para registrar: ${result.logType}`});
-         // Use a mapping to provide the correct initial data format
-         const initialDataMap = {
-            glucose: { value: result.value, notes: result.notes, timestamp: result.timestamp },
-            insulin: { dose: result.dose, type: result.insulinType, timestamp: result.timestamp },
-            medication: { medication_name: result.medicationName, dosage: result.dosage, notes: result.notes, timestamp: result.timestamp },
-            activity: { activity_type: result.activityType, duration_minutes: result.durationMinutes, notes: result.notes, timestamp: result.timestamp },
-         };
-         // @ts-ignore
-         openDialog(result.logType, initialDataMap[result.logType]);
-         setInput('');
-         return true; // Command was handled
-      }
-    } catch (error: any) {
-        console.error("Error interpreting voice log:", error);
-        toast({ title: "Erro ao Interpretar Comando", description: error.message, variant: "destructive" });
-    } finally {
-        setIsLoading(false);
-    }
-    return false; // Command was not a data log command
-  }
 
   const handleSubmit = async (e: React.FormEvent, text?: string) => {
     e.preventDefault();
     const userText = text || input;
     if (!userText.trim() || isLoading) return;
 
-    // First, try to interpret as a data log command
-    const wasHandledAsCommand = await handleDataLogCommand(userText);
-    
-    // If it was not a data log command, treat it as a conversational query
-    if (!wasHandledAsCommand) {
-        await handleAiQuery(userText);
-    }
+    // The chat page now ONLY handles conversational queries.
+    await handleAiQuery(userText);
   };
 
   const handlePlayAudio = async (messageId: string, text: string) => {
@@ -198,7 +162,7 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-10rem)]">
         <PageHeader
             title="Assistente IA"
-            description="Converse para registrar dados (ex: '120 de glicemia') ou obter insights (ex: 'qual minha média glicêmica?')."
+            description="Converse com a IA para obter insights sobre seus dados de saúde."
         />
         <div className="flex-1 flex flex-col bg-card border rounded-xl shadow-lg">
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
@@ -210,14 +174,13 @@ export default function ChatPage() {
                             <Info className="h-4 w-4" />
                             <AlertTitle>Olá! Como posso ajudar?</AlertTitle>
                             <AlertDescription>
-                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos **últimos 90 dias** ou registrar novos dados por voz.</p>
+                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos **últimos 90 dias**.</p>
                                 <strong className="block mb-1">Experimente dizer ou perguntar:</strong>
                                 <ul className="list-disc list-inside text-xs">
-                                    <li>120 de glicemia agora</li>
-                                    <li>15 unidades de insulina Tresiba</li>
                                     <li>Qual foi minha última glicemia?</li>
                                     <li>Liste minhas últimas 3 hiperglicemias.</li>
                                     <li>Resuma meus dados da última semana.</li>
+                                    <li>Como minha glicemia reagiu após a caminhada de ontem?</li>
                                 </ul>
                             </AlertDescription>
                         </Alert>
@@ -295,7 +258,7 @@ export default function ChatPage() {
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Pergunte algo ou diga um comando..."
+                        placeholder="Pergunte algo sobre seus dados..."
                         className="flex-1"
                         disabled={isLoading || isListening}
                     />
@@ -309,5 +272,3 @@ export default function ChatPage() {
     </div>
   );
 }
-
-    

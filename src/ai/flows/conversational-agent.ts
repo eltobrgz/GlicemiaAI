@@ -80,24 +80,9 @@ const conversationalAgentFlow = ai.defineFlow(
     outputSchema: z.string(),
   },
   async (input) => {
-    // Check if the user is asking for the very first reading
-    if (/primeira glicemia registrada/i.test(input.userQuestion)) {
-        try {
-            const userData = JSON.parse(input.userData);
-            if (userData?.healthData?.glucoseReadings && userData.healthData.glucoseReadings.length > 0) {
-                // Assuming readings are sorted, but we'll sort just in case
-                const sortedReadings = [...userData.healthData.glucoseReadings].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-                const firstReading = sortedReadings[0];
-                return `Sua primeira glicemia registrada foi de ${firstReading.value} mg/dL em ${new Date(firstReading.timestamp).toLocaleString('pt-BR')}.`;
-            }
-        } catch (e) {
-             // Fall through to default LLM if parsing fails
-        }
-    }
-
+    // Rely entirely on the LLM's capability to understand the context and question.
+    // Complex hardcoded checks are brittle and removed for simplicity and robustness.
     const llmResponse = await prompt(input);
     return llmResponse.text;
   }
 );
-
-    
