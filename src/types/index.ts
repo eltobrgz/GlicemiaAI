@@ -1,4 +1,5 @@
 
+
 import type { z } from 'zod';
 import type { 
   WeeklyInsightsInputSchema, 
@@ -131,22 +132,4 @@ export interface BolusCalculationResult {
   coverageDose: number;
   correctionDose: number;
   totalDose: number;
-}
-
-// Gamification Types
-export interface Achievement {
-  key: string;
-  name: string;
-  description: string;
-  icon: React.ElementType;
-  progress?: number; // 0-100
-  unlockedAt?: string; // ISO date string
-}
-
-export interface UserAchievement {
-  id: string;
-  user_id: string;
-  achievement_key: string;
-  unlocked_at: string;
-  metadata?: any;
 }

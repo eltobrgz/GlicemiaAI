@@ -38,7 +38,6 @@ export function SideNavigation() {
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
     { href: '/reports', label: 'Relatórios', icon: FileText }, 
     { href: '/insights', label: 'Insights IA', icon: BarChart3 },
-    { href: '/achievements', label: 'Conquistas', icon: Award },
   ];
 
   const userNavItems = [

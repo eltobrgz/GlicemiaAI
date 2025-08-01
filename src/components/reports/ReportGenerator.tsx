@@ -12,7 +12,7 @@ import { format, subDays, startOfMonth, endOfMonth, parseISO, differenceInDays }
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Loader2, FileSearch, Download } from 'lucide-react';
 import type { GlucoseReading, InsulinLog, UserProfile, ActivityLog, MealAnalysis, MedicationLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses, getMedicationLogs, checkAndUnlockAchievements } from '@/lib/storage';
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getActivityLogs, getMealAnalyses, getMedicationLogs } from '@/lib/storage';
 import ReportView, { type ReportData } from '@/components/reports/ReportView';
 import { useToast } from '@/hooks/use-toast';
 import jsPDF from 'jspdf';
@@ -311,9 +311,6 @@ export default function ReportGenerator() {
 
       pdf.save(`GlicemiaAI_Relatorio_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
       
-      // Check for the "FIRST_REPORT_EXPORTED" achievement after successful export
-      await checkAndUnlockAchievements();
-
       toast({ title: 'PDF Exportado', description: 'Seu relatório foi exportado com sucesso.' });
 
     } catch (error) {

@@ -1,11 +1,9 @@
 
 
-import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog, UserAchievement } from '@/types';
+import type { GlucoseReading, InsulinLog, ReminderConfig, MealAnalysis, UserProfile, ActivityLog, MedicationLog } from '@/types';
 import { createClient } from './supabaseClient';
 import { classifyGlucoseLevel, generateId } from './utils';
 import { toast } from '@/hooks/use-toast'; 
-import { ALL_ACHIEVEMENTS } from '@/config/constants';
-import { subDays, parseISO } from 'date-fns';
 
 const supabase = createClient();
 
@@ -763,114 +761,4 @@ export async function getAllUserDataForAI(): Promise<any> {
             mealAnalyses
         }
     };
-}
-
-
-// Gamification / Achievements
-export async function getUserAchievements(): Promise<UserAchievement[]> {
-  const userId = await getCurrentUserId();
-  const { data, error } = await supabase
-    .from('user_achievements')
-    .select('*')
-    .eq('user_id', userId);
-
-  if (error) {
-    console.error('Error fetching user achievements:', error);
-    throw error;
-  }
-  return data as UserAchievement[];
-}
-
-export async function unlockAchievement(achievementKey: string, metadata?: any): Promise<boolean> {
-  const userId = await getCurrentUserId();
-  const { error } = await supabase
-    .from('user_achievements')
-    .insert({
-      user_id: userId,
-      achievement_key: achievementKey,
-      metadata: metadata || null,
-    });
-
-  if (error) {
-    if (error.code === '23505') { // unique_violation
-      return false; // Already unlocked, not a new unlock
-    }
-    console.error(`Error unlocking achievement ${achievementKey}:`, error);
-    throw error;
-  }
-  return true; // Successfully unlocked
-}
-
-export async function checkAndUnlockAchievements() {
-  try {
-    const userId = await getCurrentUserId();
-    const profile = await getUserProfile();
-    if (!profile) return;
-
-    // Fetch all data necessary for checks
-    const [
-      unlockedAchievements,
-      allGlucose,
-      allMeals,
-      allActivities,
-      allReports, // This is a placeholder, as we don't have a reports table
-      allInsights, // Placeholder
-    ] = await Promise.all([
-      getUserAchievements(),
-      getGlucoseReadings(profile),
-      getMealAnalyses(),
-      getActivityLogs(),
-      Promise.resolve([]), // Placeholder for reports
-      Promise.resolve([]), // Placeholder for insights
-    ]);
-
-    const unlockedKeys = new Set(unlockedAchievements.map(a => a.achievement_key));
-
-    const checkAndUnlock = async (key: string, condition: boolean) => {
-      if (condition && !unlockedKeys.has(key)) {
-        const newlyUnlocked = await unlockAchievement(key);
-        if (newlyUnlocked) {
-          const achievement = ALL_ACHIEVEMENTS.find(a => a.key === key);
-          if (achievement) {
-            toast({
-              title: "🏆 Conquista Desbloqueada!",
-              description: achievement.name,
-            });
-          }
-        }
-      }
-    };
-
-    // --- Perform all checks ---
-
-    // Based on counts
-    await checkAndUnlock('FIRST_GLUCOSE_LOG', allGlucose.length > 0);
-    await checkAndUnlock('FIRST_MEAL_ANALYSIS', allMeals.length > 0);
-    await checkAndUnlock('MEAL_ANALYSIS_MASTER_10', allMeals.length >= 10);
-    await checkAndUnlock('ACTIVITY_LOG_10', allActivities.length >= 10);
-
-    // Streaks (needs date logic)
-    const uniqueDays = [...new Set(allGlucose.map(r => parseISO(r.timestamp).toDateString()))];
-    // This is a simplified streak check. A robust one is in utils, but for here this is ok.
-    await checkAndUnlock('CONSISTENT_LOGGING_STREAK_7_DAYS', uniqueDays.length >= 7);
-    await checkAndUnlock('CONSISTENT_LOGGING_STREAK_30_DAYS', uniqueDays.length >= 30);
-    
-    // Time in Target
-    const thirtyDaysAgo = subDays(new Date(), 30);
-    const recentGlucose = allGlucose.filter(r => parseISO(r.timestamp) >= thirtyDaysAgo);
-    if (recentGlucose.length > 0) {
-        const inTargetCount = recentGlucose.filter(r => r.level === 'normal').length;
-        const timeInTargetPercentage = (inTargetCount / recentGlucose.length) * 100;
-        await checkAndUnlock('TIME_IN_TARGET_30_DAYS_70_PERCENT', timeInTargetPercentage >= 70);
-    }
-    
-    // Check for single events (placeholders for now)
-    // These need to be triggered from their specific actions
-    // await checkAndUnlock('FIRST_REPORT_EXPORTED', ...);
-    // await checkAndUnlock('FIRST_INSIGHT_VIEWED', ...);
-
-  } catch (error) {
-    // Silently fail is ok for a background check
-    console.error("Failed to check for achievements:", error);
-  }
 }

@@ -3,7 +3,6 @@
 
 import React, { createContext, useState, useContext, useCallback, ReactNode } from 'react';
 import type { GlucoseReading, InsulinLog, ActivityLog, MedicationLog } from '@/types';
-import { checkAndUnlockAchievements } from '@/lib/storage';
 
 type LogType = 'glucose' | 'insulin' | 'activity' | 'medication' | 'voice';
 
@@ -63,8 +62,6 @@ export const LogDialogsProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const notifySuccess = useCallback((logType: LogType) => {
-    // Run the achievement check after a successful log. This is a central point for all data entries.
-    checkAndUnlockAchievements();
     listeners[logType].forEach(listener => listener());
     closeDialog();
   }, [listeners, closeDialog]);

@@ -1,4 +1,5 @@
 
+
 // src/types/supabase.ts
 
 // These type definitions are based on the assumed Supabase table structures.
@@ -256,26 +257,6 @@ export interface Database {
           medication_name?: string
           dosage?: string
           notes?: string | null
-        }
-      }
-      user_achievements: { // Nova tabela
-        Row: {
-          id: string // uuid, primary key
-          user_id: string // uuid, foreign key to auth.users.id
-          achievement_key: string // e.g., 'FIRST_WEEK_STREAK'
-          unlocked_at: string // timestamp with time zone
-          metadata: Json | null // Para armazenar dados extras, como o valor da métrica na hora do desbloqueio
-        }
-        Insert: {
-          id?: string // uuid
-          user_id: string
-          achievement_key: string
-          unlocked_at?: string
-          metadata?: Json | null
-        }
-        Update: {
-          unlocked_at?: string
-          metadata?: Json | null
         }
       }
     }

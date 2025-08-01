@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator, Award, Star } from 'lucide-react';
 import type { GlucoseReading, InsulinLog, MealAnalysis, ActivityLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs, getUserProfile, getMealAnalyses, getActivityLogs, checkAndUnlockAchievements } from '@/lib/storage'; 
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getMealAnalyses, getActivityLogs } from '@/lib/storage'; 
 import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/types';
 import WelcomeGoalsModal from '@/components/profile/WelcomeGoalsModal';
@@ -50,8 +50,6 @@ export default function DashboardPage() {
             setLastInsulin(insulinLogs[0]);
           }
 
-          // Check for achievements on dashboard load as a fallback/general check
-          await checkAndUnlockAchievements();
         }
       } catch (error: any) {
         if (error.message !== 'Usuário não autenticado.') {
@@ -62,7 +60,7 @@ export default function DashboardPage() {
 
     fetchInitialData();
 
-    // Re-fetch data and re-check achievements after new log entries
+    // Re-fetch data after new log entries
     const handleSuccess = () => {
         fetchInitialData();
     }
@@ -159,7 +157,7 @@ export default function DashboardPage() {
           </div>
         </section>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="flex items-center">
@@ -173,23 +171,6 @@ export default function DashboardPage() {
               </p>
               <Link href="/insights">
                 <Button variant="link" className="mt-2 p-0">Ver minha análise semanal</Button>
-              </Link>
-            </CardContent>
-          </Card>
-
-           <Card className="shadow-lg">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Award className="mr-2 h-6 w-6 text-yellow-500" />
-                Minhas Conquistas
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Veja suas medalhas e acompanhe seu progresso na jornada de gerenciamento.
-              </p>
-              <Link href="/achievements">
-                <Button variant="link" className="mt-2 p-0">Ver minhas conquistas</Button>
               </Link>
             </CardContent>
           </Card>
