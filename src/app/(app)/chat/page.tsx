@@ -6,14 +6,16 @@ import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, Bot, User, Info, Mic, MicOff, Volume2, Sparkles } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Bot, User, Info, Mic, MicOff, Volume2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { conversationalAgent } from '@/ai/flows/conversational-agent';
+import { interpretVoiceLog } from '@/ai/flows/interpret-voice-log';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
 import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getAllUserDataForAI } from '@/lib/storage';
+import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 interface Message {
   id: string;
@@ -29,6 +31,8 @@ export default function ChatPage() {
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
+  const { openDialog } = useLogDialog();
+
   const {
     transcript,
     isListening,
@@ -37,15 +41,20 @@ export default function ChatPage() {
     hasRecognitionSupport
   } = useSpeechRecognition();
 
-  useEffect(() => {
-    if (transcript) {
-        setInput(transcript);
-    }
-  }, [transcript]);
+  const finalTranscriptRef = useRef('');
 
   useEffect(() => {
-    if (!isListening && transcript.trim()) {
-        handleSubmit(new Event('submit') as any, transcript.trim());
+    if (isListening) {
+      setInput(transcript);
+      finalTranscriptRef.current = transcript;
+    }
+  }, [transcript, isListening]);
+  
+  useEffect(() => {
+    // When listening stops, process the final transcript.
+    if (!isListening && finalTranscriptRef.current.trim()) {
+      handleSubmit(new Event('submit') as any, finalTranscriptRef.current);
+      finalTranscriptRef.current = ''; // Clear the ref after processing
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isListening]);
@@ -62,11 +71,7 @@ export default function ChatPage() {
     }, 100);
   };
 
-  const handleSubmit = async (e: React.FormEvent, text?: string) => {
-    e.preventDefault();
-    const userText = text || input;
-    if (!userText.trim() || isLoading) return;
-
+  const handleAiQuery = async (userText: string) => {
     const newUserMessage: Message = { id: Date.now().toString(), role: 'user', text: userText };
     setMessages(prev => [...prev.filter(m => m.role !== 'welcome'), newUserMessage]);
     setInput('');
@@ -83,7 +88,6 @@ export default function ChatPage() {
       const responseText = await conversationalAgent({
           history: currentMessagesForAI,
           userData: userData,
-          userQuestion: userText,
       });
       
       if (responseText) {
@@ -106,8 +110,59 @@ export default function ChatPage() {
       scrollToBottom();
     }
   };
+  
+  const handleDataLogCommand = async (command: string) => {
+    setIsLoading(true);
+     try {
+      const now = new Date().toISOString();
+      const result = await interpretVoiceLog({ input: command, now });
+
+      if (result.logType !== 'unrecognized') {
+         toast({ title: "Comando Reconhecido!", description: `Prepare-se para registrar: ${result.logType}`});
+         // Use a mapping to provide the correct initial data format
+         const initialDataMap = {
+            glucose: { value: result.value, notes: result.notes, timestamp: result.timestamp },
+            insulin: { dose: result.dose, type: result.insulinType, timestamp: result.timestamp },
+            medication: { medication_name: result.medicationName, dosage: result.dosage, notes: result.notes, timestamp: result.timestamp },
+            activity: { activity_type: result.activityType, duration_minutes: result.durationMinutes, notes: result.notes, timestamp: result.timestamp },
+         };
+         // @ts-ignore
+         openDialog(result.logType, initialDataMap[result.logType]);
+         setInput('');
+         return true; // Command was handled
+      }
+    } catch (error: any) {
+        console.error("Error interpreting voice log:", error);
+        toast({ title: "Erro ao Interpretar Comando", description: error.message, variant: "destructive" });
+    } finally {
+        setIsLoading(false);
+    }
+    return false; // Command was not a data log command
+  }
+
+  const handleSubmit = async (e: React.FormEvent, text?: string) => {
+    e.preventDefault();
+    const userText = text || input;
+    if (!userText.trim() || isLoading) return;
+
+    // First, try to interpret as a data log command
+    const wasHandledAsCommand = await handleDataLogCommand(userText);
+    
+    // If it was not a data log command, treat it as a conversational query
+    if (!wasHandledAsCommand) {
+        await handleAiQuery(userText);
+    }
+  };
 
   const handlePlayAudio = async (messageId: string, text: string) => {
+      if(nowPlaying) {
+          if(audioRef.current) audioRef.current.pause();
+          if(nowPlaying === messageId) {
+              setNowPlaying(null);
+              return;
+          }
+      }
+
       setNowPlaying(messageId);
       try {
           const response = await textToSpeech(text);
@@ -122,8 +177,7 @@ export default function ChatPage() {
               description: "Não foi possível gerar o áudio.",
               variant: "destructive",
           });
-      } finally {
-          // setNowPlaying(null) will be handled by onEnded event of audio element
+          setNowPlaying(null);
       }
   };
   
@@ -144,24 +198,25 @@ export default function ChatPage() {
     <div className="flex flex-col h-[calc(100vh-10rem)]">
         <PageHeader
             title="Assistente IA"
-            description="Converse com a IA para obter insights e respostas sobre seus dados de saúde."
+            description="Converse para registrar dados (ex: '120 de glicemia') ou obter insights (ex: 'qual minha média glicêmica?')."
         />
         <div className="flex-1 flex flex-col bg-card border rounded-xl shadow-lg">
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
               <div className="space-y-4">
-                {messages.map((message, index) => {
+                {messages.map((message) => {
                   if (message.role === 'welcome') {
                     return (
                         <Alert variant="info" key="welcome-message">
                             <Info className="h-4 w-4" />
                             <AlertTitle>Olá! Como posso ajudar?</AlertTitle>
                             <AlertDescription>
-                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos **últimos 90 dias**. Lembre-se, eu sou uma IA e não um profissional de saúde.</p>
-                                <strong className="block mb-1">Experimente perguntar:</strong>
+                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos **últimos 90 dias** ou registrar novos dados por voz.</p>
+                                <strong className="block mb-1">Experimente dizer ou perguntar:</strong>
                                 <ul className="list-disc list-inside text-xs">
+                                    <li>120 de glicemia agora</li>
+                                    <li>15 unidades de insulina Tresiba</li>
                                     <li>Qual foi minha última glicemia?</li>
                                     <li>Liste minhas últimas 3 hiperglicemias.</li>
-                                    <li>Fiz algum exercício hoje?</li>
                                     <li>Resuma meus dados da última semana.</li>
                                 </ul>
                             </AlertDescription>
@@ -196,7 +251,7 @@ export default function ChatPage() {
                                     variant="ghost" 
                                     className="h-6 w-6 ml-2 mt-1"
                                     onClick={() => handlePlayAudio(message.id, message.text)}
-                                    disabled={nowPlaying === message.id}
+                                    disabled={isLoading}
                                     >
                                         {nowPlaying === message.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Volume2 className="h-4 w-4" />}
                                 </Button>
@@ -232,6 +287,7 @@ export default function ChatPage() {
                             size="icon" 
                             variant={isListening ? 'destructive' : 'outline'}
                             onClick={handleMicClick}
+                            disabled={isLoading}
                         >
                             {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
                         </Button>
@@ -241,7 +297,7 @@ export default function ChatPage() {
                         onChange={(e) => setInput(e.target.value)}
                         placeholder="Pergunte algo ou diga um comando..."
                         className="flex-1"
-                        disabled={isLoading}
+                        disabled={isLoading || isListening}
                     />
                     <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
@@ -253,3 +309,5 @@ export default function ChatPage() {
     </div>
   );
 }
+
+    
