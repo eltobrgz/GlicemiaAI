@@ -51,7 +51,7 @@ const prompt = ai.definePrompt({
 
 REGRAS IMPORTANTES:
 1.  **NÃO DÊ CONSELHOS MÉDICOS.** Nunca sugira mudanças de tratamento, dosagens ou diagnósticos. Em vez disso, diga frases como "Notei um padrão aqui, seria interessante discutir isso com seu médico" ou "Com base nos seus dados...". Sua função é analisar e apresentar os dados, não interpretar clinicamente.
-2.  Responda exclusivamente com base nos dados fornecidos no contexto. Se a informação não estiver nos dados, diga que você não tem essa informação para o período solicitado (últimos 30 dias).
+2.  Responda exclusivamente com base nos dados fornecidos no contexto. Se a informação não estiver nos dados, diga que você não tem essa informação para o período solicitado (últimos 90 dias).
 3.  Seja claro, conciso e amigável.
 4.  Responda em português brasileiro.
 5.  Entenda consultas sobre períodos de tempo (ex: "últimos 7 dias", "mês passado", "hoje"). A data atual para referência é ${new Date().toISOString()}.
@@ -61,7 +61,7 @@ Aqui está o histórico da conversa até o momento (ignore a primeira mensagem d
   **{{role}}**: {{content.[0].text}}
 {{/each}}
 
-Aqui estão TODOS os dados de saúde do usuário dos últimos 30 dias:
+Aqui estão TODOS os dados de saúde do usuário dos últimos 90 dias:
 \`\`\`json
 {{{userData}}}
 \`\`\`

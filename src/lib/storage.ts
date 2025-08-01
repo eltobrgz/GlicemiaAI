@@ -720,9 +720,9 @@ export async function getAllUserDataForAI(): Promise<any> {
         const userId = await getCurrentUserId();
         const profile = await getUserProfile();
 
-        const thirtyDaysAgo = new Date();
-        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-        const isoDate = thirtyDaysAgo.toISOString();
+        const ninetyDaysAgo = new Date();
+        ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+        const isoDate = ninetyDaysAgo.toISOString();
 
         const [
             { data: glucoseReadings, error: glucoseError },
