@@ -89,8 +89,8 @@ export function SideNavigation() {
         tooltip: { children: item.label, side: 'right', align: 'center' },
       };
       
-      // Special styling for voice registration and chat
-      if (('type' in item && item.type === 'voice') || ('href' in item && item.href === '/chat')) {
+      // Special styling for voice registration
+      if ('type' in item && item.type === 'voice') {
         buttonProps.className = cn(buttonProps.className, "bg-primary/5 text-primary hover:bg-primary/10 font-medium");
       }
 
