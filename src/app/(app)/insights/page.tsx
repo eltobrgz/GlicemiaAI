@@ -1,3 +1,4 @@
+
 'use client';
 
 import InsightsDisplay from '@/components/insights/InsightsDisplay';
