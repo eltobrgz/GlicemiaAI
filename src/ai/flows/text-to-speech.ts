@@ -12,10 +12,10 @@ import wav from 'wav';
 import { googleAI } from '@genkit-ai/googleai';
 
 // Input schema for the TTS flow, expecting a simple string.
-export const TextToSpeechInputSchema = z.string();
+const TextToSpeechInputSchema = z.string();
 
 // Output schema for the TTS flow, returning the audio as a data URI string.
-export const TextToSpeechOutputSchema = z.object({
+const TextToSpeechOutputSchema = z.object({
   audioDataUri: z.string().describe('The generated audio as a base64-encoded WAV data URI.'),
 });
 export type TextToSpeechOutput = z.infer<typeof TextToSpeechOutputSchema>;
