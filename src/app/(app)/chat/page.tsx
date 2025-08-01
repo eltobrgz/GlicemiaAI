@@ -113,8 +113,6 @@ export default function ChatPage() {
     e.preventDefault();
     const userText = text || input;
     if (!userText.trim() || isLoading) return;
-
-    // The chat page now ONLY handles conversational queries.
     await handleAiQuery(userText);
   };
 

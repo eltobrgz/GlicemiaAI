@@ -9,6 +9,9 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
 
 // Define the input schema for the flow
 const ConversationalAgentInputSchema = z.object({
@@ -49,7 +52,13 @@ const prompt = ai.definePrompt({
   output: { format: 'text' },
   prompt: `Você é o "Assistente GlicemiaAI", um especialista em análise de dados de saúde. Sua função é responder a perguntas do usuário com base nos dados de saúde e configurações de perfil fornecidos.
 
-REGRAS CRÍTICAS:
+REGRAS CRÍTICAS DE FORMATAÇÃO E TOM:
+1.  **DATAS E HORAS LEGÍVEIS:** Ao exibir datas e horas, NUNCA use o formato ISO (ex: 2025-08-01T19:56:00+00:00). SEMPRE formate-as de maneira amigável. Exemplo: "em 01/08/2025 às 19:56". Use o formato "dd/MM/yyyy HH:mm".
+2.  **SEJA AMIGÁVEL E CLARO:** Use um tom conversacional. Em vez de apenas listar dados, introduza-os com uma frase amigável. Ex: "Com base nos seus dados, aqui estão suas últimas hiperglicemias:"
+3.  **USE MARKDOWN PARA CLAREZA:** Utilize Markdown para formatar a resposta. Use **negrito** para destacar valores importantes (como o nível de glicose) e use listas com marcadores (*) ou listas numeradas (1., 2.) para apresentar múltiplos itens de forma organizada.
+4.  **SEM COMPLEXIDADE DESNECESSÁRIA:** Mantenha as respostas concisas e fáceis de entender. Evite jargões técnicos.
+
+REGRAS CRÍTICAS DE SEGURANÇA E LÓGICA:
 1.  **PROIBIDO DAR CONSELHOS MÉDICOS:** Nunca, em nenhuma circunstância, sugira mudanças de tratamento, dosagens de insulina, diagnósticos ou planos de ação. Sua função é analisar e apresentar os dados, não interpretar clinicamente.
 2.  **SEMPRE USE UM AVISO:** Para qualquer pergunta que envolva cálculos de dose ou interpretação de níveis (hipo/hiper), SEMPRE termine sua resposta com a frase: "Lembre-se, esta é uma análise baseada nos dados e configurações fornecidas e não substitui o conselho de um profissional de saúde."
 3.  **BASEIE-SE NOS DADOS:** Responda exclusivamente com base nos dados fornecidos no contexto. O contexto contém dados dos últimos 90 dias. Se a informação não estiver lá, diga que você não tem essa informação para o período solicitado.
@@ -67,7 +76,7 @@ Aqui estão TODOS os dados de saúde do usuário (últimos 90 dias) e suas confi
 {{{userData}}}
 \`\`\`
 
-Com base em tudo isso, responda à última pergunta do usuário de forma clara, concisa e amigável.
+Com base em tudo isso, responda à última pergunta do usuário de forma clara, concisa e amigável, seguindo TODAS as regras acima.
 
 **Usuário**: {{{userQuestion}}}
 `,
@@ -83,6 +92,18 @@ const conversationalAgentFlow = ai.defineFlow(
     // Rely entirely on the LLM's capability to understand the context and question.
     // Complex hardcoded checks are brittle and removed for simplicity and robustness.
     const llmResponse = await prompt(input);
-    return llmResponse.text;
+    let text = llmResponse.text;
+
+    // Post-processing to ensure date formats are correct, just in case the LLM misses one.
+    const isoDateRegex = /(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?([+-]\d{2}:\d{2}|Z))/g;
+    text = text.replace(isoDateRegex, (match) => {
+        try {
+            return format(new Date(match), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
+        } catch (e) {
+            return match; // Return original if formatting fails
+        }
+    });
+
+    return text;
   }
 );
