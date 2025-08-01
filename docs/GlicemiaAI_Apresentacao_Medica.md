@@ -101,3 +101,6 @@ Entendemos a sensibilidade dos dados de saúde. A plataforma GlicemiaAI utiliza 
 ## 7. Conclusão
 
 O GlicemiaAI é mais do que um diário digital. É um assistente inteligente projetado para ser um elo de comunicação eficaz entre o paciente e a equipe de saúde. Ao fornecer dados claros, contextualizados e acionáveis, a plataforma visa facilitar o manejo do diabetes, apoiar decisões clínicas baseadas em evidências e, finalmente, melhorar a qualidade de vida dos pacientes.
+
+
+
