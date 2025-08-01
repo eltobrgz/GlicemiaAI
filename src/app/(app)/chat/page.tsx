@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, Bot, User, Info, Mic, MicOff, Volume2 } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Bot, User, Info, Mic, MicOff, Volume2, Headphones } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { conversationalAgent } from '@/ai/flows/conversational-agent';
 import { textToSpeech } from '@/ai/flows/text-to-speech';
@@ -14,6 +14,7 @@ import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getAllUserDataForAI } from '@/lib/storage';
+import VoiceConversationModal from '@/components/chat/VoiceConversationModal';
 
 interface Message {
   id: string;
@@ -26,6 +27,7 @@ export default function ChatPage() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [nowPlaying, setNowPlaying] = useState<string | null>(null);
+  const [isVoiceConversationModalOpen, setIsVoiceConversationModalOpen] = useState(false);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
@@ -143,11 +145,22 @@ export default function ChatPage() {
   }, [messages]);
 
   return (
+    <>
     <div className="flex flex-col h-[calc(100vh-10rem)]">
         <PageHeader
             title="Assistente IA"
             description="Converse com a IA para obter insights sobre seus dados de saúde."
-        />
+        >
+            <Button 
+                variant="outline" 
+                onClick={() => setIsVoiceConversationModalOpen(true)}
+                disabled={!hasRecognitionSupport}
+                title="Iniciar modo de conversa por voz"
+                >
+                <Headphones className="mr-2 h-4 w-4" />
+                Conversar
+            </Button>
+        </PageHeader>
         <div className="flex-1 flex flex-col bg-card border rounded-xl shadow-lg overflow-hidden">
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
               <div className="space-y-4">
@@ -253,5 +266,12 @@ export default function ChatPage() {
         </div>
         <audio ref={audioRef} onEnded={() => setNowPlaying(null)} className="hidden" />
     </div>
+     <VoiceConversationModal 
+        isOpen={isVoiceConversationModalOpen} 
+        onClose={() => setIsVoiceConversationModalOpen(false)} 
+    />
+    </>
   );
 }
+
+    
