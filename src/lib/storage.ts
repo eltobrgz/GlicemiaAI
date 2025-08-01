@@ -751,8 +751,13 @@ export async function getAllUserDataForAI(): Promise<any> {
                     hypo: profile.hypo_glucose_threshold,
                     low: profile.target_glucose_low,
                     high: profile.target_glucose_high,
-                    hyper: profile.hyper_glucose_threshold
-                }
+                    hyper: profile.hyper_glucose_threshold,
+                },
+                bolusFactors: {
+                    carbRatio: profile.carb_ratio,
+                    correctionFactor: profile.correction_factor,
+                    targetGlucose: profile.target_glucose,
+                },
             } : {},
             recentHealthData: {
                 glucoseReadings,
