@@ -103,7 +103,7 @@ export default function ChatPage() {
                             <Info className="h-4 w-4" />
                             <AlertTitle>Olá! Como posso ajudar?</AlertTitle>
                             <AlertDescription>
-                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos últimos 30 dias. Lembre-se, eu sou uma IA e não um profissional de saúde.</p>
+                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos **últimos 30 dias**. Lembre-se, eu sou uma IA e não um profissional de saúde.</p>
                                 <strong className="block mb-1">Experimente perguntar:</strong>
                                 <ul className="list-disc list-inside text-xs">
                                     <li>Qual foi minha última glicemia?</li>
