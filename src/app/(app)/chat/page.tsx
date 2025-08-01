@@ -1,29 +1,55 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
-import { MessageSquare, Send, Loader2, Bot, User, Info } from 'lucide-react';
+import { MessageSquare, Send, Loader2, Bot, User, Info, Mic, MicOff, Volume2, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { conversationalAgent } from '@/ai/flows/conversational-agent';
+import { textToSpeech } from '@/ai/flows/text-to-speech';
+import { useSpeechRecognition } from '@/hooks/use-speech-recognition';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { getAllUserDataForAI } from '@/lib/storage';
 
 interface Message {
+  id: string;
   role: 'user' | 'model' | 'welcome';
   text: string;
 }
 
 export default function ChatPage() {
-  const [messages, setMessages] = useState<Message[]>([{ role: 'welcome', text: 'Welcome Message' }]);
+  const [messages, setMessages] = useState<Message[]>([{ id: 'welcome', role: 'welcome', text: 'Welcome Message' }]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [nowPlaying, setNowPlaying] = useState<string | null>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const { toast } = useToast();
+  const {
+    transcript,
+    isListening,
+    startListening,
+    stopListening,
+    hasRecognitionSupport
+  } = useSpeechRecognition();
+
+  useEffect(() => {
+    if (transcript) {
+        setInput(transcript);
+    }
+  }, [transcript]);
+
+  useEffect(() => {
+    if (!isListening && transcript.trim()) {
+        handleSubmit(new Event('submit') as any, transcript.trim());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isListening]);
+
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -36,34 +62,32 @@ export default function ChatPage() {
     }, 100);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent, text?: string) => {
     e.preventDefault();
-    if (!input.trim() || isLoading) return;
+    const userText = text || input;
+    if (!userText.trim() || isLoading) return;
 
-    const newUserMessage: Message = { role: 'user', text: input };
+    const newUserMessage: Message = { id: Date.now().toString(), role: 'user', text: userText };
     setMessages(prev => [...prev.filter(m => m.role !== 'welcome'), newUserMessage]);
     setInput('');
     setIsLoading(true);
     scrollToBottom();
 
     try {
-      // 1. Fetch user data before calling the agent
       const userData = await getAllUserDataForAI();
-
-      // 2. Prepare the history for the AI
       const currentMessagesForAI = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
         role: msg.role as 'user' | 'model',
         content: [{ text: msg.text }],
       }));
 
-      // 3. Call the agent with history and user data
       const responseText = await conversationalAgent({
           history: currentMessagesForAI,
-          userData: userData
+          userData: userData,
+          userQuestion: userText,
       });
       
       if (responseText) {
-        const newAiMessage: Message = { role: 'model', text: responseText };
+        const newAiMessage: Message = { id: Date.now().toString() + '-ai', role: 'model', text: responseText };
         setMessages(prev => [...prev, newAiMessage]);
       } else {
         throw new Error("A resposta da IA está vazia ou em formato inesperado.");
@@ -75,13 +99,42 @@ export default function ChatPage() {
         description: error.message || "Não foi possível obter uma resposta da IA.",
         variant: "destructive",
       });
-      const errorMessage: Message = { role: 'model', text: 'Desculpe, ocorreu um erro ao tentar me comunicar com a IA. Por favor, tente novamente.' };
+      const errorMessage: Message = { id: 'error', role: 'model', text: 'Desculpe, ocorreu um erro ao tentar me comunicar com a IA. Por favor, tente novamente.' };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
       scrollToBottom();
     }
   };
+
+  const handlePlayAudio = async (messageId: string, text: string) => {
+      setNowPlaying(messageId);
+      try {
+          const response = await textToSpeech(text);
+          if (audioRef.current) {
+              audioRef.current.src = response.audioDataUri;
+              audioRef.current.play();
+          }
+      } catch (error: any) {
+          console.error("TTS error:", error);
+          toast({
+              title: "Erro de Áudio",
+              description: "Não foi possível gerar o áudio.",
+              variant: "destructive",
+          });
+      } finally {
+          // setNowPlaying(null) will be handled by onEnded event of audio element
+      }
+  };
+  
+  const handleMicClick = () => {
+      if (isListening) {
+          stopListening();
+      } else {
+          startListening();
+      }
+  };
+
 
   useEffect(() => {
     scrollToBottom();
@@ -107,7 +160,7 @@ export default function ChatPage() {
                                 <strong className="block mb-1">Experimente perguntar:</strong>
                                 <ul className="list-disc list-inside text-xs">
                                     <li>Qual foi minha última glicemia?</li>
-                                    <li>Qual minha maior glicemia no último mês?</li>
+                                    <li>Liste minhas últimas 3 hiperglicemias.</li>
                                     <li>Fiz algum exercício hoje?</li>
                                     <li>Resuma meus dados da última semana.</li>
                                 </ul>
@@ -117,7 +170,7 @@ export default function ChatPage() {
                   }
                   return (
                     <div
-                        key={index}
+                        key={message.id}
                         className={cn(
                         'flex items-start gap-3',
                         message.role === 'user' ? 'justify-end' : 'justify-start'
@@ -136,7 +189,18 @@ export default function ChatPage() {
                             : 'bg-muted'
                         )}
                         >
-                        {message.text}
+                            {message.text}
+                            {message.role === 'model' && (
+                                <Button 
+                                    size="icon" 
+                                    variant="ghost" 
+                                    className="h-6 w-6 ml-2 mt-1"
+                                    onClick={() => handlePlayAudio(message.id, message.text)}
+                                    disabled={nowPlaying === message.id}
+                                    >
+                                        {nowPlaying === message.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Volume2 className="h-4 w-4" />}
+                                </Button>
+                            )}
                         </div>
                         {message.role === 'user' && (
                         <div className="flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center">
@@ -162,19 +226,30 @@ export default function ChatPage() {
             
             <div className="p-4 border-t">
                 <form onSubmit={handleSubmit} className="flex items-center gap-2">
-                <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Pergunte algo..."
-                    className="flex-1"
-                    disabled={isLoading}
-                />
-                <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
-                    {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-                </Button>
+                    {hasRecognitionSupport && (
+                        <Button 
+                            type="button" 
+                            size="icon" 
+                            variant={isListening ? 'destructive' : 'outline'}
+                            onClick={handleMicClick}
+                        >
+                            {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+                        </Button>
+                    )}
+                    <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Pergunte algo ou diga um comando..."
+                        className="flex-1"
+                        disabled={isLoading}
+                    />
+                    <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
+                        {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
+                    </Button>
                 </form>
             </div>
         </div>
+        <audio ref={audioRef} onEnded={() => setNowPlaying(null)} className="hidden" />
     </div>
   );
 }

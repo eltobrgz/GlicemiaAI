@@ -25,7 +25,6 @@ export default function BottomNavigationBar() {
     { href: '/dashboard', label: 'Dashboard', icon: Home },
     { type: 'glucose', label: 'Glicemia', icon: Droplet },
     { type: 'insulin', label: 'Insulina', icon: Pill },
-    { type: 'voice', label: 'Voz', icon: Mic },
     { href: '/chat', label: 'Assistente', icon: MessageSquare },
     { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { type: 'medication', label: 'Medicamento', icon: ClipboardPlus },
@@ -41,15 +40,15 @@ export default function BottomNavigationBar() {
 
   const directVisibleItems: NavItemDef[] = [
     allNavItems.find(item => item.href === '/dashboard')!,
-    allNavItems.find(item => item.href === '/chat')!,
-    allNavItems.find(item => item.type === 'voice')!,
-    allNavItems.find(item => item.href === '/meal-analysis')!,
+    allNavItems.find(item => item.type === 'glucose')!,
+    allNavItems.find(item => item.href === '/chat')!, // Central button
+    allNavItems.find(item => item.type === 'insulin')!,
   ];
   
   const popoverItems = allNavItems.filter(
     item => !directVisibleItems.some(dItem => dItem.label === item.label)
   ).sort((a, b) => {
-    const order = ['/calendar', '/reports', '/bolus-calculator', 'glucose', 'insulin', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
+    const order = ['/calendar', '/reports', '/bolus-calculator', '/meal-analysis', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
     const aKey = a.href || a.type;
     const bKey = b.href || b.type;
     return order.indexOf(aKey!) - order.indexOf(bKey!);
@@ -58,23 +57,26 @@ export default function BottomNavigationBar() {
   const NavItem = ({ item }: { item: NavItemDef }) => {
     const isActive = item.href ? (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) : false;
     
+    // Special styling for the central Chat button
+    if (item.href === '/chat') {
+      return (
+         <Link href={item.href} className="flex flex-col items-center justify-center text-center -mt-6">
+            <div className={cn(
+                "flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transform transition-transform hover:scale-110",
+                isActive && "ring-4 ring-primary/50"
+            )}>
+              <item.icon className='h-7 w-7' />
+            </div>
+            <span className="text-[11px] font-medium text-primary mt-1">{item.label}</span>
+        </Link>
+      )
+    }
+
     const sharedClasses = cn(
       'flex flex-col items-center justify-center text-center p-1 rounded-md w-1/5 group',
       isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary/90',
       'transition-colors duration-150'
     );
-    
-    // Special styling for the central Voice button
-    if (item.type === 'voice') {
-      return (
-         <button onClick={() => openDialog(item.type!)} className="flex flex-col items-center justify-center text-center -mt-6">
-            <div className="flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transform transition-transform hover:scale-110">
-              <item.icon className='h-7 w-7' />
-            </div>
-            <span className="text-[11px] font-medium text-primary mt-1">{item.label}</span>
-        </button>
-      )
-    }
 
     if (item.href) {
       return (
@@ -86,7 +88,7 @@ export default function BottomNavigationBar() {
     }
     
     return (
-      <button onClick={() => openDialog(item.type!)} className={sharedClasses}>
+      <button onClick={() => openDialog(item.type! as 'glucose' | 'insulin' | 'activity' | 'medication')} className={sharedClasses}>
         <item.icon className='h-5 w-5 mb-0.5 transition-transform group-hover:scale-110' />
         <span className="text-[11px] font-medium truncate">{item.label}</span>
       </button>
@@ -110,7 +112,7 @@ export default function BottomNavigationBar() {
         );
       }
       return (
-        <button onClick={() => openDialog(item.type!)} className={sharedClasses}>
+        <button onClick={() => openDialog(item.type! as any)} className={sharedClasses}>
           <item.icon className='h-5 w-5 text-muted-foreground group-hover:text-foreground' />
           <span>{item.label}</span>
         </button>
