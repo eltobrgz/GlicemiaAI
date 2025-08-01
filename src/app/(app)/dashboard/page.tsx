@@ -8,68 +8,22 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator, Award, Star } from 'lucide-react';
 import type { GlucoseReading, InsulinLog, MealAnalysis, ActivityLog } from '@/types';
-import { getGlucoseReadings, getInsulinLogs, getUserProfile, getMealAnalyses, getActivityLogs, unlockAchievement, getUserAchievements } from '@/lib/storage'; 
+import { getGlucoseReadings, getInsulinLogs, getUserProfile, getMealAnalyses, getActivityLogs, checkAndUnlockAchievements } from '@/lib/storage'; 
 import { useToast } from '@/hooks/use-toast';
-import type { UserProfile, UserAchievement } from '@/types';
+import type { UserProfile } from '@/types';
 import WelcomeGoalsModal from '@/components/profile/WelcomeGoalsModal';
 import DashboardStats from '@/components/dashboard/DashboardStats';
 import { useLogDialog } from '@/contexts/LogDialogsContext';
-import { calculateConsecutiveDaysStreak } from '@/lib/utils';
-import { ALL_ACHIEVEMENTS } from '@/config/constants';
 
 
 export default function DashboardPage() {
   const [lastGlucose, setLastGlucose] = useState<GlucoseReading | null>(null);
   const [allGlucose, setAllGlucose] = useState<GlucoseReading[]>([]);
-  const [allMeals, setAllMeals] = useState<MealAnalysis[]>([]);
-  const [allActivities, setAllActivities] = useState<ActivityLog[]>([]);
   const [lastInsulin, setLastInsulin] = useState<InsulinLog | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isWelcomeModalOpen, setIsWelcomeModalOpen] = useState(false);
   const { toast } = useToast();
   const { openDialog, addSuccessListener } = useLogDialog();
-
-  const checkAndUnlockNewAchievements = async (
-    allData: {
-      glucose: GlucoseReading[],
-      meals: MealAnalysis[],
-      activities: ActivityLog[]
-    },
-    unlockedAchievements: UserAchievement[]
-  ) => {
-    const { glucose, meals, activities } = allData;
-    const unlockedKeys = new Set(unlockedAchievements.map(a => a.achievement_key));
-
-    const checkAndUnlock = async (key: string, condition: boolean) => {
-      if (condition && !unlockedKeys.has(key)) {
-        await unlockAchievement(key);
-        const achievement = ALL_ACHIEVEMENTS.find(a => a.key === key);
-        if (achievement) {
-          toast({
-            title: "🏆 Conquista Desbloqueada!",
-            description: achievement.name,
-          });
-        }
-        return true; // Indicates an achievement was unlocked
-      }
-      return false;
-    };
-
-    let newAchievements = false;
-    newAchievements = (await checkAndUnlock('FIRST_GLUCOSE_LOG', glucose.length > 0)) || newAchievements;
-    newAchievements = (await checkAndUnlock('FIRST_MEAL_ANALYSIS', meals.length > 0)) || newAchievements;
-    newAchievements = (await checkAndUnlock('MEAL_ANALYSIS_MASTER_10', meals.length >= 10)) || newAchievements;
-    newAchievements = (await checkAndUnlock('ACTIVITY_LOG_10', activities.length >= 10)) || newAchievements;
-
-    const streak = calculateConsecutiveDaysStreak(glucose);
-    newAchievements = (await checkAndUnlock('CONSISTENT_LOGGING_STREAK_7_DAYS', streak >= 7)) || newAchievements;
-    newAchievements = (await checkAndUnlock('CONSISTENT_LOGGING_STREAK_30_DAYS', streak >= 30)) || newAchievements;
-  
-    // TODO: Implement logic for TIME_IN_TARGET and FIRST_REPORT_EXPORTED
-    
-    // Potentially re-fetch achievements if new ones were unlocked
-    // This is optional and depends on whether the UI needs immediate update
-  };
   
 
   useEffect(() => {
@@ -83,17 +37,12 @@ export default function DashboardPage() {
             setIsWelcomeModalOpen(true);
           }
           
-          const [glucoseReadings, insulinLogs, mealAnalyses, activityLogs, userAchievements] = await Promise.all([
+          const [glucoseReadings, insulinLogs] = await Promise.all([
             getGlucoseReadings(profile),
             getInsulinLogs(),
-            getMealAnalyses(),
-            getActivityLogs(),
-            getUserAchievements()
           ]);
           
           setAllGlucose(glucoseReadings);
-          setAllMeals(mealAnalyses);
-          setAllActivities(activityLogs);
           if (glucoseReadings.length > 0) {
             setLastGlucose(glucoseReadings[0]);
           }
@@ -101,8 +50,8 @@ export default function DashboardPage() {
             setLastInsulin(insulinLogs[0]);
           }
 
-          // Check for achievements
-          await checkAndUnlockNewAchievements({ glucose: glucoseReadings, meals: mealAnalyses, activities: activityLogs }, userAchievements);
+          // Check for achievements on dashboard load
+          await checkAndUnlockAchievements();
         }
       } catch (error: any) {
         if (error.message !== 'Usuário não autenticado.') {
@@ -113,11 +62,15 @@ export default function DashboardPage() {
 
     fetchInitialData();
 
-    // Re-fetch data and check achievements after new log entries
-    const unsubscribeGlucose = addSuccessListener('glucose', fetchInitialData);
-    const unsubscribeInsulin = addSuccessListener('insulin', fetchInitialData);
-    const unsubscribeMedication = addSuccessListener('medication', fetchInitialData);
-    const unsubscribeActivity = addSuccessListener('activity', fetchInitialData);
+    // Re-fetch data and re-check achievements after new log entries
+    const handleSuccess = () => {
+        fetchInitialData();
+    }
+
+    const unsubscribeGlucose = addSuccessListener('glucose', handleSuccess);
+    const unsubscribeInsulin = addSuccessListener('insulin', handleSuccess);
+    const unsubscribeMedication = addSuccessListener('medication', handleSuccess);
+    const unsubscribeActivity = addSuccessListener('activity', handleSuccess);
     
     return () => {
       unsubscribeGlucose();
