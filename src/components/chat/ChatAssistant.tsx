@@ -40,13 +40,14 @@ export default function ChatAssistant() {
           const parsedPosition = JSON.parse(savedPosition);
           setPosition(parsedPosition);
         } else {
+          // Default position logic
           const buttonWidth = 48; // w-12
           const buttonHeight = 48; // h-12
           const marginX = window.innerWidth > 768 ? 40 : 24;
-          const marginY = window.innerHeight > 768 ? 40 : 24;
+          const marginY = 80; // Space for bottom nav
           setPosition({
             x: window.innerWidth - buttonWidth - marginX,
-            y: window.innerHeight - buttonHeight - marginY - 140, // Adjust for bottom nav bar and voice assistant
+            y: window.innerHeight - buttonHeight - marginY,
           });
         }
       } catch (error) {
@@ -54,10 +55,10 @@ export default function ChatAssistant() {
          const buttonWidth = 48;
          const buttonHeight = 48;
          const marginX = window.innerWidth > 768 ? 40 : 24;
-         const marginY = window.innerHeight > 768 ? 40 : 24;
+         const marginY = 80;
         setPosition({
           x: window.innerWidth - buttonWidth - marginX,
-          y: window.innerHeight - buttonHeight - marginY - 140,
+          y: window.innerHeight - buttonHeight - marginY,
         });
       }
     };
@@ -80,7 +81,7 @@ export default function ChatAssistant() {
 
   const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (buttonRef.current) {
-      setWasDragged(false);
+      setWasDragged(false); // Reset drag state on new pointer down
       setIsDragging(true);
       const rect = buttonRef.current.getBoundingClientRect();
       setDragOffset({
@@ -109,14 +110,13 @@ export default function ChatAssistant() {
 
   const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
     if (buttonRef.current) {
-      setIsDragging(false);
       buttonRef.current.releasePointerCapture(e.pointerId);
       if (wasDragged) {
         localStorage.setItem(CHAT_ASSISTANT_POSITION_KEY, JSON.stringify(position));
       }
+      setIsDragging(false);
     }
   };
-
 
   const handleOpenChange = (open: boolean) => {
     setIsOpen(open);
@@ -127,15 +127,18 @@ export default function ChatAssistant() {
     }
   };
 
-  const handleButtonClick = () => {
-      if(wasDragged) return;
+  const handleButtonClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (wasDragged) {
+        setWasDragged(false); // Reset for next click
+        return;
+      }
       handleOpenChange(!isOpen);
   }
 
   const scrollToBottom = () => {
     setTimeout(() => {
         if (scrollAreaRef.current) {
-            const scrollableView = scrollAreaRef.current.children[0] as HTMLDivElement;
+            const scrollableView = scrollAreaRef.current.querySelector('[data-radix-scroll-area-viewport]');
             if(scrollableView) {
                  scrollableView.scrollTop = scrollableView.scrollHeight;
             }
@@ -149,17 +152,17 @@ export default function ChatAssistant() {
 
     const newUserMessage: Message = { role: 'user', text: input };
     const currentMessages = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
-      role: msg.role,
+      role: msg.role as 'user' | 'model',
       content: [{ text: msg.text }],
     }));
     
-    setMessages(prev => [...prev, newUserMessage]);
+    setMessages(prev => [...prev.filter(m => m.role !== 'welcome'), newUserMessage]);
     setInput('');
     setIsLoading(true);
     scrollToBottom();
 
     try {
-      const responseText = await conversationalAgent(currentMessages as any);
+      const responseText = await conversationalAgent(currentMessages);
       
       if (responseText) {
         const newAiMessage: Message = { role: 'model', text: responseText };
@@ -174,7 +177,7 @@ export default function ChatAssistant() {
         description: error.message || "Não foi possível obter uma resposta da IA.",
         variant: "destructive",
       });
-      const errorMessage: Message = { role: 'model', text: 'Desculpe, ocorreu um erro. Por favor, tente novamente.' };
+      const errorMessage: Message = { role: 'model', text: 'Desculpe, ocorreu um erro ao tentar me comunicar com a IA. Por favor, tente novamente.' };
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -212,8 +215,8 @@ export default function ChatAssistant() {
 
       {isOpen && (
         <div 
-          className="fixed z-50 rounded-xl shadow-2xl bg-card border w-[calc(100vw-32px)] max-w-sm h-[65vh] max-h-[600px] flex flex-col transition-all duration-300 animate-in fade-in-50 slide-in-from-bottom-10"
-          style={{
+          className="fixed z-50 rounded-xl shadow-2xl bg-card border w-[calc(100vw-32px)] max-w-sm h-[70vh] max-h-[600px] flex flex-col transition-all duration-300 animate-in fade-in-50 slide-in-from-bottom-10"
+           style={{
              bottom: '80px', // Adjust to be above bottom nav
              right: '16px'
           }}
@@ -237,14 +240,13 @@ export default function ChatAssistant() {
                             <Info className="h-4 w-4" />
                             <AlertTitle>Olá! Como posso ajudar?</AlertTitle>
                             <AlertDescription>
-                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde. Lembre-se, eu sou uma IA e não um profissional de saúde.</p>
+                                <p className="mb-2">Eu posso responder perguntas sobre seus dados de saúde registrados nos últimos 30 dias. Lembre-se, eu sou uma IA e não um profissional de saúde.</p>
                                 <strong className="block mb-1">Experimente perguntar:</strong>
                                 <ul className="list-disc list-inside text-xs">
                                     <li>Qual foi minha última glicemia?</li>
                                     <li>Qual minha maior glicemia no último mês?</li>
-                                    <li>Qual foi a última dose de insulina que apliquei?</li>
                                     <li>Fiz algum exercício hoje?</li>
-                                    <li>Qual o último remédio que registrei?</li>
+                                    <li>Resuma meus dados da última semana.</li>
                                 </ul>
                             </AlertDescription>
                         </Alert>
@@ -265,7 +267,7 @@ export default function ChatAssistant() {
                         )}
                         <div
                         className={cn(
-                            'rounded-xl p-3 max-w-[80%] break-words text-sm',
+                            'rounded-xl p-3 max-w-[80%] break-words text-sm whitespace-pre-wrap',
                             message.role === 'user'
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-muted'

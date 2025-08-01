@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -22,9 +23,14 @@ const ConversationalAgentInputSchema = z.array(
 export async function conversationalAgent(history: z.infer<typeof ConversationalAgentInputSchema>): Promise<string> {
   const allUserData = await getAllUserDataForAI();
   
+  // Find the last user message to pass to the prompt
+  const lastUserMessage = history.find(m => m.role === 'user');
+  const userQuestion = lastUserMessage ? lastUserMessage.content[0].text : '';
+  
   const result = await conversationalAgentFlow({
       history,
       userData: JSON.stringify(allUserData, null, 2),
+      userQuestion: userQuestion,
   });
   return result;
 }
@@ -33,6 +39,7 @@ export async function conversationalAgent(history: z.infer<typeof Conversational
 const ConversationalAgentFlowInputSchema = z.object({
     history: ConversationalAgentInputSchema,
     userData: z.string(),
+    userQuestion: z.string(),
 });
 
 
@@ -44,24 +51,24 @@ const prompt = ai.definePrompt({
 
 REGRAS IMPORTANTES:
 1.  **NÃO DÊ CONSELHOS MÉDICOS.** Nunca sugira mudanças de tratamento, dosagens ou diagnósticos. Em vez disso, diga frases como "Notei um padrão aqui, seria interessante discutir isso com seu médico" ou "Com base nos seus dados...". Sua função é analisar e apresentar os dados, não interpretar clinicamente.
-2.  Responda exclusivamente com base nos dados fornecidos no contexto. Se a informação não estiver nos dados, diga que você não tem essa informação.
+2.  Responda exclusivamente com base nos dados fornecidos no contexto. Se a informação não estiver nos dados, diga que você não tem essa informação para o período solicitado (últimos 30 dias).
 3.  Seja claro, conciso e amigável.
 4.  Responda em português brasileiro.
 5.  Entenda consultas sobre períodos de tempo (ex: "últimos 7 dias", "mês passado", "hoje"). A data atual para referência é ${new Date().toISOString()}.
 
-Aqui está o histórico da conversa até o momento:
+Aqui está o histórico da conversa até o momento (ignore a primeira mensagem de boas-vindas se houver):
 {{#each history}}
   **{{role}}**: {{content.[0].text}}
 {{/each}}
 
-Aqui estão TODOS os dados de saúde do usuário:
+Aqui estão TODOS os dados de saúde do usuário dos últimos 30 dias:
 \`\`\`json
 {{{userData}}}
 \`\`\`
 
 Com base em tudo isso, responda à última pergunta do usuário.
 
-**Usuário**: {{history.[history.length-1].content.[0].text}}
+**Usuário**: {{{userQuestion}}}
 `,
 });
 
