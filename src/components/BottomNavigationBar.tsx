@@ -36,19 +36,21 @@ export default function BottomNavigationBar() {
     { href: '/reminders', label: 'Lembretes', icon: BellRing },
     { href: '/insights', label: 'Insights IA', icon: BarChart3 },
     { href: '/settings', label: 'Ajustes', icon: Settings },
+    { type: 'voice', label: 'Voz', icon: Mic },
   ];
 
   const directVisibleItems: NavItemDef[] = [
     allNavItems.find(item => item.href === '/dashboard')!,
     allNavItems.find(item => item.type === 'glucose')!,
-    allNavItems.find(item => item.href === '/chat')!, // Central button
+    allNavItems.find(item => item.type === 'voice')!, // Central button is now voice
     allNavItems.find(item => item.type === 'insulin')!,
   ];
   
   const popoverItems = allNavItems.filter(
     item => !directVisibleItems.some(dItem => dItem.label === item.label)
   ).sort((a, b) => {
-    const order = ['/calendar', '/reports', '/bolus-calculator', '/meal-analysis', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
+    // Put Chat first in the popover
+    const order = ['/chat', '/calendar', '/reports', '/bolus-calculator', '/meal-analysis', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
     const aKey = a.href || a.type;
     const bKey = b.href || b.type;
     return order.indexOf(aKey!) - order.indexOf(bKey!);
@@ -57,18 +59,17 @@ export default function BottomNavigationBar() {
   const NavItem = ({ item }: { item: NavItemDef }) => {
     const isActive = item.href ? (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) : false;
     
-    // Special styling for the central Chat button
-    if (item.href === '/chat') {
+    // Special styling for the central Voice button
+    if (item.type === 'voice') {
       return (
-         <Link href={item.href} className="flex flex-col items-center justify-center text-center -mt-6">
+         <button onClick={() => openDialog('voice')} className="flex flex-col items-center justify-center text-center -mt-6">
             <div className={cn(
-                "flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transform transition-transform hover:scale-110",
-                isActive && "ring-4 ring-primary/50"
+                "flex items-center justify-center h-16 w-16 rounded-full bg-primary text-primary-foreground shadow-lg border-4 border-background transform transition-transform hover:scale-110"
             )}>
               <item.icon className='h-7 w-7' />
             </div>
             <span className="text-[11px] font-medium text-primary mt-1">{item.label}</span>
-        </Link>
+        </button>
       )
     }
 
