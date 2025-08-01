@@ -6,7 +6,7 @@ import { useEffect, useState, Fragment } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator, Award, Star } from 'lucide-react';
+import { Droplet, Pill, Camera, BarChart3, Loader2, Bike, ClipboardPlus, Calculator } from 'lucide-react';
 import type { GlucoseReading, InsulinLog, MealAnalysis, ActivityLog } from '@/types';
 import { getGlucoseReadings, getInsulinLogs, getUserProfile, getMealAnalyses, getActivityLogs } from '@/lib/storage'; 
 import { useToast } from '@/hooks/use-toast';

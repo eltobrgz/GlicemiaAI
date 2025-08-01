@@ -9,13 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import type { UserProfile } from '@/types';
 import { getUserProfile, saveUserProfile } from '@/lib/storage'; 
-import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info, Calculator, Award } from 'lucide-react';
+import { Edit3, Save, UserCircle, Mail, CalendarDays, Droplet, Loader2, Upload, Target, Info, Calculator } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { createClient } from '@/lib/supabaseClient';
 import { GLUCOSE_THRESHOLDS } from '@/config/constants';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Separator } from '../ui/separator';
-import Link from 'next/link';
 
 export default function UserProfileCard() {
   const [user, setUser] = useState<UserProfile | null>(null);

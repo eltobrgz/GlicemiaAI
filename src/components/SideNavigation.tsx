@@ -2,7 +2,7 @@
 'use client';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus, Calculator, Mic, Award } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BellRing, BarChart3, Settings, LogOut, User, Bike, FileText, ClipboardPlus, Calculator, Mic } from 'lucide-react';
 import AppLogo from '@/components/AppLogo';
 import {
   Sidebar,
