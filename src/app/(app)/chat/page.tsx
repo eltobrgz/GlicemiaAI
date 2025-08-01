@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,25 +38,12 @@ export default function ChatPage() {
     hasRecognitionSupport
   } = useSpeechRecognition();
 
-  const finalTranscriptRef = useRef('');
-
   useEffect(() => {
     if (isListening) {
       setInput(transcript);
-      finalTranscriptRef.current = transcript;
     }
   }, [transcript, isListening]);
   
-  useEffect(() => {
-    // When listening stops, process the final transcript.
-    if (!isListening && finalTranscriptRef.current.trim()) {
-      handleSubmit(new Event('submit') as any, finalTranscriptRef.current);
-      finalTranscriptRef.current = ''; // Clear the ref after processing
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isListening]);
-
-
   const scrollToBottom = () => {
     setTimeout(() => {
         if (scrollAreaRef.current) {
@@ -67,8 +54,10 @@ export default function ChatPage() {
         }
     }, 100);
   };
-
+  
   const handleAiQuery = async (userText: string) => {
+    if (!userText.trim()) return;
+
     const newUserMessage: Message = { id: Date.now().toString(), role: 'user', text: userText };
     setMessages(prev => [...prev.filter(m => m.role !== 'welcome'), newUserMessage]);
     setInput('');
@@ -108,12 +97,10 @@ export default function ChatPage() {
     }
   };
   
-
-  const handleSubmit = async (e: React.FormEvent, text?: string) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const userText = text || input;
-    if (!userText.trim() || isLoading) return;
-    await handleAiQuery(userText);
+    if (isLoading || !input.trim()) return;
+    await handleAiQuery(input);
   };
 
   const handlePlayAudio = async (messageId: string, text: string) => {
@@ -151,7 +138,6 @@ export default function ChatPage() {
       }
   };
 
-
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -162,7 +148,7 @@ export default function ChatPage() {
             title="Assistente IA"
             description="Converse com a IA para obter insights sobre seus dados de saúde."
         />
-        <div className="flex-1 flex flex-col bg-card border rounded-xl shadow-lg">
+        <div className="flex-1 flex flex-col bg-card border rounded-xl shadow-lg overflow-hidden">
             <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
               <div className="space-y-4">
                 {messages.map((message) => {
@@ -178,7 +164,6 @@ export default function ChatPage() {
                                     <li>Qual foi minha última glicemia?</li>
                                     <li>Liste minhas últimas 3 hiperglicemias.</li>
                                     <li>Resuma meus dados da última semana.</li>
-                                    <li>Como minha glicemia reagiu após a caminhada de ontem?</li>
                                 </ul>
                             </AlertDescription>
                         </Alert>
@@ -212,7 +197,7 @@ export default function ChatPage() {
                                     variant="ghost" 
                                     className="h-6 w-6 ml-2 mt-1"
                                     onClick={() => handlePlayAudio(message.id, message.text)}
-                                    disabled={isLoading}
+                                    disabled={nowPlaying !== null && nowPlaying !== message.id}
                                     >
                                         {nowPlaying === message.id ? <Loader2 className="h-4 w-4 animate-spin"/> : <Volume2 className="h-4 w-4" />}
                                 </Button>
@@ -240,7 +225,7 @@ export default function ChatPage() {
               </div>
             </ScrollArea>
             
-            <div className="p-4 border-t">
+            <div className="p-4 border-t bg-background">
                 <form onSubmit={handleSubmit} className="flex items-center gap-2">
                     {hasRecognitionSupport && (
                         <Button 
@@ -256,9 +241,9 @@ export default function ChatPage() {
                     <Input
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        placeholder="Pergunte algo sobre seus dados..."
+                        placeholder={isListening ? "Ouvindo..." : "Pergunte algo sobre seus dados..."}
                         className="flex-1"
-                        disabled={isLoading || isListening}
+                        disabled={isLoading}
                     />
                     <Button type="submit" size="icon" disabled={isLoading || !input.trim()}>
                         {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
