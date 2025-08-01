@@ -9,35 +9,35 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
-import { getAllUserDataForAI } from '@/lib/storage'; // We'll need to create this function
-import type { User } from '@supabase/supabase-js';
 
 // Define the input schema for the flow
-const ConversationalAgentInputSchema = z.array(
-    z.object({
-        role: z.enum(['user', 'model']),
-        content: z.array(z.object({ text: z.string() })),
-    })
-);
+const ConversationalAgentInputSchema = z.object({
+    history: z.array(
+        z.object({
+            role: z.enum(['user', 'model']),
+            content: z.array(z.object({ text: z.string() })),
+        })
+    ),
+    userData: z.any().describe("A JSON object containing the user's health data."),
+});
 
-export async function conversationalAgent(history: z.infer<typeof ConversationalAgentInputSchema>): Promise<string> {
-  const allUserData = await getAllUserDataForAI();
-  
-  // Find the last user message to pass to the prompt
-  const lastUserMessage = history.find(m => m.role === 'user');
-  const userQuestion = lastUserMessage ? lastUserMessage.content[0].text : '';
-  
-  const result = await conversationalAgentFlow({
-      history,
-      userData: JSON.stringify(allUserData, null, 2),
-      userQuestion: userQuestion,
-  });
-  return result;
+
+export async function conversationalAgent(input: z.infer<typeof ConversationalAgentInputSchema>): Promise<string> {
+    // Find the last user message to pass to the prompt
+    const lastUserMessage = input.history.find(m => m.role === 'user');
+    const userQuestion = lastUserMessage ? lastUserMessage.content[0].text : '';
+
+    const result = await conversationalAgentFlow({
+        history: input.history,
+        userData: JSON.stringify(input.userData, null, 2),
+        userQuestion: userQuestion,
+    });
+    return result;
 }
 
 
 const ConversationalAgentFlowInputSchema = z.object({
-    history: ConversationalAgentInputSchema,
+    history: ConversationalAgentInputSchema.shape.history,
     userData: z.string(),
     userQuestion: z.string(),
 });
@@ -83,3 +83,4 @@ const conversationalAgentFlow = ai.defineFlow(
     return llmResponse.text;
   }
 );
+

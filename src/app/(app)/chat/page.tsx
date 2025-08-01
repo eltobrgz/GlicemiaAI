@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { conversationalAgent } from '@/ai/flows/conversational-agent';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { getAllUserDataForAI } from '@/lib/storage';
 
 interface Message {
   role: 'user' | 'model' | 'welcome';
@@ -40,18 +41,26 @@ export default function ChatPage() {
     if (!input.trim() || isLoading) return;
 
     const newUserMessage: Message = { role: 'user', text: input };
-    const currentMessages = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
-      role: msg.role as 'user' | 'model',
-      content: [{ text: msg.text }],
-    }));
-    
     setMessages(prev => [...prev.filter(m => m.role !== 'welcome'), newUserMessage]);
     setInput('');
     setIsLoading(true);
     scrollToBottom();
 
     try {
-      const responseText = await conversationalAgent(currentMessages);
+      // 1. Fetch user data before calling the agent
+      const userData = await getAllUserDataForAI();
+
+      // 2. Prepare the history for the AI
+      const currentMessagesForAI = [...messages.filter(m => m.role !== 'welcome'), newUserMessage].map(msg => ({
+        role: msg.role as 'user' | 'model',
+        content: [{ text: msg.text }],
+      }));
+
+      // 3. Call the agent with history and user data
+      const responseText = await conversationalAgent({
+          history: currentMessagesForAI,
+          userData: userData
+      });
       
       if (responseText) {
         const newAiMessage: Message = { role: 'model', text: responseText };
