@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus, Calculator, Mic, MessageSquare } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus, Calculator, Mic, MessageSquare, Menu } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ import { useLogDialog } from '@/contexts/LogDialogsContext';
 
 interface NavItemDef {
   href?: string;
-  type?: 'glucose' | 'insulin' | 'medication' | 'activity' | 'voice';
+  type?: 'glucose' | 'insulin' | 'medication' | 'activity' | 'voice' | 'manual_reg' | 'more';
   label: string;
   icon: LucideIcon;
 }
@@ -23,42 +23,39 @@ export default function BottomNavigationBar() {
 
   const allNavItems: NavItemDef[] = [
     { href: '/dashboard', label: 'Dashboard', icon: Home },
+    { href: '/chat', label: 'Assistente', icon: MessageSquare },
+    { type: 'voice', label: 'Voz', icon: Mic },
+    { type: 'manual_reg', label: 'Registros', icon: Menu },
+    { type: 'more', label: 'Mais', icon: MoreHorizontal },
+  ];
+
+  const manualRegItems: NavItemDef[] = [
     { type: 'glucose', label: 'Glicemia', icon: Droplet },
     { type: 'insulin', label: 'Insulina', icon: Pill },
-    { href: '/chat', label: 'Assistente', icon: MessageSquare },
-    { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { type: 'medication', label: 'Medicamento', icon: ClipboardPlus },
     { type: 'activity', label: 'Atividade', icon: Bike },
+  ];
+  
+  const popoverItems: NavItemDef[] = [
+    { href: '/meal-analysis', label: 'Refeição', icon: Camera },
+    { href: 'bolus-calculator', label: 'Calculadora', icon: Calculator },
     { href: '/calendar', label: 'Calendário', icon: CalendarDays },
-    { href: '/reports', label: 'Relatórios', icon: FileText }, 
-    { href: '/bolus-calculator', label: 'Calculadora', icon: Calculator },
+    { href: '/reports', label: 'Relatórios', icon: FileText },
+    { href: '/insights', label: 'Insights IA', icon: BarChart3 },
     { href: '/profile', label: 'Perfil', icon: User },
     { href: '/reminders', label: 'Lembretes', icon: BellRing },
-    { href: '/insights', label: 'Insights IA', icon: BarChart3 },
     { href: '/settings', label: 'Ajustes', icon: Settings },
-    { type: 'voice', label: 'Voz', icon: Mic },
   ];
-
-  const mainItems: NavItemDef[] = [
-    allNavItems.find(item => item.href === '/dashboard')!,
-    allNavItems.find(item => item.type === 'glucose')!,
-    allNavItems.find(item => item.type === 'voice')!,
-    allNavItems.find(item => item.type === 'insulin')!,
-    allNavItems.find(item => item.href === '/chat')!,
-  ];
-
-  const popoverItems = allNavItems.filter(
-    item => !mainItems.some(dItem => dItem.label === item.label)
-  ).sort((a, b) => {
-    const order = ['/calendar', '/reports', '/bolus-calculator', '/meal-analysis', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
-    const aKey = a.href || a.type;
-    const bKey = b.href || b.type;
-    return order.indexOf(aKey!) - order.indexOf(bKey!);
-  });
 
   const NavItem = ({ item }: { item: NavItemDef }) => {
     const isActive = item.href ? (pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))) : false;
     
+    const sharedClasses = (active: boolean) => cn(
+      'flex flex-col items-center justify-center text-center p-1 rounded-md w-full group',
+      active ? 'text-primary' : 'text-muted-foreground hover:text-primary/90',
+      'transition-colors duration-150'
+    );
+
     // Special styling for the central Voice button
     if (item.type === 'voice') {
       return (
@@ -73,27 +70,38 @@ export default function BottomNavigationBar() {
       )
     }
 
-    const sharedClasses = cn(
-      'flex flex-col items-center justify-center text-center p-1 rounded-md w-full group',
-      isActive ? 'text-primary' : 'text-muted-foreground hover:text-primary/90',
-      'transition-colors duration-150'
-    );
-
     if (item.href) {
       return (
-        <Link href={item.href} key={item.href} className={sharedClasses}>
+        <Link href={item.href} key={item.href} className={sharedClasses(isActive)}>
           <item.icon className={cn('h-5 w-5 mb-0.5 transition-transform group-hover:scale-110', isActive ? 'text-primary' : '')} />
           <span className="text-[11px] font-medium truncate">{item.label}</span>
         </Link>
       );
     }
     
-    return (
-      <button onClick={() => openDialog(item.type! as 'glucose' | 'insulin' | 'activity' | 'medication')} className={sharedClasses}>
-        <item.icon className='h-5 w-5 mb-0.5 transition-transform group-hover:scale-110' />
-        <span className="text-[11px] font-medium truncate">{item.label}</span>
-      </button>
-    );
+    // For Popover Triggers
+    if (item.type === 'manual_reg' || item.type === 'more') {
+      const itemsToDisplay = item.type === 'manual_reg' ? manualRegItems : popoverItems;
+      return (
+        <Popover>
+          <PopoverTrigger asChild>
+             <button className={sharedClasses(false)}>
+                <item.icon className='h-5 w-5 mb-0.5 transition-transform group-hover:scale-110' />
+                <span className="text-[11px] font-medium truncate">{item.label}</span>
+              </button>
+          </PopoverTrigger>
+          <PopoverContent className="w-56 p-2 mb-2">
+            <div className="grid gap-1">
+              {itemsToDisplay.map(popoverItem => (
+                <PopoverNavItem key={popoverItem.label} item={popoverItem} />
+              ))}
+            </div>
+          </PopoverContent>
+        </Popover>
+      );
+    }
+
+    return null; // Should not happen
   };
 
   const PopoverNavItem = ({ item }: { item: NavItemDef }) => {
@@ -120,26 +128,24 @@ export default function BottomNavigationBar() {
       )
   }
 
+  // The 5 main items to display directly
   const directVisibleItems = [
-    mainItems.find(i => i.label === 'Dashboard')!,
-    mainItems.find(i => i.label === 'Glicemia')!,
-    mainItems.find(i => i.label === 'Voz')!,
-    mainItems.find(i => i.label === 'Insulina')!,
-    mainItems.find(i => i.label === 'Assistente')!,
+    allNavItems.find(i => i.label === 'Dashboard')!,
+    allNavItems.find(i => i.label === 'Assistente')!,
+    allNavItems.find(i => i.label === 'Voz')!,
+    allNavItems.find(i => i.label === 'Registros')!,
+    allNavItems.find(i => i.label === 'Mais')!,
   ];
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-40">
       <div className="flex justify-around items-center h-16 px-1">
         
-        {/* Render the 5 main items */}
         {directVisibleItems.map((item) => (
           <div key={item.label} className="w-1/5 flex justify-center">
             <NavItem item={item} />
           </div>
         ))}
-        
-        {/* The Popover for "More" button will be removed, as we now have 5 main items */}
 
       </div>
     </nav>
