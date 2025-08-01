@@ -166,7 +166,7 @@ export default function VoiceConversationModal({ isOpen, onClose }: VoiceConvers
           <DialogDescription className="mb-8 min-h-[40px]">
             {stateDescriptions[conversationState]}
             {conversationState === 'listening' && (
-                <p className="text-sm text-muted-foreground italic mt-2">"{transcript}"</p>
+                <div className="text-sm text-muted-foreground italic mt-2">"{transcript}"</div>
             )}
           </DialogDescription>
 
@@ -203,5 +203,3 @@ export default function VoiceConversationModal({ isOpen, onClose }: VoiceConvers
     </Dialog>
   );
 }
-
-    
