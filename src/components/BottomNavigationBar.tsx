@@ -4,7 +4,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { LucideIcon } from 'lucide-react';
-import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus, Calculator, Mic } from 'lucide-react';
+import { Home, Droplet, Pill, Camera, CalendarDays, BarChart3, User, Settings, BellRing, MoreHorizontal, Bike, FileText, ClipboardPlus, Calculator, Mic, MessageSquare } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -26,6 +26,7 @@ export default function BottomNavigationBar() {
     { type: 'glucose', label: 'Glicemia', icon: Droplet },
     { type: 'insulin', label: 'Insulina', icon: Pill },
     { type: 'voice', label: 'Voz', icon: Mic },
+    { href: '/chat', label: 'Assistente', icon: MessageSquare },
     { href: '/meal-analysis', label: 'Refeição', icon: Camera },
     { type: 'medication', label: 'Medicamento', icon: ClipboardPlus },
     { type: 'activity', label: 'Atividade', icon: Bike },
@@ -40,7 +41,7 @@ export default function BottomNavigationBar() {
 
   const directVisibleItems: NavItemDef[] = [
     allNavItems.find(item => item.href === '/dashboard')!,
-    allNavItems.find(item => item.type === 'glucose')!,
+    allNavItems.find(item => item.href === '/chat')!,
     allNavItems.find(item => item.type === 'voice')!,
     allNavItems.find(item => item.href === '/meal-analysis')!,
   ];
@@ -48,7 +49,7 @@ export default function BottomNavigationBar() {
   const popoverItems = allNavItems.filter(
     item => !directVisibleItems.some(dItem => dItem.label === item.label)
   ).sort((a, b) => {
-    const order = ['/calendar', '/reports', '/bolus-calculator', 'insulin', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
+    const order = ['/calendar', '/reports', '/bolus-calculator', 'glucose', 'insulin', 'activity', 'medication', '/profile', '/reminders', '/insights', '/settings'];
     const aKey = a.href || a.type;
     const bKey = b.href || b.type;
     return order.indexOf(aKey!) - order.indexOf(bKey!);
